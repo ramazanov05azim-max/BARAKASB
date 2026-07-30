@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "core-audit",
+  "projectType": "library",
+  "root": "packages/core/audit",
+  "tags": ["type:core", "scope:platform", "runtime:server"],
+  "targets": {}
+}

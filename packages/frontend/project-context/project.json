@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "frontend-project-context",
+  "projectType": "library",
+  "root": "packages/frontend/project-context",
+  "tags": ["type:frontend", "scope:platform", "runtime:browser"],
+  "targets": {}
+}

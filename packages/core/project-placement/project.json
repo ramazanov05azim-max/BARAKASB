@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "core-project-placement",
+  "projectType": "library",
+  "root": "packages/core/project-placement",
+  "tags": ["type:core", "scope:platform", "runtime:server"],
+  "targets": {}
+}

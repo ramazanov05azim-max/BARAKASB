@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "frontend-ui",
+  "projectType": "library",
+  "root": "packages/frontend/ui",
+  "tags": ["type:frontend", "scope:shared", "runtime:browser"],
+  "targets": {}
+}

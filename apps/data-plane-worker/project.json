@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "app-data-plane-worker",
+  "projectType": "application",
+  "root": "apps/data-plane-worker",
+  "tags": ["type:app", "scope:data-plane", "runtime:server"],
+  "targets": {}
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "toolchain-testing",
+  "projectType": "library",
+  "root": "packages/toolchain/testing",
+  "tags": ["type:tooling", "scope:shared", "runtime:tooling"],
+  "targets": {}
+}

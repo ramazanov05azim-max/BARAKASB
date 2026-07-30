@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "infrastructure-object-storage",
+  "projectType": "library",
+  "root": "packages/infrastructure/object-storage",
+  "tags": ["type:infrastructure", "scope:shared", "runtime:server"],
+  "targets": {}
+}

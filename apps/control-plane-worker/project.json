@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "app-control-plane-worker",
+  "projectType": "application",
+  "root": "apps/control-plane-worker",
+  "tags": ["type:app", "scope:control-plane", "runtime:server"],
+  "targets": {}
+}

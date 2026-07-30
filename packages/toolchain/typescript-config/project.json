@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "toolchain-typescript-config",
+  "projectType": "library",
+  "root": "packages/toolchain/typescript-config",
+  "tags": ["type:tooling", "scope:shared", "runtime:tooling"],
+  "targets": {}
+}

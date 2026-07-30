@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "infrastructure-config",
+  "projectType": "library",
+  "root": "packages/infrastructure/config",
+  "tags": ["type:infrastructure", "scope:shared", "runtime:universal"],
+  "targets": {}
+}

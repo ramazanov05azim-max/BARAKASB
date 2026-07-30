@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "infrastructure-persistence",
+  "projectType": "library",
+  "root": "packages/infrastructure/persistence",
+  "tags": ["type:infrastructure", "scope:shared", "runtime:server"],
+  "targets": {}
+}

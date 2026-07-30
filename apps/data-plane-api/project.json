@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "app-data-plane-api",
+  "projectType": "application",
+  "root": "apps/data-plane-api",
+  "tags": ["type:app", "scope:data-plane", "runtime:server"],
+  "targets": {}
+}

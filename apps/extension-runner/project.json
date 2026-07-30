@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "app-extension-runner",
+  "projectType": "application",
+  "root": "apps/extension-runner",
+  "tags": ["type:app", "scope:extension-plane", "runtime:server"],
+  "targets": {}
+}

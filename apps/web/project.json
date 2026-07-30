@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "app-web",
+  "projectType": "application",
+  "root": "apps/web",
+  "tags": ["type:app", "scope:edge", "runtime:universal"],
+  "targets": {
+    "dev": {
+      "command": "pnpm --dir apps/web dev"
+    },
+    "build": {
+      "command": "pnpm --dir apps/web build",
+      "outputs": ["{projectRoot}/.next"]
+    },
+    "lint": {
+      "command": "pnpm --dir apps/web lint"
+    },
+    "typecheck": {
+      "command": "pnpm --dir apps/web typecheck"
+    }
+  }
+}

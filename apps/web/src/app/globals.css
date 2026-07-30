@@ -1,0 +1,121 @@
+@import 'tailwindcss';
+
+:root {
+  --canvas: #f7f8fa;
+  --surface: #ffffff;
+  --subtle: #f0f2f5;
+  --text: #171a1f;
+  --text-secondary: #5e6673;
+  --muted: #7b8492;
+  --border: #d9dee7;
+  --border-strong: #aeb6c3;
+  --action: #1769e0;
+  --action-hover: #0f57be;
+  --focus: #6ea8ff;
+  --focus-soft: rgb(110 168 255 / 22%);
+  --danger: #c52a2a;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0f1115;
+    --surface: #171a20;
+    --subtle: #20242c;
+    --text: #f4f6f8;
+    --text-secondary: #b4bbc6;
+    --muted: #929ba8;
+    --border: #333946;
+    --border-strong: #525b6b;
+    --action: #73a9ff;
+    --action-hover: #9bc1ff;
+    --focus: #8db7ff;
+    --focus-soft: rgb(141 183 255 / 18%);
+    --danger: #ff7b7b;
+    color-scheme: dark;
+  }
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--text);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--focus-soft);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.surface-grid {
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--border) 35%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--border) 35%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 32px 32px;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--subtle) 25%,
+    color-mix(in srgb, var(--subtle) 65%, var(--surface)) 50%,
+    var(--subtle) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton 1.35s ease-in-out infinite;
+}
+
+@keyframes skeleton {
+  to {
+    background-position-x: -200%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

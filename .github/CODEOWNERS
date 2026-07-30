@@ -1,0 +1,12 @@
+# Default owner
+* @ramazanov05azim-max
+
+# Security- and architecture-sensitive boundaries
+/docs/adr/ @ramazanov05azim-max
+/packages/core/identity/ @ramazanov05azim-max
+/packages/core/access-control/ @ramazanov05azim-max
+/packages/core/tenancy/ @ramazanov05azim-max
+/packages/core/project-placement/ @ramazanov05azim-max
+/packages/core/solutions-runtime/ @ramazanov05azim-max
+/packages/core/plugins-runtime/ @ramazanov05azim-max
+/infra/ @ramazanov05azim-max

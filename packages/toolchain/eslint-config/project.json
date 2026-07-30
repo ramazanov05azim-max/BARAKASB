@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "toolchain-eslint-config",
+  "projectType": "library",
+  "root": "packages/toolchain/eslint-config",
+  "tags": ["type:tooling", "scope:shared", "runtime:tooling"],
+  "targets": {}
+}

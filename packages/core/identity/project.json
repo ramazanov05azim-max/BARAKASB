@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "core-identity",
+  "projectType": "library",
+  "root": "packages/core/identity",
+  "tags": ["type:core", "scope:platform", "runtime:server"],
+  "targets": {}
+}

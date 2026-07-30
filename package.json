@@ -1,0 +1,27 @@
+{
+  "name": "barakasb",
+  "version": "0.0.0",
+  "private": true,
+  "description": "BARAKASB Business OS monorepo",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "architecture:check": "node tools/architecture/check.mjs",
+    "build": "nx run-many -t build",
+    "dev:web": "nx run app-web:dev",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "graph": "nx graph",
+    "lint": "nx run-many -t lint",
+    "test": "nx run-many -t test",
+    "typecheck": "nx run-many -t typecheck"
+  },
+  "devDependencies": {
+    "nx": "23.1.0",
+    "prettier": "3.9.6",
+    "typescript": "7.0.2"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "infrastructure-observability",
+  "projectType": "library",
+  "root": "packages/infrastructure/observability",
+  "tags": ["type:infrastructure", "scope:shared", "runtime:universal"],
+  "targets": {}
+}

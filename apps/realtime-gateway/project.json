@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "app-realtime-gateway",
+  "projectType": "application",
+  "root": "apps/realtime-gateway",
+  "tags": ["type:app", "scope:data-plane", "runtime:server"],
+  "targets": {}
+}

@@ -1,0 +1,21 @@
+packages:
+  - 'apps/*'
+  - 'packages/core/*'
+  - 'packages/contracts/*'
+  - 'packages/infrastructure/*'
+  - 'packages/frontend/*'
+  - 'packages/toolchain/*'
+  - 'solutions/*'
+  - 'plugins/*'
+
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+
+catalog:
+  nx: 23.1.0
+  prettier: 3.9.6
+  typescript: 7.0.2
+
+minimumReleaseAgeExclude:
+  - lucide-react@1.28.0

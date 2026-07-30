@@ -1,0 +1,38 @@
+# Dependencies and task caches
+node_modules/
+.nx/
+.turbo/
+
+# Build and test output
+dist/
+build/
+coverage/
+.next/
+out/
+*.tsbuildinfo
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs and temporary files
+*.log
+tmp/
+.cache/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Local object-storage and database volumes
+.data/
+
+# Codex working directories
+work/
+outputs/

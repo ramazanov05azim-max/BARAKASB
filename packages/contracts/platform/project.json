@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "contracts-platform",
+  "projectType": "library",
+  "root": "packages/contracts/platform",
+  "tags": ["type:contracts", "scope:shared", "runtime:universal"],
+  "targets": {}
+}

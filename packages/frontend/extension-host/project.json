@@ -1,0 +1,8 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "frontend-extension-host",
+  "projectType": "library",
+  "root": "packages/frontend/extension-host",
+  "tags": ["type:frontend", "scope:platform", "runtime:browser"],
+  "targets": {}
+}
