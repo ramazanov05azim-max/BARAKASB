@@ -1,25 +1,30 @@
 'use client';
 
 import {
+  coffeeCrashTestSeedVersion,
+  createCoffeeCrashTestSeed,
   localCoffeeManagerRepositories,
-  type CoffeeDevelopmentSeed,
   type CoffeeManagerRepositories,
 } from '@barakasb/solution-coffee';
-import { localBusinessEnvironmentDirectoryWriter } from '@/features/universal-application/infrastructure/local-business-environment-directory';
 import type {
   BusinessEnvironmentDirectoryWriter,
   ResolvedBusinessEnvironment,
 } from '@/features/universal-application/application/business-environment-resolution';
+import { localBusinessEnvironmentDirectoryWriter } from '@/features/universal-application/infrastructure/local-business-environment-directory';
 import {
   mockRepository,
   type MockRepository,
   type ProjectSummary,
 } from '@/lib/mock-repository';
 
-const storageKey = 'barakasb.manager.coffee-installations.v1';
-const demoRemovalKey = 'barakasb.manager.coffee-demo.removed.v1';
-const demoProjectId = 'demo-coffee-north-star';
-const demoSeedId = 'coffee-development-demo-v1';
+export const coffeeManagerStorageKey = 'barakasb.manager.coffee-installations.v2';
+export const legacyCoffeeManagerStorageKey = 'barakasb.manager.coffee-installations.v1';
+export const legacyCoffeeDemoRemovalKey = 'barakasb.manager.coffee-demo.removed.v1';
+export const coffeeCrashTestProjectId = 'barakasb-coffee-crash-test-v2';
+export const coffeeCrashTestProjectName = 'BARAKASB Coffee Crash Test';
+export const coffeeCrashTestDisplayName = 'Север Coffee Lab — CRASH TEST';
+export const coffeeCrashTestEnvironmentId = 'business-environment-coffee-crash-test-v2';
+
 const codeSpace = 10_000_000_000_000_000n;
 const fnvOffsetBasis = 14_695_981_039_346_656_037n;
 const fnvPrime = 1_099_511_628_211n;
@@ -48,7 +53,7 @@ export interface CoffeeSolutionInstallation {
 }
 
 export interface CoffeeManagerSetupRecord {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly project: ProjectSummary;
   readonly installation: CoffeeSolutionInstallation;
   readonly establishment: CoffeeEstablishmentInput | null;
@@ -56,6 +61,7 @@ export interface CoffeeManagerSetupRecord {
   readonly businessEnvironmentId: string | null;
   readonly configuredAt: string | null;
   readonly isDevelopmentDemo: boolean;
+  readonly crashTestSeedVersion: number | null;
 }
 
 export interface CoffeeManagerSetupRepository {
@@ -66,24 +72,34 @@ export interface CoffeeManagerSetupRepository {
     projectId: string,
     input: CoffeeEstablishmentInput,
   ): Promise<CoffeeManagerSetupRecord>;
-  seedDevelopmentDemo(): Promise<CoffeeManagerSetupRecord | null>;
-  removeDevelopmentDemo(): Promise<void>;
+  installCrashTest(): Promise<CoffeeManagerSetupRecord>;
+  deleteCrashTest(): Promise<void>;
 }
 
 interface CoffeeManagerSetupDependencies {
   storage: Storage;
-  platformProjects: Pick<
-    MockRepository,
-    'ensureProject' | 'deleteProject' | 'getProject'
-  >;
+  platformProjects: Pick<MockRepository, 'ensureProject' | 'deleteProject'>;
   coffeeRepositories: Pick<
     CoffeeManagerRepositories,
     'coffeeProject' | 'businessProfile' | 'settings' | 'developmentSeed'
   >;
   directory: BusinessEnvironmentDirectoryWriter;
   now?: () => string;
-  developmentDemoEnabled?: boolean;
 }
+
+export const coffeeCrashTestEstablishment: CoffeeEstablishmentInput = {
+  establishmentName: coffeeCrashTestDisplayName,
+  legalName: 'ООО «Север Кофе Лаб»',
+  ownerName: 'Алексей Романов',
+  country: 'RU',
+  city: 'Москва',
+  address: 'ул. Тверская, д. 12',
+  timezone: 'Europe/Moscow',
+  currency: 'RUB',
+  language: 'ru',
+  phone: '+7 495 555-12-12',
+  email: 'owner@sever-coffee.test',
+};
 
 function canonicalize(input: CoffeeEstablishmentInput): string {
   return [
@@ -124,263 +140,54 @@ export function generateLocalBusinessEnvironmentCode(
   throw new Error('local-business-environment-code-space-exhausted');
 }
 
-function readRecords(storage: Storage): CoffeeManagerSetupRecord[] {
-  const raw = storage.getItem(storageKey);
+function isRecord(value: unknown): value is CoffeeManagerSetupRecord {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'schemaVersion' in value &&
+    value.schemaVersion === 2 &&
+    'project' in value &&
+    typeof value.project === 'object' &&
+    value.project !== null
+  );
+}
+
+export function readCoffeeManagerRecords(storage: Storage): CoffeeManagerSetupRecord[] {
+  const raw = storage.getItem(coffeeManagerStorageKey);
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter(
-          (record): record is CoffeeManagerSetupRecord =>
-            typeof record === 'object' &&
-            record !== null &&
-            'schemaVersion' in record &&
-            record.schemaVersion === 1 &&
-            'project' in record &&
-            typeof record.project === 'object' &&
-            record.project !== null,
-        )
-      : [];
+    return Array.isArray(parsed) ? parsed.filter(isRecord) : [];
   } catch {
     return [];
   }
 }
 
 function writeRecords(storage: Storage, records: CoffeeManagerSetupRecord[]): void {
-  storage.setItem(storageKey, JSON.stringify(records));
+  storage.setItem(coffeeManagerStorageKey, JSON.stringify(records));
 }
 
 function replaceRecord(storage: Storage, record: CoffeeManagerSetupRecord): void {
   writeRecords(storage, [
-    ...readRecords(storage).filter(
+    ...readCoffeeManagerRecords(storage).filter(
       (candidate) => candidate.project.id !== record.project.id,
     ),
     record,
   ]);
 }
 
-function demoProject(timestamp: string): ProjectSummary {
+function crashTestProject(timestamp: string): ProjectSummary {
   return {
-    id: demoProjectId,
-    name: 'North Star Coffee',
+    id: coffeeCrashTestProjectId,
+    name: coffeeCrashTestProjectName,
+    displayName: coffeeCrashTestDisplayName,
     solutionId: 'coffee',
     categoryId: 'food',
     status: 'active',
     role: 'owner',
     createdAt: timestamp,
     isDevelopmentDemo: true,
-  };
-}
-
-const demoEstablishment: CoffeeEstablishmentInput = {
-  establishmentName: 'North Star Coffee',
-  legalName: 'North Star Coffee LLC',
-  ownerName: 'Alex Morgan',
-  country: 'RU',
-  city: 'Moscow',
-  address: '12 Tverskaya Street',
-  timezone: 'Europe/Moscow',
-  currency: 'RUB',
-  language: 'ru',
-  phone: '+7 999 123-45-67',
-  email: 'owner@north-star.test',
-};
-
-function developmentSeed(timestamp: string): CoffeeDevelopmentSeed {
-  return {
-    id: demoSeedId,
-    warehouses: [
-      {
-        id: 'demo-warehouse-main',
-        name: 'Main storage',
-        code: 'MAIN',
-        locationId: '',
-        warehouseType: 'main',
-        addressOrZone: 'Back of house',
-        responsibleEmployeeId: '',
-        status: 'active',
-        updatedAt: timestamp,
-      },
-    ],
-    ingredients: [
-      {
-        id: 'demo-ingredient-beans',
-        name: 'Espresso beans',
-        sku: 'ING-BEANS',
-        category: 'Coffee',
-        baseUnitId: 'unit-g',
-        purchaseUnitId: 'unit-kg',
-        conversionRate: 1000,
-        minimumStock: 5000,
-        cost: 1.8,
-        supplierReferences: 'Demo Roastery',
-        status: 'active',
-        updatedAt: timestamp,
-      },
-      {
-        id: 'demo-ingredient-milk',
-        name: 'Whole milk',
-        sku: 'ING-MILK',
-        category: 'Dairy',
-        baseUnitId: 'unit-ml',
-        purchaseUnitId: 'unit-l',
-        conversionRate: 1000,
-        minimumStock: 10000,
-        cost: 0.11,
-        supplierReferences: 'Demo Dairy',
-        status: 'active',
-        updatedAt: timestamp,
-      },
-      {
-        id: 'demo-ingredient-water',
-        name: 'Filtered water',
-        sku: 'ING-WATER',
-        category: 'Utility',
-        baseUnitId: 'unit-ml',
-        purchaseUnitId: 'unit-l',
-        conversionRate: 1000,
-        minimumStock: 20000,
-        cost: 0.01,
-        supplierReferences: '',
-        status: 'active',
-        updatedAt: timestamp,
-      },
-      {
-        id: 'demo-ingredient-cup',
-        name: 'Takeaway cup 300 ml',
-        sku: 'ING-CUP-300',
-        category: 'Packaging',
-        baseUnitId: 'unit-pc',
-        purchaseUnitId: 'unit-pc',
-        conversionRate: 1,
-        minimumStock: 100,
-        cost: 8,
-        supplierReferences: 'Demo Packaging',
-        status: 'active',
-        updatedAt: timestamp,
-      },
-    ],
-    menuCategories: [
-      {
-        id: 'demo-category-coffee',
-        name: 'Coffee',
-        description: 'Espresso-based drinks',
-        displayOrder: 1,
-        locationAvailability: 'all',
-        imagePlaceholder: '',
-        status: 'active',
-        updatedAt: timestamp,
-      },
-    ],
-    menuItems: [
-      {
-        id: 'demo-item-espresso',
-        name: 'Espresso',
-        categoryId: 'demo-category-coffee',
-        description: 'Double espresso',
-        sku: 'DRINK-ESP',
-        barcode: '',
-        sellingPrice: 190,
-        taxCategory: 'standard',
-        locationAvailability: 'all',
-        imagePlaceholder: '',
-        recipeId: 'demo-recipe-espresso',
-        modifierGroupIds: [],
-        status: 'active',
-        updatedAt: timestamp,
-      },
-      {
-        id: 'demo-item-cappuccino',
-        name: 'Cappuccino',
-        categoryId: 'demo-category-coffee',
-        description: 'Espresso with steamed milk',
-        sku: 'DRINK-CAP',
-        barcode: '',
-        sellingPrice: 290,
-        taxCategory: 'standard',
-        locationAvailability: 'all',
-        imagePlaceholder: '',
-        recipeId: 'demo-recipe-cappuccino',
-        modifierGroupIds: [],
-        status: 'active',
-        updatedAt: timestamp,
-      },
-      {
-        id: 'demo-item-americano',
-        name: 'Americano',
-        categoryId: 'demo-category-coffee',
-        description: 'Espresso with hot water',
-        sku: 'DRINK-AMR',
-        barcode: '',
-        sellingPrice: 230,
-        taxCategory: 'standard',
-        locationAvailability: 'all',
-        imagePlaceholder: '',
-        recipeId: 'demo-recipe-americano',
-        modifierGroupIds: [],
-        status: 'active',
-        updatedAt: timestamp,
-      },
-    ],
-    recipes: [
-      {
-        id: 'demo-recipe-espresso',
-        name: 'Espresso technology card',
-        menuItemId: 'demo-item-espresso',
-        outputQuantity: 1,
-        outputUnitId: 'unit-pc',
-        preparationInstructions: 'Grind, dose and extract.',
-        ingredientId: 'demo-ingredient-beans',
-        ingredientQuantity: 18,
-        ingredientUnitId: 'unit-g',
-        wastePercentage: 3,
-        status: 'active',
-        updatedAt: timestamp,
-      },
-      {
-        id: 'demo-recipe-cappuccino',
-        name: 'Cappuccino technology card',
-        menuItemId: 'demo-item-cappuccino',
-        outputQuantity: 1,
-        outputUnitId: 'unit-pc',
-        preparationInstructions: 'Extract espresso and steam milk.',
-        ingredientId: 'demo-ingredient-milk',
-        ingredientQuantity: 180,
-        ingredientUnitId: 'unit-ml',
-        wastePercentage: 5,
-        status: 'active',
-        updatedAt: timestamp,
-      },
-      {
-        id: 'demo-recipe-americano',
-        name: 'Americano technology card',
-        menuItemId: 'demo-item-americano',
-        outputQuantity: 1,
-        outputUnitId: 'unit-pc',
-        preparationInstructions: 'Extract espresso and add hot water.',
-        ingredientId: 'demo-ingredient-water',
-        ingredientQuantity: 180,
-        ingredientUnitId: 'unit-ml',
-        wastePercentage: 2,
-        status: 'active',
-        updatedAt: timestamp,
-      },
-    ],
-    openingStockBalances: [
-      ['demo-ingredient-beans', 12000, 'unit-g', 1.8],
-      ['demo-ingredient-milk', 24000, 'unit-ml', 0.11],
-      ['demo-ingredient-water', 50000, 'unit-ml', 0.01],
-      ['demo-ingredient-cup', 300, 'unit-pc', 8],
-    ].map(([ingredientId, quantity, unitId, unitCost], index) => ({
-      id: `demo-opening-${index + 1}`,
-      warehouseId: 'demo-warehouse-main',
-      ingredientId: ingredientId as string,
-      quantity: quantity as number,
-      unitId: unitId as string,
-      unitCost: unitCost as number,
-      source: 'development-demo' as const,
-      recordedAt: timestamp,
-    })),
+    developmentLabel: 'crash-test',
   };
 }
 
@@ -390,7 +197,7 @@ export function createCoffeeManagerSetupRepository(
   const now = dependencies.now ?? (() => new Date().toISOString());
 
   async function install(project: ProjectSummary): Promise<CoffeeManagerSetupRecord> {
-    const existing = readRecords(dependencies.storage).find(
+    const existing = readCoffeeManagerRecords(dependencies.storage).find(
       (record) => record.project.id === project.id,
     );
     if (existing) return structuredClone(existing);
@@ -400,7 +207,7 @@ export function createCoffeeManagerSetupRepository(
       project.name,
     );
     const record: CoffeeManagerSetupRecord = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       project: structuredClone(project),
       installation: {
         id: `coffee-installation-${project.id}`,
@@ -414,6 +221,7 @@ export function createCoffeeManagerSetupRepository(
       businessEnvironmentId: null,
       configuredAt: null,
       isDevelopmentDemo: project.isDevelopmentDemo === true,
+      crashTestSeedVersion: null,
     };
     replaceRecord(dependencies.storage, record);
     return structuredClone(record);
@@ -423,7 +231,7 @@ export function createCoffeeManagerSetupRepository(
     projectId: string,
     input: CoffeeEstablishmentInput,
   ): Promise<CoffeeManagerSetupRecord> {
-    const records = readRecords(dependencies.storage);
+    const records = readCoffeeManagerRecords(dependencies.storage);
     const current = records.find((record) => record.project.id === projectId);
     if (!current) throw new Error('coffee-solution-not-installed');
     const code =
@@ -438,7 +246,10 @@ export function createCoffeeManagerSetupRepository(
       );
     const timestamp = current.configuredAt ?? now();
     const businessEnvironmentId =
-      current.businessEnvironmentId ?? `business-environment-${projectId}`;
+      current.businessEnvironmentId ??
+      (projectId === coffeeCrashTestProjectId
+        ? coffeeCrashTestEnvironmentId
+        : `business-environment-${projectId}`);
     const profile =
       await dependencies.coffeeRepositories.businessProfile.get(projectId);
     await dependencies.coffeeRepositories.businessProfile.update(projectId, {
@@ -446,6 +257,10 @@ export function createCoffeeManagerSetupRepository(
       businessName: input.establishmentName,
       legalName: input.legalName,
       brandName: input.establishmentName,
+      description:
+        projectId === coffeeCrashTestProjectId
+          ? 'DEV DEMO · максимально заполненная среда ручного crash-test'
+          : profile.description,
       defaultCurrency: input.currency,
       timezone: input.timezone,
       country: input.country,
@@ -454,6 +269,11 @@ export function createCoffeeManagerSetupRepository(
         .filter(Boolean)
         .join(' · '),
       businessAddress: [input.city, input.address].filter(Boolean).join(', '),
+      ownerName: input.ownerName,
+      registrationIdentifier:
+        projectId === coffeeCrashTestProjectId ? 'ИНН 7712345678' : '',
+      operatingStatus: 'active',
+      businessHours: projectId === coffeeCrashTestProjectId ? 'Пн–Вс 07:30–23:00' : '',
     });
     const settings = await dependencies.coffeeRepositories.settings.get(projectId);
     await dependencies.coffeeRepositories.settings.update(projectId, {
@@ -484,54 +304,53 @@ export function createCoffeeManagerSetupRepository(
   return {
     install,
     async get(projectId) {
-      const record = readRecords(dependencies.storage).find(
+      const record = readCoffeeManagerRecords(dependencies.storage).find(
         (candidate) => candidate.project.id === projectId,
       );
-      if (record) return structuredClone(record);
-      const project = await dependencies.platformProjects.getProject(projectId);
-      return project?.solutionId === 'coffee' ? install(project) : null;
+      return record ? structuredClone(record) : null;
     },
     async list() {
-      return structuredClone(readRecords(dependencies.storage));
+      return structuredClone(readCoffeeManagerRecords(dependencies.storage));
     },
     configure,
-    async seedDevelopmentDemo() {
-      if (
-        !dependencies.developmentDemoEnabled ||
-        dependencies.storage.getItem(demoRemovalKey) === 'true'
-      ) {
-        return null;
-      }
+    async installCrashTest() {
       const timestamp = '2026-07-31T00:00:00.000Z';
       const project = await dependencies.platformProjects.ensureProject(
-        demoProject(timestamp),
+        crashTestProject(timestamp),
       );
-      const existing = await install(project);
-      const configured = existing.businessEnvironmentCode
-        ? existing
-        : await configure(project.id, demoEstablishment);
-      await dependencies.coffeeRepositories.developmentSeed.apply(
+      const installed = await install(project);
+      const configured = installed.businessEnvironmentCode
+        ? installed
+        : await configure(project.id, coffeeCrashTestEstablishment);
+      const seed = createCoffeeCrashTestSeed(timestamp);
+      await dependencies.coffeeRepositories.developmentSeed.apply(project.id, seed);
+      const profile = await dependencies.coffeeRepositories.businessProfile.get(
         project.id,
-        developmentSeed(timestamp),
       );
-      return configured;
+      await dependencies.coffeeRepositories.businessProfile.update(project.id, {
+        ...profile,
+        defaultWarehouseId:
+          seed.warehouses.find((warehouse) => warehouse.isDefault)?.id ?? '',
+      });
+      const completed: CoffeeManagerSetupRecord = {
+        ...configured,
+        crashTestSeedVersion: coffeeCrashTestSeedVersion,
+      };
+      replaceRecord(dependencies.storage, completed);
+      return structuredClone(completed);
     },
-    async removeDevelopmentDemo() {
-      const record = readRecords(dependencies.storage).find(
-        (candidate) => candidate.project.id === demoProjectId,
+    async deleteCrashTest() {
+      await dependencies.directory.removeProject(coffeeCrashTestProjectId);
+      await dependencies.coffeeRepositories.coffeeProject.remove(
+        coffeeCrashTestProjectId,
       );
-      if (record?.businessEnvironmentId) {
-        await dependencies.directory.removeProject(demoProjectId);
-      }
-      await dependencies.coffeeRepositories.coffeeProject.remove(demoProjectId);
-      await dependencies.platformProjects.deleteProject(demoProjectId);
+      await dependencies.platformProjects.deleteProject(coffeeCrashTestProjectId);
       writeRecords(
         dependencies.storage,
-        readRecords(dependencies.storage).filter(
-          (candidate) => candidate.project.id !== demoProjectId,
+        readCoffeeManagerRecords(dependencies.storage).filter(
+          (candidate) => candidate.project.id !== coffeeCrashTestProjectId,
         ),
       );
-      dependencies.storage.setItem(demoRemovalKey, 'true');
     },
   };
 }
@@ -545,10 +364,6 @@ function browserRepository(): CoffeeManagerSetupRepository {
     platformProjects: mockRepository,
     coffeeRepositories: localCoffeeManagerRepositories,
     directory: localBusinessEnvironmentDirectoryWriter,
-    developmentDemoEnabled:
-      process.env.NEXT_PUBLIC_ENABLE_COFFEE_DEMO === 'true' ||
-      (process.env.NODE_ENV === 'development' &&
-        process.env.NEXT_PUBLIC_ENABLE_COFFEE_DEMO !== 'false'),
   });
 }
 
@@ -557,6 +372,6 @@ export const localCoffeeManagerSetupRepository: CoffeeManagerSetupRepository = {
   get: (projectId) => browserRepository().get(projectId),
   list: () => browserRepository().list(),
   configure: (projectId, input) => browserRepository().configure(projectId, input),
-  seedDevelopmentDemo: () => browserRepository().seedDevelopmentDemo(),
-  removeDevelopmentDemo: () => browserRepository().removeDevelopmentDemo(),
+  installCrashTest: () => browserRepository().installCrashTest(),
+  deleteCrashTest: () => browserRepository().deleteCrashTest(),
 };

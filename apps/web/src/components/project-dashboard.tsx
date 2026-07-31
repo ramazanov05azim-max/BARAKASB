@@ -1,35 +1,37 @@
 'use client';
 
-import { ArrowRight, Check, Coffee, Settings2, Trash2, UserPlus } from 'lucide-react';
+import { ArrowRight, Check, Coffee, Copy, Settings2, UserPlus } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { roleLabelKeys, solutionLabelKeys } from '@/i18n/entity-labels';
 import { useTranslation } from '@/i18n/i18n-provider';
 import { mockRepository, type ProjectSummary } from '@/lib/mock-repository';
-import { localCoffeeManagerSetupRepository } from '@/features/manager-coffee-setup/coffee-manager-setup-repository';
+import {
+  localCoffeeManagerSetupRepository,
+  type CoffeeManagerSetupRecord,
+} from '@/features/manager-coffee-setup/coffee-manager-setup-repository';
+import { formatBusinessEnvironmentCode } from '@/features/universal-application/domain/business-environment-code';
 import { PageHeading } from './page-heading';
 import { Badge } from './ui/badge';
 import { buttonVariants } from './ui/button';
 import { Card, CardContent } from './ui/card';
 
 export function ProjectDashboard({ projectId }: { projectId: string }) {
-  const router = useRouter();
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
   const [project, setProject] = useState<ProjectSummary | null | undefined>(undefined);
-  const [removing, setRemoving] = useState(false);
+  const [setup, setSetup] = useState<CoffeeManagerSetupRecord | null>(null);
 
   useEffect(() => {
-    void mockRepository.getProject(projectId).then(setProject);
+    void Promise.all([
+      mockRepository.getProject(projectId),
+      localCoffeeManagerSetupRepository.get(projectId),
+    ]).then(([currentProject, currentSetup]) => {
+      setProject(currentProject);
+      setSetup(currentSetup);
+    });
   }, [projectId]);
-
-  async function removeDemo(): Promise<void> {
-    if (!window.confirm(t('dashboard.removeDemoConfirmation'))) return;
-    setRemoving(true);
-    await localCoffeeManagerSetupRepository.removeDevelopmentDemo();
-    router.push('/projects');
-    router.refresh();
-  }
 
   if (project === undefined) {
     return (
@@ -56,11 +58,29 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
     );
   }
 
+  const businessEnvironmentCode = setup?.businessEnvironmentCode;
+
   return (
     <>
+      {searchParams.get('crashTestInstalled') === '1' &&
+        project.developmentLabel === 'crash-test' &&
+        businessEnvironmentCode && (
+          <div
+            role="status"
+            className="mb-6 rounded-[18px] border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-950"
+          >
+            <Check className="mr-2 inline size-4" />
+            {t('crashTest.installSuccess')
+              .replace('{project}', project.displayName ?? project.name)
+              .replace(
+                '{code}',
+                formatBusinessEnvironmentCode(businessEnvironmentCode),
+              )}
+          </div>
+        )}
       <PageHeading
         eyebrow={`${t(solutionLabelKeys[project.solutionId])} · ${t(roleLabelKeys[project.role])}`}
-        title={project.name}
+        title={project.displayName ?? project.name}
         description={t('dashboard.description')}
         action={
           <Badge tone="success">
@@ -80,6 +100,40 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
             <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
               {t('dashboard.beginDescription')}
             </p>
+            {project.developmentLabel === 'crash-test' && businessEnvironmentCode && (
+              <div className="mt-6 rounded-[18px] border border-[var(--border)] bg-[var(--subtle)] p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="warning">{t('crashTest.marker')}</Badge>
+                  <span className="text-xs font-semibold text-[var(--muted)]">
+                    {project.name}
+                  </span>
+                </div>
+                <p className="mt-4 text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
+                  {t('universal.codeLabel')}
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-3">
+                  <code className="text-lg font-semibold tracking-[0.08em]">
+                    {formatBusinessEnvironmentCode(businessEnvironmentCode)}
+                  </code>
+                  <button
+                    type="button"
+                    aria-label={t('coffeeOnboarding.copyCode')}
+                    onClick={() =>
+                      void navigator.clipboard.writeText(businessEnvironmentCode)
+                    }
+                    className="text-[var(--action)]"
+                  >
+                    <Copy className="size-4" />
+                  </button>
+                </div>
+                <Link
+                  href="/projects/dev/coffee-crash-test"
+                  className="mt-4 inline-flex text-sm font-semibold text-[var(--action)]"
+                >
+                  {t('crashTest.manageEnvironment')}
+                </Link>
+              </div>
+            )}
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {project.solutionId === 'coffee' && (
                 <>
@@ -112,21 +166,6 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
                 <Settings2 className="size-4" /> {t('dashboard.reviewSubscription')}
               </Link>
             </div>
-            {project.isDevelopmentDemo && (
-              <button
-                type="button"
-                disabled={removing}
-                onClick={() => void removeDemo()}
-                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[var(--danger)]"
-              >
-                <Trash2 className="size-4" />
-                {t(
-                  removing
-                    ? 'dashboard.removingDemo'
-                    : 'dashboard.removeDevelopmentDemo',
-                )}
-              </button>
-            )}
           </CardContent>
         </Card>
         <Card>

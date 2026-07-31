@@ -9,7 +9,7 @@ import type {
 import { CoffeeManagerSetupScreen } from './coffee-manager-setup-screen';
 
 const record: CoffeeManagerSetupRecord = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   project: {
     id: 'coffee-1',
     name: 'North Star',
@@ -31,6 +31,7 @@ const record: CoffeeManagerSetupRecord = {
   businessEnvironmentId: null,
   configuredAt: null,
   isDevelopmentDemo: false,
+  crashTestSeedVersion: null,
 };
 
 function repository(): CoffeeManagerSetupRepository {
@@ -45,8 +46,8 @@ function repository(): CoffeeManagerSetupRepository {
       businessEnvironmentId: 'environment-1',
       configuredAt: '2026-07-31T10:00:00.000Z',
     })),
-    seedDevelopmentDemo: vi.fn(async () => null),
-    removeDevelopmentDemo: vi.fn(async () => undefined),
+    installCrashTest: vi.fn(async () => record),
+    deleteCrashTest: vi.fn(async () => undefined),
   };
 }
 

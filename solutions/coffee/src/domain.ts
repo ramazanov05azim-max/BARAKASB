@@ -39,6 +39,7 @@ export interface CoffeeProject {
   solutionStatus: 'configured' | 'setup-required';
   defaultLocationId: string | null;
   ready: boolean;
+  developmentLabel?: 'crash-test';
   updatedAt: string;
 }
 
@@ -56,6 +57,11 @@ export interface BusinessProfile {
   receiptInformation: string;
   contactInformation: string;
   businessAddress: string;
+  ownerName?: string;
+  registrationIdentifier?: string;
+  operatingStatus?: 'active' | 'inactive';
+  businessHours?: string;
+  defaultWarehouseId?: string;
   updatedAt: string;
 }
 
@@ -88,6 +94,7 @@ export interface CoffeeLocation extends BaseEntity {
   email: string;
   openingHours: string;
   isDefault: boolean;
+  operationalPurpose?: string;
 }
 
 export interface CoffeeRegister extends BaseEntity {
@@ -124,6 +131,9 @@ export interface MenuItem extends BaseEntity {
   imagePlaceholder: string;
   recipeId: string;
   modifierGroupIds: string[];
+  currency?: string;
+  preparationLocationId?: string;
+  servingUnitId?: string;
 }
 
 export interface ModifierGroup extends BaseEntity {
@@ -143,6 +153,19 @@ export interface Recipe extends BaseEntity {
   ingredientQuantity: number;
   ingredientUnitId: string;
   wastePercentage: number;
+  version?: number;
+  effectiveDate?: string;
+  preparationLocationId?: string;
+  ingredientRows?: RecipeIngredientRow[];
+  calculatedCost?: number;
+  salePrice?: number;
+  grossMargin?: number;
+}
+
+export interface RecipeIngredientRow {
+  ingredientId: string;
+  quantity: number;
+  unitId: string;
 }
 
 export interface Ingredient extends BaseEntity {
@@ -154,6 +177,9 @@ export interface Ingredient extends BaseEntity {
   minimumStock: number;
   cost: number;
   supplierReferences: string;
+  preferredSupplierId?: string;
+  reorderQuantity?: number;
+  storageLocationId?: string;
 }
 
 export interface UnitOfMeasure extends BaseEntity {
@@ -169,6 +195,8 @@ export interface Warehouse extends BaseEntity {
   warehouseType: string;
   addressOrZone: string;
   responsibleEmployeeId: string;
+  isDefault?: boolean;
+  operationalPurpose?: string;
 }
 
 export interface OpeningStockBalance {
@@ -183,6 +211,7 @@ export interface OpeningStockBalance {
 }
 
 export interface Supplier extends BaseEntity {
+  supplierCode?: string;
   contactPerson: string;
   phone: string;
   email: string;
@@ -274,21 +303,36 @@ export interface CoffeeSnapshot {
 
 export interface CoffeeDevelopmentSeed {
   id: string;
+  projectDisplayName: string;
+  locations: CoffeeLocation[];
+  registers: CoffeeRegister[];
+  workstations: CoffeeWorkstation[];
   warehouses: Warehouse[];
+  units: UnitOfMeasure[];
   ingredients: Ingredient[];
   menuCategories: MenuCategory[];
   menuItems: MenuItem[];
+  modifiers: ModifierGroup[];
   recipes: Recipe[];
   openingStockBalances: OpeningStockBalance[];
+  suppliers: Supplier[];
+  employees: Employee[];
 }
 
 export interface CoffeeOperationalSnapshot {
   project: CoffeeProject;
+  businessProfile: BusinessProfile;
+  settings: CoffeeSettings;
+  locations: ReadonlyArray<CoffeeLocation>;
   warehouses: ReadonlyArray<Warehouse>;
+  units: ReadonlyArray<UnitOfMeasure>;
   ingredients: ReadonlyArray<Ingredient>;
   menuItems: ReadonlyArray<MenuItem>;
+  modifiers: ReadonlyArray<ModifierGroup>;
   recipes: ReadonlyArray<Recipe>;
   openingStockBalances: ReadonlyArray<OpeningStockBalance>;
+  suppliers: ReadonlyArray<Supplier>;
+  employees: ReadonlyArray<Employee>;
 }
 
 export type CollectionKey =

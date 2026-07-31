@@ -14,6 +14,8 @@ export interface ProjectSummary {
   role: ProjectRole;
   createdAt: string;
   isDevelopmentDemo?: boolean;
+  displayName?: string;
+  developmentLabel?: 'crash-test';
 }
 
 export interface SolutionSummary {
@@ -40,6 +42,7 @@ export interface MockRepository {
   createProject(input: CreateProjectInput): Promise<ProjectSummary>;
   ensureProject(project: ProjectSummary): Promise<ProjectSummary>;
   deleteProject(id: string): Promise<void>;
+  clearProjects(): Promise<void>;
   listSolutions(): Promise<SolutionSummary[]>;
   authenticate(email: string, password: string): Promise<void>;
   register(name: string, email: string, password: string): Promise<void>;
@@ -56,7 +59,7 @@ export class MockRepositoryError extends Error {
   }
 }
 
-const storageKey = 'barakasb.mock.projects.v2';
+export const projectStorageKey = 'barakasb.mock.projects.v2';
 
 const seedProjects: ProjectSummary[] = [];
 
@@ -93,9 +96,9 @@ const wait = async (milliseconds = 320): Promise<void> => {
 
 function readProjects(): ProjectSummary[] {
   if (typeof window === 'undefined') return seedProjects;
-  const value = window.localStorage.getItem(storageKey);
+  const value = window.localStorage.getItem(projectStorageKey);
   if (!value) {
-    window.localStorage.setItem(storageKey, JSON.stringify(seedProjects));
+    window.localStorage.setItem(projectStorageKey, JSON.stringify(seedProjects));
     return seedProjects;
   }
   try {
@@ -136,7 +139,7 @@ export const mockRepository: MockRepository = {
       createdAt: new Date().toISOString(),
     };
     const projects = [...readProjects(), project];
-    window.localStorage.setItem(storageKey, JSON.stringify(projects));
+    window.localStorage.setItem(projectStorageKey, JSON.stringify(projects));
     return project;
   },
   async ensureProject(project) {
@@ -144,15 +147,22 @@ export const mockRepository: MockRepository = {
     const projects = readProjects();
     const existing = projects.find((candidate) => candidate.id === project.id);
     if (existing) return existing;
-    window.localStorage.setItem(storageKey, JSON.stringify([...projects, project]));
+    window.localStorage.setItem(
+      projectStorageKey,
+      JSON.stringify([...projects, project]),
+    );
     return structuredClone(project);
   },
   async deleteProject(id) {
     await wait(120);
     window.localStorage.setItem(
-      storageKey,
+      projectStorageKey,
       JSON.stringify(readProjects().filter((project) => project.id !== id)),
     );
+  },
+  async clearProjects() {
+    await wait(80);
+    window.localStorage.setItem(projectStorageKey, JSON.stringify([]));
   },
   async listSolutions() {
     await wait(240);

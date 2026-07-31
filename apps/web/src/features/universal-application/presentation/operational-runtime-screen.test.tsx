@@ -1,5 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import {
+  createCoffeeCrashTestSeed,
+  localCoffeeManagerRepositories,
+} from '@barakasb/solution-coffee';
 import type {
   OperationalRuntimeSessionStore,
   ResolvedBusinessEnvironment,
@@ -29,6 +33,15 @@ function session(
 
 describe('OperationalRuntimeScreen', () => {
   it('shows honest disabled readiness without manager-owned editing', async () => {
+    window.localStorage.clear();
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
+      'coffee-1',
+      'North Star',
+    );
+    await localCoffeeManagerRepositories.developmentSeed.apply(
+      'coffee-1',
+      createCoffeeCrashTestSeed('2026-07-31T00:00:00.000Z'),
+    );
     render(
       <I18nProvider>
         <OperationalRuntimeScreen projectId="coffee-1" session={session(environment)} />
@@ -40,6 +53,15 @@ describe('OperationalRuntimeScreen', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Приёмка товаров')).toBeInTheDocument();
     expect(screen.getAllByText('Ещё не реализовано')).toHaveLength(7);
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Идентификация окружения',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Север Coffee Lab — CRASH TEST')).toBeInTheDocument();
+    expect(screen.getByText('Сводка настроенных данных')).toBeInTheDocument();
+    expect(screen.getByText('Доступный каталог')).toBeInTheDocument();
+    expect(screen.getByText('Начальные остатки')).toBeInTheDocument();
     expect(screen.queryByLabelText('Название заведения')).not.toBeInTheDocument();
     expect(screen.queryByText(/создать код/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/изменить код/i)).not.toBeInTheDocument();

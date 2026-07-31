@@ -9,7 +9,6 @@ import {
   solutionLabelKeys,
 } from '@/i18n/entity-labels';
 import { useTranslation } from '@/i18n/i18n-provider';
-import { localCoffeeManagerSetupRepository } from '@/features/manager-coffee-setup/coffee-manager-setup-repository';
 import { mockRepository, type ProjectSummary } from '@/lib/mock-repository';
 import { PageHeading } from './page-heading';
 import { Badge } from './ui/badge';
@@ -24,13 +23,9 @@ export function ProjectsView() {
 
   useEffect(() => {
     let active = true;
-    void localCoffeeManagerSetupRepository
-      .seedDevelopmentDemo()
-      .catch(() => null)
-      .then(() => mockRepository.listProjects())
-      .then((items) => {
-        if (active) setProjects(items);
-      });
+    void mockRepository.listProjects().then((items) => {
+      if (active) setProjects(items);
+    });
     return () => {
       active = false;
     };
@@ -39,7 +34,9 @@ export function ProjectsView() {
   const visible = useMemo(
     () =>
       projects?.filter((project) =>
-        project.name.toLowerCase().includes(query.toLowerCase()),
+        (project.displayName ?? project.name)
+          .toLowerCase()
+          .includes(query.toLowerCase()),
       ) ?? [],
     [projects, query],
   );
@@ -51,12 +48,22 @@ export function ProjectsView() {
         title={t('projects.title')}
         description={t('projects.description')}
         action={
-          <Link
-            href="/projects/new?category=food&solution=coffee"
-            className={buttonVariants({ size: 'lg' })}
-          >
-            <Plus className="size-4" /> {t('projects.createCoffee')}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {process.env.NODE_ENV === 'development' && (
+              <Link
+                href="/projects/dev/coffee-crash-test"
+                className={buttonVariants({ variant: 'secondary', size: 'lg' })}
+              >
+                {t('crashTest.devEntry')}
+              </Link>
+            )}
+            <Link
+              href="/projects/new?category=food&solution=coffee"
+              className={buttonVariants({ size: 'lg' })}
+            >
+              <Plus className="size-4" /> {t('projects.createCoffee')}
+            </Link>
+          </div>
         }
       />
       <div className="relative mb-6 max-w-md">
@@ -124,10 +131,15 @@ export function ProjectsView() {
                     </Badge>
                   </div>
                   <h2 className="mt-8 text-xl font-semibold tracking-[-0.025em]">
-                    {project.name}
+                    {project.displayName ?? project.name}
                   </h2>
-                  {project.isDevelopmentDemo && (
-                    <Badge className="mt-2">{t('projects.developmentDemo')}</Badge>
+                  {project.developmentLabel === 'crash-test' && (
+                    <Badge className="mt-2">{t('crashTest.marker')}</Badge>
+                  )}
+                  {project.displayName && (
+                    <p className="mt-2 text-xs font-semibold text-[var(--muted)]">
+                      {project.name}
+                    </p>
                   )}
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
                     {t(solutionLabelKeys[project.solutionId])} ·{' '}

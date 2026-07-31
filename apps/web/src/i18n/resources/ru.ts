@@ -274,11 +274,6 @@ export const ru = {
   'dashboard.exploreSolutions': 'Посмотреть решения',
   'dashboard.configureCoffee': 'Настроить Coffee',
   'dashboard.openCoffeeAdmin': 'Открыть администрирование',
-  'dashboard.removeDevelopmentDemo': 'Удалить демонстрационный проект',
-  'dashboard.removingDemo': 'Удаляем демонстрационный проект…',
-  'dashboard.removeDemoConfirmation':
-    'Удалить локальный демонстрационный проект? Он не будет создан повторно автоматически.',
-  'projects.developmentDemo': 'Демо · только разработка',
   'solutions.eyebrow': 'Решения',
   'solutions.title': 'Выберите, как будет работать проект',
   'solutions.description':
@@ -373,6 +368,37 @@ export const ru = {
   'settings.operationalNoticesHint':
     'Показывать состояние платформы и уведомления о развёртываниях.',
   'settings.savePreferences': 'Сохранить настройки',
+  'crashTest.devOnly': 'Только для разработки',
+  'crashTest.eyebrow': 'Каноническое тестовое окружение',
+  'crashTest.description':
+    'Управляемый DEV-стенд Coffee с предсказуемыми данными для проверки интерфейсов, изоляции и будущих операций.',
+  'crashTest.installed': 'Установлено',
+  'crashTest.installSuccess':
+    'Проект «{project}» установлен. Код бизнес-среды: {code}.',
+  'crashTest.immutableCode':
+    'Код доступен только для чтения и не изменяется после создания.',
+  'crashTest.marker': 'CRASH TEST · DEV DEMO',
+  'crashTest.openManager': 'Открыть проект',
+  'crashTest.openSetup': 'Открыть настройку Coffee',
+  'crashTest.openOperational': 'Открыть приложение по коду',
+  'crashTest.reinstall': 'Переустановить стенд',
+  'crashTest.delete': 'Удалить crash-test',
+  'crashTest.notInstalled': 'Crash-test окружение не установлено',
+  'crashTest.resetRequired': 'Нужен сброс локальных тестовых данных',
+  'crashTest.resetExplanation':
+    'Установка создаст единственный канонический Coffee-проект и заменит устаревшие локальные тестовые данные в этом браузере.',
+  'crashTest.resetAndInstall': 'Сбросить и установить crash-test',
+  'crashTest.destructiveWarning':
+    'DEV ONLY: все локальные проекты, Coffee-настройки, коды бизнес-сред и устаревшие тестовые данные для localhost в этом браузере будут безвозвратно удалены. Затем будет установлен единственный Coffee crash-test проект. Продолжить?',
+  'crashTest.deleteWarning':
+    'Удалить канонический Coffee crash-test проект и его локальное окружение? Действие не затрагивает серверные данные.',
+  'crashTest.projects': 'Проекты',
+  'crashTest.installations': 'Установки',
+  'crashTest.environments': 'Бизнес-среды',
+  'crashTest.error':
+    'Операция не завершена. Локальные данные не прошли проверку целостности.',
+  'crashTest.devEntry': 'Coffee crash-test',
+  'crashTest.manageEnvironment': 'Управлять DEV-окружением',
   'universal.metaTitle': 'Универсальное приложение BARAKASB',
   'universal.metaDescription': 'Подключение устройства к бизнес-среде BARAKASB.',
   'universal.eyebrow': 'Универсальное приложение',
@@ -426,6 +452,30 @@ export const ru = {
   'operational.accessDeniedDescription':
     'Эта операционная среда не была разрешена в текущем сеансе.',
   'operational.enterCode': 'Перейти к вводу кода',
+  'operational.environmentIdentity': 'Идентификация окружения',
+  'operational.project': 'Проект',
+  'operational.establishment': 'Заведение',
+  'operational.owner': 'Владелец',
+  'operational.defaultLocation': 'Активная локация',
+  'operational.businessEnvironmentId': 'Business Environment ID',
+  'operational.configurationState': 'Конфигурация',
+  'operational.configuredDataAvailable': 'Настроенные данные доступны',
+  'operational.configurationUnavailable':
+    'Настроенные данные Coffee не удалось прочитать.',
+  'operational.dataSummary': 'Сводка настроенных данных',
+  'operational.products': 'Продукты',
+  'operational.recipes': 'Техкарты',
+  'operational.ingredients': 'Ингредиенты',
+  'operational.suppliers': 'Поставщики',
+  'operational.employees': 'Сотрудники',
+  'operational.warehouses': 'Склады',
+  'operational.availableCatalog': 'Доступный каталог',
+  'operational.stockPreview': 'Начальные остатки',
+  'operational.openingValue': 'Оценочная стоимость',
+  'operational.lowStock': 'Ниже минимума',
+  'operational.zeroStock': 'Нулевой остаток',
+  'operational.readOnlyPreview':
+    'Только чтение. Движения запасов и продажи на этом этапе отключены.',
   'operational.modules.goodsReceipt': 'Приёмка товаров',
   'operational.modules.purchasing': 'Закупки',
   'operational.modules.stockBalances': 'Остатки',

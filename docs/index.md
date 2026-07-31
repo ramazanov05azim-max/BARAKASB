@@ -69,6 +69,7 @@ This is the canonical entry point for BARAKASB documentation.
 - [Deployment and scalability](architecture/deployment-and-scalability.md)
 - [Observability](architecture/observability.md)
 - [Testing strategy](architecture/testing-strategy.md)
+- [Coffee crash-test environment](testing/coffee-crash-test-environment.md)
 
 ## Decisions
 

@@ -190,7 +190,11 @@ export function CoffeeProjectEnvironment({
   projectId: string;
   projectName: string;
   locale: CoffeeLocale;
-  projects: Array<{ id: string; name: string }>;
+  projects: Array<{
+    id: string;
+    name: string;
+    developmentLabel?: 'crash-test';
+  }>;
   languageControl: ReactNode;
   repositories?: CoffeeManagerRepositories;
   children: ReactNode;
@@ -216,7 +220,11 @@ function CoffeeShell({
   children,
 }: {
   languageControl: ReactNode;
-  projects: Array<{ id: string; name: string }>;
+  projects: Array<{
+    id: string;
+    name: string;
+    developmentLabel?: 'crash-test';
+  }>;
   children: ReactNode;
 }) {
   const { t } = useCoffeeTranslation();
@@ -332,7 +340,12 @@ function CoffeeShell({
                       ) : (
                         <span className="size-4" />
                       )}
-                      {project.name}
+                      <span className="min-w-0 truncate">{project.name}</span>
+                      {project.developmentLabel === 'crash-test' && (
+                        <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-800">
+                          {t('common.developmentDemo')}
+                        </span>
+                      )}
                     </Link>
                   </DropdownMenu.Item>
                 ))}

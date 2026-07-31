@@ -8,7 +8,7 @@ export default async function CoffeeManagerSetupPage({
 }) {
   const { projectId } = await params;
   return (
-    <PlatformShell>
+    <PlatformShell project={{ id: projectId }}>
       <CoffeeManagerSetupScreen projectId={projectId} />
     </PlatformShell>
   );

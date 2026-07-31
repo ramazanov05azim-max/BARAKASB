@@ -5,17 +5,18 @@ import type {
   ResolvedBusinessEnvironment,
 } from '../application/business-environment-resolution';
 
-const sessionKey = 'barakasb.local.operational-runtime-session.v1';
+export const operationalRuntimeSessionKey =
+  'barakasb.local.operational-runtime-session.v1';
 
 export function createOperationalRuntimeSessionStore(
   storage: Storage,
 ): OperationalRuntimeSessionStore {
   return {
     authorize(environment) {
-      storage.setItem(sessionKey, JSON.stringify(environment));
+      storage.setItem(operationalRuntimeSessionKey, JSON.stringify(environment));
     },
     read(projectId) {
-      const value = storage.getItem(sessionKey);
+      const value = storage.getItem(operationalRuntimeSessionKey);
       if (!value) return null;
       try {
         const parsed = JSON.parse(value) as ResolvedBusinessEnvironment;
@@ -25,7 +26,7 @@ export function createOperationalRuntimeSessionStore(
       }
     },
     clear() {
-      storage.removeItem(sessionKey);
+      storage.removeItem(operationalRuntimeSessionKey);
     },
   };
 }

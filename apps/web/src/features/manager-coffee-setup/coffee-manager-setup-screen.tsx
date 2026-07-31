@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -164,6 +165,18 @@ export function CoffeeManagerSetupScreen({
             <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[var(--text-secondary)] sm:text-[15px]">
               {t('coffeeOnboarding.successDescription')}
             </p>
+            {createdRecord.project.developmentLabel === 'crash-test' && (
+              <div className="mt-5">
+                <Badge tone="warning">{t('crashTest.marker')}</Badge>
+                <p className="mt-2 text-lg font-semibold">
+                  {createdRecord.project.displayName ??
+                    createdRecord.establishment?.establishmentName}
+                </p>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  {createdRecord.project.name}
+                </p>
+              </div>
+            )}
 
             <div className="mx-auto mt-8 max-w-xl rounded-[22px] border border-blue-200/70 bg-[var(--action-soft)] p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
@@ -187,6 +200,9 @@ export function CoffeeManagerSetupScreen({
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
                 {t(copied ? 'coffeeOnboarding.copied' : 'coffeeOnboarding.copyCode')}
               </Button>
+              <p className="mt-4 text-xs text-[var(--muted)]">
+                {t('crashTest.immutableCode')}
+              </p>
             </div>
 
             <div className="mt-8 flex flex-col-reverse justify-center gap-3 sm:flex-row">
@@ -196,6 +212,28 @@ export function CoffeeManagerSetupScreen({
               >
                 {t('coffeeOnboarding.backToProjects')}
               </Link>
+              {createdRecord.project.developmentLabel === 'crash-test' && (
+                <>
+                  <Link
+                    href="/app/connect"
+                    className={buttonVariants({
+                      variant: 'secondary',
+                      size: 'lg',
+                    })}
+                  >
+                    {t('crashTest.openOperational')}
+                  </Link>
+                  <Link
+                    href="/projects/dev/coffee-crash-test"
+                    className={buttonVariants({
+                      variant: 'secondary',
+                      size: 'lg',
+                    })}
+                  >
+                    {t('crashTest.manageEnvironment')}
+                  </Link>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>

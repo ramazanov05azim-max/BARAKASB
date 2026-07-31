@@ -16,8 +16,14 @@ export type {
   CoffeeLocale,
   CoffeeOperationalSnapshot,
 } from './domain';
+export {
+  coffeeCrashTestSeedId,
+  coffeeCrashTestSeedVersion,
+  createCoffeeCrashTestSeed,
+} from './coffee-crash-test-seed';
 export { CoffeeRepositoryError } from './repository-contracts';
 export {
+  clearLocalCoffeeDevelopmentStorage,
   localCoffeeManagerRepositories,
   localCoffeeOperationalReadRepository,
 } from './repositories';

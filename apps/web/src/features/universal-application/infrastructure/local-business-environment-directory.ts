@@ -2,6 +2,7 @@
 
 import type {
   BusinessEnvironmentDirectoryWriter,
+  BusinessEnvironmentDirectoryMaintenance,
   BusinessEnvironmentResolver,
   ResolvedBusinessEnvironment,
 } from '../application/business-environment-resolution';
@@ -10,8 +11,8 @@ import {
   normalizeBusinessEnvironmentCode,
 } from '../domain/business-environment-code';
 
-const directoryStorageKey = 'barakasb.local.business-environment.directory.v1';
-const legacyCoffeeStorageKey = 'barakasb.local.coffee.environments.v1';
+export const directoryStorageKey = 'barakasb.local.business-environment.directory.v1';
+export const legacyCoffeeStorageKey = 'barakasb.local.coffee.environments.v1';
 
 interface DirectoryEntry {
   readonly code: string;
@@ -21,6 +22,7 @@ interface DirectoryEntry {
 export interface LocalBusinessEnvironmentDirectory {
   resolver: BusinessEnvironmentResolver;
   writer: BusinessEnvironmentDirectoryWriter;
+  maintenance: BusinessEnvironmentDirectoryMaintenance;
 }
 
 function isResolvedEnvironment(value: unknown): value is ResolvedBusinessEnvironment {
@@ -157,6 +159,15 @@ export function createLocalBusinessEnvironmentDirectory(
         storage.setItem(directoryStorageKey, JSON.stringify(entries));
       },
     },
+    maintenance: {
+      async clear() {
+        storage.removeItem(directoryStorageKey);
+        storage.removeItem(legacyCoffeeStorageKey);
+      },
+      async count() {
+        return readEntries(storage).length;
+      },
+    },
   };
 }
 
@@ -176,4 +187,10 @@ export const localBusinessEnvironmentDirectoryWriter: BusinessEnvironmentDirecto
     register: (code, environment) =>
       browserDirectory().writer.register(code, environment),
     removeProject: (projectId) => browserDirectory().writer.removeProject(projectId),
+  };
+
+export const localBusinessEnvironmentDirectoryMaintenance: BusinessEnvironmentDirectoryMaintenance =
+  {
+    clear: () => browserDirectory().maintenance.clear(),
+    count: () => browserDirectory().maintenance.count(),
   };

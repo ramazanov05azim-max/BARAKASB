@@ -60,13 +60,16 @@ export function CoffeeProjectBridge({
     <CoffeeProjectEnvironment
       key={project.id}
       projectId={project.id}
-      projectName={project.name}
+      projectName={project.displayName ?? project.name}
       locale={locale}
       projects={projects
         .filter((availableProject) => availableProject.solutionId === 'coffee')
         .map((availableProject) => ({
           id: availableProject.id,
-          name: availableProject.name,
+          name: availableProject.displayName ?? availableProject.name,
+          ...(availableProject.developmentLabel
+            ? { developmentLabel: availableProject.developmentLabel }
+            : {}),
         }))}
       languageControl={<LanguageSwitcher compact />}
     >

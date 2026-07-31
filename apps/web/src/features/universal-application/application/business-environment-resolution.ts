@@ -20,6 +20,11 @@ export interface BusinessEnvironmentDirectoryWriter {
   removeProject(projectId: string): Promise<void>;
 }
 
+export interface BusinessEnvironmentDirectoryMaintenance {
+  clear(): Promise<void>;
+  count(): Promise<number>;
+}
+
 export interface OperationalRuntimeSessionStore {
   authorize(environment: ResolvedBusinessEnvironment): void;
   read(projectId: string): ResolvedBusinessEnvironment | null;

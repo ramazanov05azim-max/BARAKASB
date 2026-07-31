@@ -17,13 +17,14 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Brand } from './brand';
 import { LanguageSwitcher } from './language-switcher';
 import { Button, buttonVariants } from './ui/button';
 import { useTranslation } from '@/i18n/i18n-provider';
 import type { TranslationKey } from '@/i18n/config';
 import { cn } from '@/lib/utils';
+import { mockRepository, type ProjectSummary } from '@/lib/mock-repository';
 
 export function PlatformShell({
   children,
@@ -36,6 +37,21 @@ export function PlatformShell({
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void mockRepository.listProjects().then((items) => {
+      if (active) setProjects(items);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const currentProject = project
+    ? projects.find((item) => item.id === project.id)
+    : undefined;
 
   const accountItems = [
     { href: '/projects', label: t('nav.myProjects'), icon: Grid2X2 },
@@ -79,7 +95,10 @@ export function PlatformShell({
               <button className="hidden min-h-10 items-center gap-2 rounded-[12px] px-3 text-sm font-semibold transition hover:bg-[var(--action-soft)] sm:flex">
                 <span>
                   {project
-                    ? (project.name ?? t(project.nameKey ?? 'common.newProject'))
+                    ? (currentProject?.displayName ??
+                      currentProject?.name ??
+                      project.name ??
+                      t(project.nameKey ?? 'common.newProject'))
                     : t('nav.allProjects')}
                 </span>
                 <ChevronDown className="size-4 text-[var(--muted)]" />
@@ -101,6 +120,23 @@ export function PlatformShell({
                     {t('nav.allProjects')}
                   </Link>
                 </DropdownMenu.Item>
+                {projects.map((availableProject) => (
+                  <DropdownMenu.Item key={availableProject.id} asChild>
+                    <Link
+                      href={`/projects/${availableProject.id}`}
+                      className="flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-2 text-sm outline-none hover:bg-[var(--action-soft)]"
+                    >
+                      <span className="min-w-0 flex-1 truncate">
+                        {availableProject.displayName ?? availableProject.name}
+                      </span>
+                      {availableProject.developmentLabel === 'crash-test' && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-800">
+                          {t('crashTest.marker')}
+                        </span>
+                      )}
+                    </Link>
+                  </DropdownMenu.Item>
+                ))}
                 <DropdownMenu.Separator className="my-1 h-px bg-[var(--border)]" />
                 <DropdownMenu.Item asChild>
                   <Link

@@ -231,6 +231,11 @@ function initialSnapshot(projectId: string, projectName: string): CoffeeSnapshot
       receiptInformation: '',
       contactInformation: '',
       businessAddress: '',
+      ownerName: '',
+      registrationIdentifier: '',
+      operatingStatus: 'active',
+      businessHours: '',
+      defaultWarehouseId: '',
       updatedAt: timestamp,
     },
     settings: {
@@ -633,12 +638,38 @@ export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
       await wait(120);
       const snapshot = readSnapshot(projectId);
       if (snapshot.developmentSeedId === seed.id) return;
+      snapshot.project.name = seed.projectDisplayName;
+      snapshot.project.developmentLabel = 'crash-test';
+      snapshot.project.defaultLocationId =
+        seed.locations.find((location) => location.isDefault)?.id ??
+        seed.locations[0]?.id ??
+        null;
+      snapshot.project.ready = true;
+      snapshot.project.solutionStatus = 'configured';
+      snapshot.project.updatedAt = now();
+      snapshot.locations = structuredClone(seed.locations);
+      snapshot.registers = structuredClone(seed.registers);
+      snapshot.workstations = structuredClone(seed.workstations);
       snapshot.warehouses = structuredClone(seed.warehouses);
+      snapshot.units = structuredClone(seed.units);
       snapshot.ingredients = structuredClone(seed.ingredients);
       snapshot.menuCategories = structuredClone(seed.menuCategories);
       snapshot.menuItems = structuredClone(seed.menuItems);
+      snapshot.modifiers = structuredClone(seed.modifiers);
       snapshot.recipes = structuredClone(seed.recipes);
       snapshot.openingStockBalances = structuredClone(seed.openingStockBalances);
+      snapshot.suppliers = structuredClone(seed.suppliers);
+      snapshot.employees = structuredClone(seed.employees);
+      snapshot.roles = snapshot.roles.map((role) => ({
+        ...role,
+        assignmentCount:
+          seed.employees.filter((employee) => employee.assignedRoleId === role.id)
+            .length + (role.id === 'owner' ? 1 : 0),
+      }));
+      snapshot.setupSteps = snapshot.setupSteps.map((step) => ({
+        ...step,
+        status: 'complete',
+      }));
       snapshot.developmentSeedId = seed.id;
       appendActivity(
         snapshot,
@@ -660,14 +691,30 @@ export const localCoffeeOperationalReadRepository: CoffeeOperationalReadReposito
     const snapshot = readSnapshot(projectId);
     return structuredClone({
       project: snapshot.project,
+      businessProfile: snapshot.businessProfile,
+      settings: snapshot.settings,
+      locations: snapshot.locations,
       warehouses: snapshot.warehouses,
+      units: snapshot.units,
       ingredients: snapshot.ingredients,
       menuItems: snapshot.menuItems,
+      modifiers: snapshot.modifiers,
       recipes: snapshot.recipes,
       openingStockBalances: snapshot.openingStockBalances,
+      suppliers: snapshot.suppliers,
+      employees: snapshot.employees,
     });
   },
 };
+
+export function clearLocalCoffeeDevelopmentStorage(storage: Storage): number {
+  const keys = Array.from({ length: storage.length }, (_, index) =>
+    storage.key(index),
+  ).filter((key): key is string => Boolean(key));
+  const targets = keys.filter((key) => key.startsWith(`${storagePrefix}.`));
+  for (const key of targets) storage.removeItem(key);
+  return targets.length;
+}
 
 export function setupStatusCounts(steps: SetupStep[]): Record<SetupStepStatus, number> {
   return steps.reduce<Record<SetupStepStatus, number>>(
