@@ -49,6 +49,7 @@ const requiredFiles = [
   'docs/security/privileged-access.md',
   'docs/adr/README.md',
   'docs/adr/template.md',
+  'packages/core/solutions-runtime/DATA_LIFECYCLE.md',
 ];
 
 const zonePolicies = [
@@ -128,6 +129,26 @@ function walk(directory, predicate = () => true) {
 for (const file of requiredFiles) {
   if (!fs.existsSync(path.join(root, file))) {
     errors.push(`Missing required file: ${file}`);
+  }
+}
+
+const solutionRuntimeLedgerPath = path.join(
+  root,
+  'packages/core/solutions-runtime/DATA_LIFECYCLE.md',
+);
+if (fs.existsSync(solutionRuntimeLedgerPath)) {
+  const ledger = fs.readFileSync(solutionRuntimeLedgerPath, 'utf8');
+  for (const heading of [
+    '## Business Environment field classification',
+    '## Authoritative and derived copies',
+    '## Logging, tracing, and metrics',
+    '## Archival and deletion',
+    '## Recovery',
+    '## Ownership and review',
+  ]) {
+    if (!ledger.includes(heading)) {
+      errors.push(`Solution Runtime lifecycle ledger is missing: ${heading}`);
+    }
   }
 }
 
