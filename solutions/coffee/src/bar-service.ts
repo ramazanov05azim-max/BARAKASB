@@ -4,16 +4,19 @@ import type {
   CoffeeBarState,
   CoffeeBarStore,
   CoffeeOrder,
+  CoffeeOrderBatch,
   CoffeeOrderItem,
   CoffeeOrderItemDraftInput,
   CoffeeOrderItemStatus,
-  CoffeePaymentStatus,
+  CoffeePaymentMethod,
   CoffeePreparationWorkspace,
+  CoffeeSeatingInput,
 } from './bar-domain';
 import {
   CoffeeBarOperationError,
   type CoffeeBarOrderRepository,
 } from './bar-repository-contracts';
+import type { ModifierGroup } from './domain';
 import type { CoffeeOperationalReadRepository } from './repository-contracts';
 
 export interface CoffeeBarService {
@@ -21,8 +24,21 @@ export interface CoffeeBarService {
   createTableOrder(
     context: CoffeeBarRuntimeContext,
     tableId: string,
+    seating: CoffeeSeatingInput,
   ): Promise<CoffeeOrder>;
   createTakeawayOrder(context: CoffeeBarRuntimeContext): Promise<CoffeeOrder>;
+  changeGuestCount(
+    context: CoffeeBarRuntimeContext,
+    orderId: string,
+    seating: CoffeeSeatingInput,
+  ): Promise<CoffeeOrder>;
+  transferOrder(
+    context: CoffeeBarRuntimeContext,
+    orderId: string,
+    tableId: string,
+    allowCapacityOverride?: boolean,
+  ): Promise<CoffeeOrder>;
+  releaseTable(context: CoffeeBarRuntimeContext, orderId: string): Promise<void>;
   addItem(
     context: CoffeeBarRuntimeContext,
     orderId: string,
@@ -38,7 +54,7 @@ export interface CoffeeBarService {
     context: CoffeeBarRuntimeContext,
     orderId: string,
     itemId: string,
-    input: Pick<CoffeeOrderItemDraftInput, 'modifiers' | 'comment'>,
+    input: CoffeeOrderItemDraftInput,
   ): Promise<CoffeeOrder>;
   removeItem(
     context: CoffeeBarRuntimeContext,
@@ -52,13 +68,20 @@ export interface CoffeeBarService {
     itemId: string,
     status: Exclude<CoffeeOrderItemStatus, 'DRAFT' | 'CANCELLED'>,
   ): Promise<CoffeeOrder>;
-  setPayment(
+  recordPayment(
     context: CoffeeBarRuntimeContext,
     orderId: string,
-    status: CoffeePaymentStatus,
+    method: CoffeePaymentMethod,
   ): Promise<CoffeeOrder>;
-  issueOrder(context: CoffeeBarRuntimeContext, orderId: string): Promise<CoffeeOrder>;
-  cancelOrder(context: CoffeeBarRuntimeContext, orderId: string): Promise<CoffeeOrder>;
+  completeOrder(
+    context: CoffeeBarRuntimeContext,
+    orderId: string,
+  ): Promise<CoffeeOrder>;
+  cancelOrder(
+    context: CoffeeBarRuntimeContext,
+    orderId: string,
+    reason?: string,
+  ): Promise<CoffeeOrder>;
   subscribe(context: CoffeeBarRuntimeContext, listener: () => void): () => void;
 }
 
@@ -70,67 +93,41 @@ interface Dependencies {
 }
 
 type OperationalSnapshot = Awaited<ReturnType<CoffeeOperationalReadRepository['load']>>;
+const terminalStatuses = new Set<CoffeeOrder['status']>(['COMPLETED', 'CANCELLED']);
 
-const terminalStatuses = new Set<CoffeeOrder['status']>(['ISSUED', 'CANCELLED']);
+const money = (value: number): number => Math.round(value * 100) / 100;
+const itemTotal = (item: CoffeeOrderItem): number =>
+  money(item.finalUnitPrice * item.quantity);
+const withTotal = (order: CoffeeOrder): CoffeeOrder => ({
+  ...order,
+  total: money(order.items.reduce((sum, item) => sum + itemTotal(item), 0)),
+});
 
-function money(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-function itemTotal(item: CoffeeOrderItem): number {
-  const modifierTotal = item.modifiers.reduce(
-    (sum, modifier) => sum + modifier.priceAdjustment,
-    0,
-  );
-  return money((item.unitPrice + modifierTotal) * item.quantity);
-}
-
-function withTotal(order: CoffeeOrder): CoffeeOrder {
-  return {
-    ...order,
-    total: money(order.items.reduce((sum, item) => sum + itemTotal(item), 0)),
-  };
-}
-
-function statusAfterPreparation(order: CoffeeOrder): CoffeeOrder['status'] {
-  if (order.items.length > 0 && order.items.every((item) => item.status === 'READY')) {
-    return 'READY';
-  }
-  if (
-    order.items.some(
-      (item) => item.status === 'ACCEPTED' || item.status === 'PREPARING',
-    )
-  ) {
-    return 'IN_PREPARATION';
-  }
-  return 'SENT';
-}
-
-function parsePriceAdjustment(optionName: string): number {
-  const match = optionName.match(/\+\s*(\d+(?:[.,]\d+)?)/u);
+function parsePriceAdjustment(value: string): number {
+  const match = value.match(/\+\s*(\d+(?:[.,]\d+)?)/u);
   return match ? Number.parseFloat(match[1]?.replace(',', '.') ?? '0') : 0;
 }
 
-function parseModifierOptions(options: string): ReadonlyArray<{
+function parseOptions(group: ModifierGroup): ReadonlyArray<{
   name: string;
   priceAdjustment: number;
 }> {
-  return options
+  return group.options
     .split(';')
-    .map((option) => option.trim())
+    .map((value) => value.trim())
     .filter(Boolean)
     .map((name) => ({ name, priceAdjustment: parsePriceAdjustment(name) }));
 }
 
-function preparationWorkspace(
+function routeFor(
   snapshot: OperationalSnapshot,
   productId: string,
 ): CoffeePreparationWorkspace {
-  const item = snapshot.menuItems.find((candidate) => candidate.id === productId);
-  if (!item) throw new CoffeeBarOperationError('NOT_FOUND');
-  if (!item.recipeId) return 'IMMEDIATE';
-  return item.preparationLocationId &&
-    item.preparationLocationId !== snapshot.project.defaultLocationId
+  const product = snapshot.menuItems.find((candidate) => candidate.id === productId);
+  if (!product) throw new CoffeeBarOperationError('NOT_FOUND');
+  if (!product.recipeId) return 'IMMEDIATE';
+  return product.preparationLocationId &&
+    product.preparationLocationId !== snapshot.project.defaultLocationId
     ? 'KITCHEN'
     : 'BAR';
 }
@@ -141,29 +138,7 @@ function findOrder(store: CoffeeBarStore, orderId: string): CoffeeOrder {
   return order;
 }
 
-function replaceOrder(store: CoffeeBarStore, order: CoffeeOrder): CoffeeBarStore {
-  return {
-    ...store,
-    orders: store.orders.map((candidate) =>
-      candidate.orderId === order.orderId ? order : candidate,
-    ),
-  };
-}
-
-function audit(store: CoffeeBarStore, entry: CoffeeBarAuditEntry): CoffeeBarStore {
-  return { ...store, audit: [entry, ...store.audit].slice(0, 500) };
-}
-
-function ensureDraft(order: CoffeeOrder): void {
-  if (order.status !== 'DRAFT') {
-    throw new CoffeeBarOperationError('ORDER_IMMUTABLE');
-  }
-}
-
-function ensureContextOrder(
-  context: CoffeeBarRuntimeContext,
-  order: CoffeeOrder,
-): void {
+function assertContext(context: CoffeeBarRuntimeContext, order: CoffeeOrder): void {
   if (
     order.projectId !== context.projectId ||
     order.businessEnvironmentId !== context.businessEnvironmentId ||
@@ -171,6 +146,21 @@ function ensureContextOrder(
   ) {
     throw new CoffeeBarOperationError('ACCESS_DENIED');
   }
+}
+
+function assertMutable(order: CoffeeOrder): void {
+  if (terminalStatuses.has(order.status) || order.paymentStatus === 'PAID') {
+    throw new CoffeeBarOperationError('ORDER_IMMUTABLE');
+  }
+}
+
+function findDraftItem(order: CoffeeOrder, itemId: string): CoffeeOrderItem {
+  const item = order.items.find((candidate) => candidate.id === itemId);
+  if (!item) throw new CoffeeBarOperationError('NOT_FOUND');
+  if (item.status !== 'DRAFT' || item.submittedBatchId) {
+    throw new CoffeeBarOperationError('ORDER_IMMUTABLE');
+  }
+  return item;
 }
 
 function nextOrderNumber(orders: ReadonlyArray<CoffeeOrder>): string {
@@ -181,6 +171,80 @@ function nextOrderNumber(orders: ReadonlyArray<CoffeeOrder>): string {
   return `Б-${String(highest + 1).padStart(4, '0')}`;
 }
 
+function preparationStatus(order: CoffeeOrder): CoffeeOrder['status'] {
+  const submitted = order.items.filter((item) => item.submittedBatchId);
+  if (submitted.length === 0) return 'DRAFT';
+  if (submitted.every((item) => item.status === 'READY')) return 'READY';
+  if (
+    submitted.some((item) => item.status === 'ACCEPTED' || item.status === 'PREPARING')
+  ) {
+    return 'IN_PREPARATION';
+  }
+  return 'SENT';
+}
+
+function tableStatus(order: CoffeeOrder): CoffeeBarState['tables'][number]['status'] {
+  if (order.paymentStatus === 'PAID') {
+    return order.status === 'READY' ? 'AWAITING_COMPLETION' : 'PAID';
+  }
+  if (order.status === 'DRAFT') return order.items.length ? 'DRAFT' : 'OCCUPIED';
+  if (order.status === 'SENT') return 'SENT';
+  if (order.status === 'IN_PREPARATION') return 'IN_PREPARATION';
+  if (order.status === 'READY') return 'READY';
+  return 'OCCUPIED';
+}
+
+function selectedModifiers(
+  snapshot: OperationalSnapshot,
+  productId: string,
+  selections: CoffeeOrderItemDraftInput['modifiers'],
+): CoffeeOrderItem['modifiers'] {
+  const product = snapshot.menuItems.find((candidate) => candidate.id === productId);
+  if (!product) throw new CoffeeBarOperationError('NOT_FOUND');
+  const chosen = selections ?? [];
+  const result: CoffeeOrderItem['modifiers'][number][] = [];
+  for (const groupId of product.modifierGroupIds) {
+    const group = snapshot.modifiers.find(
+      (candidate) => candidate.id === groupId && candidate.status === 'active',
+    );
+    if (!group) continue;
+    const groupSelections = chosen.filter(
+      (selection) => selection.modifierGroupId === group.id,
+    );
+    const minimum = group.required
+      ? Math.max(1, group.minimumSelections)
+      : group.minimumSelections;
+    if (
+      groupSelections.length < minimum ||
+      groupSelections.length > group.maximumSelections ||
+      (group.selectionType === 'single' && groupSelections.length > 1)
+    ) {
+      throw new CoffeeBarOperationError('INVALID_MODIFIERS');
+    }
+    const options = parseOptions(group);
+    for (const selection of groupSelections) {
+      const option = options.find(
+        (candidate) => candidate.name === selection.optionName,
+      );
+      if (!option) throw new CoffeeBarOperationError('INVALID_MODIFIERS');
+      result.push({
+        modifierGroupId: group.id,
+        modifierName: group.name,
+        optionName: option.name,
+        priceAdjustment: option.priceAdjustment,
+      });
+    }
+  }
+  if (
+    chosen.some(
+      (selection) => !product.modifierGroupIds.includes(selection.modifierGroupId),
+    )
+  ) {
+    throw new CoffeeBarOperationError('INVALID_MODIFIERS');
+  }
+  return result;
+}
+
 export function createCoffeeBarService({
   operational,
   orders,
@@ -188,7 +252,7 @@ export function createCoffeeBarService({
   createId = () =>
     globalThis.crypto?.randomUUID?.() ?? `local-${Date.now().toString(36)}`,
 }: Dependencies): CoffeeBarService {
-  async function authorizedSnapshot(
+  async function snapshotFor(
     context: CoffeeBarRuntimeContext,
   ): Promise<OperationalSnapshot> {
     if (
@@ -224,6 +288,7 @@ export function createCoffeeBarService({
     context: CoffeeBarRuntimeContext,
     orderId: string,
     operation: CoffeeBarAuditEntry['operation'],
+    detail: string | null = null,
   ): CoffeeBarAuditEntry {
     return {
       id: createId(),
@@ -233,40 +298,65 @@ export function createCoffeeBarService({
       employeeId: context.employeeId,
       operation,
       occurredAt: now(),
+      detail,
     };
   }
 
-  async function saveOrder(
+  async function persist(
     context: CoffeeBarRuntimeContext,
     store: CoffeeBarStore,
     order: CoffeeOrder,
     operation?: CoffeeBarAuditEntry['operation'],
+    detail?: string,
   ): Promise<CoffeeOrder> {
-    const updatedStore = operation
-      ? audit(replaceOrder(store, order), auditEntry(context, order.orderId, operation))
-      : replaceOrder(store, order);
-    await orders.save(context.projectId, updatedStore);
+    const replaced = {
+      ...store,
+      orders: store.orders.map((candidate) =>
+        candidate.orderId === order.orderId ? order : candidate,
+      ),
+    };
+    const next = operation
+      ? {
+          ...replaced,
+          audit: [
+            auditEntry(context, order.orderId, operation, detail ?? null),
+            ...replaced.audit,
+          ].slice(0, 500),
+        }
+      : replaced;
+    await orders.save(context.projectId, next);
     return structuredClone(order);
   }
 
   async function createOrder(
     context: CoffeeBarRuntimeContext,
     tableId: string | null,
+    seating: CoffeeSeatingInput,
   ): Promise<CoffeeOrder> {
-    const snapshot = await authorizedSnapshot(context);
+    const snapshot = await snapshotFor(context);
     const location =
       snapshot.locations.find(
         (candidate) => candidate.id === snapshot.project.defaultLocationId,
       ) ?? snapshot.locations.find((candidate) => candidate.status === 'active');
     if (!location) throw new CoffeeBarOperationError('NOT_FOUND');
-    if (tableId) {
-      const table = snapshot.tables.find(
-        (candidate) =>
-          candidate.id === tableId &&
-          candidate.locationId === location.id &&
-          candidate.status === 'active',
-      );
-      if (!table) throw new CoffeeBarOperationError('NOT_FOUND');
+    const table = tableId
+      ? snapshot.tables.find(
+          (candidate) =>
+            candidate.id === tableId &&
+            candidate.locationId === location.id &&
+            candidate.status === 'active',
+        )
+      : undefined;
+    if (tableId && !table) throw new CoffeeBarOperationError('NOT_FOUND');
+    if (
+      table &&
+      seating.guestCount > table.seatCount &&
+      !seating.allowCapacityOverride
+    ) {
+      throw new CoffeeBarOperationError('CAPACITY_EXCEEDED');
+    }
+    if (!Number.isInteger(seating.guestCount) || seating.guestCount < 1) {
+      throw new CoffeeBarOperationError('INVALID_OPERATION');
     }
     const store = await orders.load(context.projectId);
     if (
@@ -291,28 +381,37 @@ export function createCoffeeBarService({
       tableId,
       orderNumber: nextOrderNumber(store.orders),
       status: 'DRAFT',
+      guestCount: seating.guestCount,
+      seatingNote: seating.note?.trim() ?? '',
+      openedAt: timestamp,
+      openedByEmployeeId: context.employeeId,
       createdAt: timestamp,
       createdByEmployeeId: context.employeeId,
       paymentStatus: 'UNPAID',
+      paymentMethod: null,
+      paidAmount: null,
+      paidAt: null,
+      paidByEmployeeId: null,
       total: 0,
       issuedAt: null,
+      completedAt: null,
+      completedByEmployeeId: null,
+      cancellationReason: null,
       updatedAt: timestamp,
       items: [],
+      batches: [],
     };
-    await orders.save(
-      context.projectId,
-      audit(
-        { ...store, orders: [...store.orders, order] },
-        auditEntry(context, order.orderId, 'ORDER_CREATED'),
-      ),
-    );
+    await orders.save(context.projectId, {
+      orders: [...store.orders, order],
+      audit: [auditEntry(context, order.orderId, 'ORDER_CREATED'), ...store.audit],
+    });
     return structuredClone(order);
   }
 
   return {
     async load(context) {
       const [snapshot, store] = await Promise.all([
-        authorizedSnapshot(context),
+        snapshotFor(context),
         orders.load(context.projectId),
       ]);
       const location =
@@ -337,310 +436,422 @@ export function createCoffeeBarService({
         locationName: location.name,
         employeeId: employee.id,
         employeeName: employee.fullName,
+        zones: snapshot.floorPlanZones
+          .filter((zone) => zone.locationId === location.id && zone.active)
+          .sort((left, right) => left.sortOrder - right.sortOrder)
+          .map((zone) => ({
+            id: zone.id,
+            name: zone.name,
+            canvasWidth: zone.canvasWidth,
+            canvasHeight: zone.canvasHeight,
+          })),
         tables: snapshot.tables
           .filter(
             (table) => table.locationId === location.id && table.status === 'active',
           )
+          .sort((left, right) => left.sortOrder - right.sortOrder)
           .map((table) => {
             const activeOrder = scopedOrders.find(
               (order) =>
                 order.tableId === table.id && !terminalStatuses.has(order.status),
             );
-            const status = !activeOrder
-              ? 'FREE'
-              : activeOrder.status === 'READY' && activeOrder.paymentStatus === 'UNPAID'
-                ? 'UNPAID'
-                : activeOrder.status === 'READY'
-                  ? 'READY'
-                  : 'OCCUPIED';
             return {
               id: table.id,
+              zoneId: table.zoneId,
               name: table.name,
               code: table.code,
-              seats: table.seats,
-              status,
+              seatCount: table.seatCount,
+              shape: table.shape,
+              positionX: table.positionX,
+              positionY: table.positionY,
+              width: table.width,
+              height: table.height,
+              rotation: table.rotation,
+              status: activeOrder ? tableStatus(activeOrder) : 'FREE',
               activeOrderId: activeOrder?.orderId ?? null,
             };
           }),
         categories: snapshot.menuCategories
           .filter((category) => category.status === 'active')
           .sort((left, right) => left.displayOrder - right.displayOrder)
-          .map((category) => ({ id: category.id, name: category.name })),
+          .map(({ id, name }) => ({ id, name })),
         products: snapshot.menuItems
-          .filter((item) => item.status === 'active')
-          .map((item) => ({
-            id: item.id,
-            name: item.name,
-            categoryId: item.categoryId,
-            price: item.sellingPrice,
-            currency: item.currency ?? location.currency,
-            modifierGroupIds: item.modifierGroupIds,
+          .filter((product) => product.status === 'active')
+          .map((product) => ({
+            id: product.id,
+            name: product.name,
+            categoryId: product.categoryId,
+            price: product.sellingPrice,
+            currency: product.currency ?? location.currency,
+            modifierGroupIds: product.modifierGroupIds,
           })),
         modifierGroups: snapshot.modifiers
           .filter((group) => group.status === 'active')
           .map((group) => ({
             id: group.id,
             name: group.name,
-            options: parseModifierOptions(group.options),
+            selectionType: group.selectionType,
+            required: group.required,
+            minimumSelections: group.minimumSelections,
+            maximumSelections: group.maximumSelections,
+            defaultOptionName: null,
+            options: parseOptions(group),
           })),
         orders: scopedOrders,
       };
     },
-    createTableOrder: (context, tableId) => createOrder(context, tableId),
-    createTakeawayOrder: (context) => createOrder(context, null),
-    async addItem(context, orderId, input) {
-      const snapshot = await authorizedSnapshot(context);
+    createTableOrder: (context, tableId, seating) =>
+      createOrder(context, tableId, seating),
+    createTakeawayOrder: (context) => createOrder(context, null, { guestCount: 1 }),
+    async changeGuestCount(context, orderId, seating) {
+      const snapshot = await snapshotFor(context);
       const store = await orders.load(context.projectId);
       const order = findOrder(store, orderId);
-      ensureContextOrder(context, order);
-      ensureDraft(order);
+      assertContext(context, order);
+      assertMutable(order);
+      const table = order.tableId
+        ? snapshot.tables.find((candidate) => candidate.id === order.tableId)
+        : undefined;
+      if (
+        !Number.isInteger(seating.guestCount) ||
+        seating.guestCount < 1 ||
+        (table &&
+          seating.guestCount > table.seatCount &&
+          !seating.allowCapacityOverride)
+      ) {
+        throw new CoffeeBarOperationError(
+          table && seating.guestCount > table.seatCount
+            ? 'CAPACITY_EXCEEDED'
+            : 'INVALID_OPERATION',
+        );
+      }
+      return persist(
+        context,
+        store,
+        {
+          ...order,
+          guestCount: seating.guestCount,
+          seatingNote: seating.note?.trim() ?? order.seatingNote,
+          updatedAt: now(),
+        },
+        'GUEST_COUNT_CHANGED',
+        String(seating.guestCount),
+      );
+    },
+    async transferOrder(context, orderId, tableId, allowCapacityOverride = false) {
+      const snapshot = await snapshotFor(context);
+      const store = await orders.load(context.projectId);
+      const order = findOrder(store, orderId);
+      assertContext(context, order);
+      assertMutable(order);
+      if (order.orderType !== 'TABLE')
+        throw new CoffeeBarOperationError('INVALID_OPERATION');
+      const table = snapshot.tables.find(
+        (candidate) =>
+          candidate.id === tableId &&
+          candidate.locationId === order.locationId &&
+          candidate.status === 'active',
+      );
+      if (!table) throw new CoffeeBarOperationError('NOT_FOUND');
+      if (
+        store.orders.some(
+          (candidate) =>
+            candidate.orderId !== orderId &&
+            candidate.tableId === tableId &&
+            !terminalStatuses.has(candidate.status),
+        )
+      ) {
+        throw new CoffeeBarOperationError('TABLE_NOT_FREE');
+      }
+      if (order.guestCount > table.seatCount && !allowCapacityOverride) {
+        throw new CoffeeBarOperationError('CAPACITY_EXCEEDED');
+      }
+      return persist(
+        context,
+        store,
+        { ...order, tableId, updatedAt: now() },
+        'ORDER_TRANSFERRED',
+        tableId,
+      );
+    },
+    async releaseTable(context, orderId) {
+      await snapshotFor(context);
+      const store = await orders.load(context.projectId);
+      const order = findOrder(store, orderId);
+      assertContext(context, order);
+      if (
+        order.orderType !== 'TABLE' ||
+        order.items.length > 0 ||
+        order.batches.length > 0 ||
+        order.status !== 'DRAFT'
+      ) {
+        throw new CoffeeBarOperationError('INVALID_OPERATION');
+      }
+      await orders.save(context.projectId, {
+        orders: store.orders.filter((candidate) => candidate.orderId !== orderId),
+        audit: [auditEntry(context, orderId, 'ORDER_RELEASED'), ...store.audit],
+      });
+    },
+    async addItem(context, orderId, input) {
+      const snapshot = await snapshotFor(context);
+      const store = await orders.load(context.projectId);
+      const order = findOrder(store, orderId);
+      assertContext(context, order);
+      assertMutable(order);
       const product = snapshot.menuItems.find(
         (candidate) =>
           candidate.id === input.productId && candidate.status === 'active',
       );
       if (!product) throw new CoffeeBarOperationError('NOT_FOUND');
-      const modifiers = (input.modifiers ?? []).map((selection) => {
-        const group = snapshot.modifiers.find(
-          (candidate) =>
-            candidate.id === selection.modifierGroupId &&
-            product.modifierGroupIds.includes(candidate.id) &&
-            candidate.status === 'active',
-        );
-        const option = group
-          ? parseModifierOptions(group.options).find(
-              (candidate) => candidate.name === selection.optionName,
-            )
-          : undefined;
-        if (!group || !option) throw new CoffeeBarOperationError('NOT_FOUND');
-        return {
-          modifierGroupId: group.id,
-          modifierName: group.name,
-          optionName: option.name,
-          priceAdjustment: option.priceAdjustment,
-        };
-      });
+      const modifiers = selectedModifiers(snapshot, product.id, input.modifiers);
+      const finalUnitPrice = money(
+        product.sellingPrice +
+          modifiers.reduce((sum, modifier) => sum + modifier.priceAdjustment, 0),
+      );
       const item: CoffeeOrderItem = {
         id: createId(),
         productId: product.id,
         productName: product.name,
+        variantName: input.variantName?.trim() || null,
         quantity: 1,
         unitPrice: product.sellingPrice,
+        finalUnitPrice,
         modifiers,
         comment: input.comment?.trim() ?? '',
-        preparationWorkspace: preparationWorkspace(snapshot, product.id),
+        preparationWorkspace: routeFor(snapshot, product.id),
         status: 'DRAFT',
+        submittedBatchId: null,
       };
-      const updated = withTotal({
-        ...order,
-        items: [...order.items, item],
-        updatedAt: now(),
-      });
-      return saveOrder(context, store, updated);
+      return persist(
+        context,
+        store,
+        withTotal({ ...order, items: [...order.items, item], updatedAt: now() }),
+      );
     },
     async updateItemQuantity(context, orderId, itemId, quantity) {
-      await authorizedSnapshot(context);
+      await snapshotFor(context);
       const store = await orders.load(context.projectId);
       const order = findOrder(store, orderId);
-      ensureContextOrder(context, order);
-      ensureDraft(order);
+      assertContext(context, order);
+      assertMutable(order);
+      findDraftItem(order, itemId);
       if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
         throw new CoffeeBarOperationError('INVALID_OPERATION');
       }
-      if (!order.items.some((item) => item.id === itemId)) {
-        throw new CoffeeBarOperationError('NOT_FOUND');
-      }
-      const updated = withTotal({
-        ...order,
-        items: order.items.map((item) =>
-          item.id === itemId ? { ...item, quantity } : item,
-        ),
-        updatedAt: now(),
-      });
-      return saveOrder(context, store, updated);
+      return persist(
+        context,
+        store,
+        withTotal({
+          ...order,
+          updatedAt: now(),
+          items: order.items.map((item) =>
+            item.id === itemId ? { ...item, quantity } : item,
+          ),
+        }),
+      );
     },
     async updateItemDetails(context, orderId, itemId, input) {
-      const snapshot = await authorizedSnapshot(context);
+      const snapshot = await snapshotFor(context);
       const store = await orders.load(context.projectId);
       const order = findOrder(store, orderId);
-      ensureContextOrder(context, order);
-      ensureDraft(order);
-      const currentItem = order.items.find((item) => item.id === itemId);
-      if (!currentItem) throw new CoffeeBarOperationError('NOT_FOUND');
-      const product = snapshot.menuItems.find(
-        (candidate) => candidate.id === currentItem.productId,
+      assertContext(context, order);
+      assertMutable(order);
+      const item = findDraftItem(order, itemId);
+      const modifiers = selectedModifiers(snapshot, item.productId, input.modifiers);
+      const finalUnitPrice = money(
+        item.unitPrice +
+          modifiers.reduce((sum, modifier) => sum + modifier.priceAdjustment, 0),
       );
-      if (!product) throw new CoffeeBarOperationError('NOT_FOUND');
-      const modifiers = (input.modifiers ?? []).map((selection) => {
-        const group = snapshot.modifiers.find(
-          (candidate) =>
-            candidate.id === selection.modifierGroupId &&
-            product.modifierGroupIds.includes(candidate.id),
-        );
-        const option = group
-          ? parseModifierOptions(group.options).find(
-              (candidate) => candidate.name === selection.optionName,
-            )
-          : undefined;
-        if (!group || !option) throw new CoffeeBarOperationError('NOT_FOUND');
-        return {
-          modifierGroupId: group.id,
-          modifierName: group.name,
-          optionName: option.name,
-          priceAdjustment: option.priceAdjustment,
-        };
-      });
-      const updated = withTotal({
+      return persist(
+        context,
+        store,
+        withTotal({
+          ...order,
+          updatedAt: now(),
+          items: order.items.map((candidate) =>
+            candidate.id === itemId
+              ? {
+                  ...candidate,
+                  variantName: input.variantName?.trim() || null,
+                  modifiers,
+                  comment: input.comment?.trim() ?? '',
+                  finalUnitPrice,
+                }
+              : candidate,
+          ),
+        }),
+      );
+    },
+    async removeItem(context, orderId, itemId) {
+      await snapshotFor(context);
+      const store = await orders.load(context.projectId);
+      const order = findOrder(store, orderId);
+      assertContext(context, order);
+      assertMutable(order);
+      findDraftItem(order, itemId);
+      return persist(
+        context,
+        store,
+        withTotal({
+          ...order,
+          items: order.items.filter((item) => item.id !== itemId),
+          updatedAt: now(),
+        }),
+      );
+    },
+    async sendOrder(context, orderId) {
+      await snapshotFor(context);
+      const store = await orders.load(context.projectId);
+      const order = findOrder(store, orderId);
+      assertContext(context, order);
+      assertMutable(order);
+      const draftItems = order.items.filter((item) => item.status === 'DRAFT');
+      if (draftItems.length === 0) throw new CoffeeBarOperationError('ORDER_EMPTY');
+      const timestamp = now();
+      const batchId = createId();
+      const batch: CoffeeOrderBatch = {
+        batchId,
+        orderId,
+        createdAt: timestamp,
+        createdByEmployeeId: context.employeeId,
+        itemIds: draftItems.map((item) => item.id),
+        sentAt: timestamp,
+        status: 'SENT',
+      };
+      const updated = {
         ...order,
-        items: order.items.map((item) =>
-          item.id === itemId
+        status: 'SENT' as const,
+        batches: [...order.batches, batch],
+        items: order.items.map((item): CoffeeOrderItem =>
+          item.status === 'DRAFT'
             ? {
                 ...item,
-                modifiers,
-                comment: input.comment?.trim() ?? item.comment,
+                submittedBatchId: batchId,
+                status: item.preparationWorkspace === 'IMMEDIATE' ? 'READY' : 'NEW',
               }
             : item,
         ),
-        updatedAt: now(),
-      });
-      return saveOrder(context, store, updated);
-    },
-    async removeItem(context, orderId, itemId) {
-      await authorizedSnapshot(context);
-      const store = await orders.load(context.projectId);
-      const order = findOrder(store, orderId);
-      ensureContextOrder(context, order);
-      ensureDraft(order);
-      if (!order.items.some((item) => item.id === itemId)) {
-        throw new CoffeeBarOperationError('NOT_FOUND');
-      }
-      const updated = withTotal({
-        ...order,
-        items: order.items.filter((item) => item.id !== itemId),
-        updatedAt: now(),
-      });
-      return saveOrder(context, store, updated);
-    },
-    async sendOrder(context, orderId) {
-      await authorizedSnapshot(context);
-      const store = await orders.load(context.projectId);
-      const order = findOrder(store, orderId);
-      ensureContextOrder(context, order);
-      if (order.status !== 'DRAFT') return structuredClone(order);
-      if (order.items.length === 0) {
-        throw new CoffeeBarOperationError('ORDER_EMPTY');
-      }
-      const items = order.items.map((item) => ({
-        ...item,
-        status: (item.preparationWorkspace === 'IMMEDIATE'
-          ? 'READY'
-          : 'NEW') as CoffeeOrderItemStatus,
-      }));
-      const updatedBase: CoffeeOrder = {
-        ...order,
-        items,
-        status: 'SENT',
-        updatedAt: now(),
+        updatedAt: timestamp,
       };
-      const updated = {
-        ...updatedBase,
-        status: statusAfterPreparation(updatedBase),
-      };
-      return saveOrder(context, store, updated, 'ORDER_SENT');
+      const next = { ...updated, status: preparationStatus(updated) };
+      return persist(context, store, next, 'BATCH_SENT', batchId);
     },
     async updateBarItemStatus(context, orderId, itemId, status) {
-      await authorizedSnapshot(context);
+      await snapshotFor(context);
       const store = await orders.load(context.projectId);
       const order = findOrder(store, orderId);
-      ensureContextOrder(context, order);
-      if (terminalStatuses.has(order.status) || order.status === 'DRAFT') {
-        throw new CoffeeBarOperationError('INVALID_OPERATION');
-      }
+      assertContext(context, order);
+      if (terminalStatuses.has(order.status))
+        throw new CoffeeBarOperationError('ORDER_IMMUTABLE');
       const item = order.items.find((candidate) => candidate.id === itemId);
       if (!item) throw new CoffeeBarOperationError('NOT_FOUND');
-      if (item.preparationWorkspace !== 'BAR') {
+      if (item.preparationWorkspace !== 'BAR')
         throw new CoffeeBarOperationError('ITEM_ROUTE_MISMATCH');
-      }
-      const allowedNext: Partial<Record<CoffeeOrderItemStatus, CoffeeOrderItemStatus>> =
-        {
-          NEW: 'ACCEPTED',
-          ACCEPTED: 'PREPARING',
-          PREPARING: 'READY',
-        };
-      if (item.status === status) return structuredClone(order);
-      if (allowedNext[item.status] !== status) {
+      const transitions: Record<string, ReadonlyArray<CoffeeOrderItemStatus>> = {
+        NEW: ['ACCEPTED'],
+        ACCEPTED: ['PREPARING'],
+        PREPARING: ['READY'],
+        READY: ['READY'],
+      };
+      if (!transitions[item.status]?.includes(status)) {
         throw new CoffeeBarOperationError('INVALID_OPERATION');
       }
-      const updatedBase: CoffeeOrder = {
+      const changed = {
         ...order,
         items: order.items.map((candidate) =>
           candidate.id === itemId ? { ...candidate, status } : candidate,
         ),
         updatedAt: now(),
       };
-      const updated = {
-        ...updatedBase,
-        status: statusAfterPreparation(updatedBase),
-      };
-      return saveOrder(context, store, updated, 'ITEM_STATUS_CHANGED');
+      return persist(
+        context,
+        store,
+        { ...changed, status: preparationStatus(changed) },
+        'ITEM_STATUS_CHANGED',
+        `${itemId}:${status}`,
+      );
     },
-    async setPayment(context, orderId, status) {
-      await authorizedSnapshot(context);
+    async recordPayment(context, orderId, method) {
+      await snapshotFor(context);
       const store = await orders.load(context.projectId);
       const order = findOrder(store, orderId);
-      ensureContextOrder(context, order);
-      if (
-        order.status === 'DRAFT' ||
-        order.status === 'CANCELLED' ||
-        order.status === 'ISSUED'
-      ) {
+      assertContext(context, order);
+      if (terminalStatuses.has(order.status))
+        throw new CoffeeBarOperationError('ORDER_IMMUTABLE');
+      if (order.paymentStatus === 'PAID')
+        throw new CoffeeBarOperationError('PAYMENT_ALREADY_RECORDED');
+      if (!order.items.length || order.items.some((item) => item.status === 'DRAFT')) {
         throw new CoffeeBarOperationError('INVALID_OPERATION');
-      }
-      if (order.paymentStatus === status) return structuredClone(order);
-      const updated = { ...order, paymentStatus: status, updatedAt: now() };
-      return saveOrder(context, store, updated, 'PAYMENT_CHANGED');
-    },
-    async issueOrder(context, orderId) {
-      await authorizedSnapshot(context);
-      const store = await orders.load(context.projectId);
-      const order = findOrder(store, orderId);
-      ensureContextOrder(context, order);
-      if (order.status === 'ISSUED') return structuredClone(order);
-      if (order.status !== 'READY') {
-        throw new CoffeeBarOperationError('ORDER_NOT_READY');
-      }
-      if (order.paymentStatus === 'UNPAID') {
-        throw new CoffeeBarOperationError('PAYMENT_REQUIRED');
       }
       const timestamp = now();
-      const updated: CoffeeOrder = {
-        ...order,
-        status: 'ISSUED',
-        issuedAt: timestamp,
-        updatedAt: timestamp,
-      };
-      return saveOrder(context, store, updated, 'ORDER_ISSUED');
+      return persist(
+        context,
+        store,
+        {
+          ...order,
+          paymentStatus: 'PAID',
+          paymentMethod: method,
+          paidAmount: order.total,
+          paidAt: timestamp,
+          paidByEmployeeId: context.employeeId,
+          updatedAt: timestamp,
+        },
+        'PAYMENT_RECORDED',
+        method,
+      );
     },
-    async cancelOrder(context, orderId) {
-      await authorizedSnapshot(context);
+    async completeOrder(context, orderId) {
+      await snapshotFor(context);
       const store = await orders.load(context.projectId);
       const order = findOrder(store, orderId);
-      ensureContextOrder(context, order);
-      if (order.status === 'CANCELLED') return structuredClone(order);
-      if (
-        order.status === 'READY' ||
-        order.status === 'ISSUED' ||
-        order.items.some((item) => item.status === 'READY')
-      ) {
-        throw new CoffeeBarOperationError('INVALID_OPERATION');
+      assertContext(context, order);
+      if (terminalStatuses.has(order.status))
+        throw new CoffeeBarOperationError('ORDER_IMMUTABLE');
+      if (order.paymentStatus !== 'PAID')
+        throw new CoffeeBarOperationError('PAYMENT_REQUIRED');
+      if (!order.items.length || order.items.some((item) => item.status !== 'READY')) {
+        throw new CoffeeBarOperationError('ORDER_NOT_READY');
       }
-      const updated: CoffeeOrder = {
-        ...order,
-        status: 'CANCELLED',
-        items: order.items.map((item) => ({ ...item, status: 'CANCELLED' })),
-        updatedAt: now(),
-      };
-      return saveOrder(context, store, updated, 'ORDER_CANCELLED');
+      const timestamp = now();
+      return persist(
+        context,
+        store,
+        {
+          ...order,
+          status: 'COMPLETED',
+          issuedAt: timestamp,
+          completedAt: timestamp,
+          completedByEmployeeId: context.employeeId,
+          updatedAt: timestamp,
+        },
+        'ORDER_COMPLETED',
+      );
     },
-    subscribe: (context, listener) => orders.subscribe(context.projectId, listener),
+    async cancelOrder(context, orderId, reason = '') {
+      await snapshotFor(context);
+      const store = await orders.load(context.projectId);
+      const order = findOrder(store, orderId);
+      assertContext(context, order);
+      assertMutable(order);
+      const hasSubmittedItems = order.items.some((item) => item.submittedBatchId);
+      if (hasSubmittedItems && !reason.trim()) {
+        throw new CoffeeBarOperationError('CANCELLATION_REASON_REQUIRED');
+      }
+      return persist(
+        context,
+        store,
+        {
+          ...order,
+          status: 'CANCELLED',
+          cancellationReason: reason.trim() || 'Черновик отменён',
+          updatedAt: now(),
+        },
+        'ORDER_CANCELLED',
+        reason.trim() || undefined,
+      );
+    },
+    subscribe(context, listener) {
+      return orders.subscribe(context.projectId, listener);
+    },
   };
 }

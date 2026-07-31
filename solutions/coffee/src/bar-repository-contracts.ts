@@ -18,7 +18,12 @@ export class CoffeeBarOperationError extends Error {
       | 'ORDER_IMMUTABLE'
       | 'ITEM_ROUTE_MISMATCH'
       | 'PAYMENT_REQUIRED'
-      | 'ORDER_NOT_READY',
+      | 'ORDER_NOT_READY'
+      | 'CAPACITY_EXCEEDED'
+      | 'INVALID_MODIFIERS'
+      | 'PAYMENT_ALREADY_RECORDED'
+      | 'CANCELLATION_REASON_REQUIRED'
+      | 'TABLE_NOT_FREE',
   ) {
     super(code);
     this.name = 'CoffeeBarOperationError';

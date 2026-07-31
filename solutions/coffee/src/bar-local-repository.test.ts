@@ -15,13 +15,25 @@ function order(projectId: string, orderId: string): CoffeeOrder {
     tableId: null,
     orderNumber: 'Б-0001',
     status: 'DRAFT',
+    guestCount: 1,
+    seatingNote: '',
+    openedAt: '2026-07-31T12:00:00.000Z',
+    openedByEmployeeId: 'employee-bar',
     createdAt: '2026-07-31T12:00:00.000Z',
     createdByEmployeeId: 'employee-bar',
     paymentStatus: 'UNPAID',
+    paymentMethod: null,
+    paidAmount: null,
+    paidAt: null,
+    paidByEmployeeId: null,
     total: 0,
     issuedAt: null,
+    completedAt: null,
+    completedByEmployeeId: null,
+    cancellationReason: null,
     updatedAt: '2026-07-31T12:00:00.000Z',
     items: [],
+    batches: [],
   };
 }
 
@@ -106,6 +118,32 @@ describe('local Coffee Bar repository adapter', () => {
     (loaded.orders as CoffeeOrder[])[0] = order('project-a', 'mutated');
     await expect(repository.load('project-a')).resolves.toMatchObject({
       orders: [{ orderId: 'order-a' }],
+    });
+  });
+
+  it('migrates legacy issued orders without losing their history', async () => {
+    const repository = createLocalCoffeeBarOrderRepository(window.localStorage, window);
+    await repository.save('project-a', store('project-a', 'order-a'));
+    const storageKey = [...storedValues.keys()][0]!;
+    const legacy = JSON.parse(storedValues.get(storageKey)!) as {
+      orders: Array<Record<string, unknown>>;
+      audit: unknown[];
+    };
+    legacy.orders[0]!.status = 'ISSUED';
+    legacy.orders[0]!.paymentStatus = 'CASH';
+    delete legacy.orders[0]!.completedAt;
+    delete legacy.orders[0]!.batches;
+    storedValues.set(storageKey, JSON.stringify(legacy));
+
+    await expect(repository.load('project-a')).resolves.toMatchObject({
+      orders: [
+        {
+          status: 'COMPLETED',
+          paymentStatus: 'PAID',
+          paymentMethod: 'CASH',
+          completedAt: '2026-07-31T12:00:00.000Z',
+        },
+      ],
     });
   });
 });

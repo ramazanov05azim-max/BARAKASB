@@ -1,5 +1,6 @@
 import type {
   CoffeeDevelopmentSeed,
+  CoffeeFloorPlanZone,
   CoffeeLocation,
   CoffeeTable,
   Employee,
@@ -11,7 +12,7 @@ import type {
   Warehouse,
 } from './domain';
 
-export const coffeeCrashTestSeedVersion = 3;
+export const coffeeCrashTestSeedVersion = 4;
 export const coffeeCrashTestSeedId = `coffee-crash-test-v${coffeeCrashTestSeedVersion}`;
 
 const active = 'active' as const;
@@ -75,12 +76,54 @@ function locations(timestamp: string): CoffeeLocation[] {
   ];
 }
 
+function floorPlanZones(timestamp: string): CoffeeFloorPlanZone[] {
+  return [
+    {
+      id: 'crash-zone-main',
+      locationId: 'crash-location-main',
+      name: 'Основной зал',
+      zoneType: 'MAIN_HALL',
+      canvasWidth: 800,
+      canvasHeight: 500,
+      active: true,
+      sortOrder: 1,
+      updatedAt: timestamp,
+    },
+    {
+      id: 'crash-zone-street',
+      locationId: 'crash-location-main',
+      name: 'Улица',
+      zoneType: 'STREET',
+      canvasWidth: 800,
+      canvasHeight: 500,
+      active: true,
+      sortOrder: 2,
+      updatedAt: timestamp,
+    },
+  ];
+}
+
 function tables(timestamp: string): CoffeeTable[] {
   return Array.from({ length: 12 }, (_, index) => ({
     id: `crash-table-${String(index + 1).padStart(2, '0')}`,
     name: `Стол ${index + 1}`,
     code: `T-${String(index + 1).padStart(2, '0')}`,
-    seats: index < 4 ? 2 : index < 10 ? 4 : 6,
+    zoneId: index < 8 ? 'crash-zone-main' : 'crash-zone-street',
+    shape:
+      index % 4 === 0
+        ? 'ROUND'
+        : index % 4 === 1
+          ? 'SQUARE'
+          : index % 4 === 2
+            ? 'RECTANGLE'
+            : 'BAR_SEAT',
+    positionX: 60 + (index % 4) * 175,
+    positionY: 65 + (Math.floor(index / 4) % 2) * 190,
+    width: index % 4 === 2 ? 150 : index % 4 === 3 ? 80 : 110,
+    height: index % 4 === 2 ? 90 : index % 4 === 3 ? 60 : 110,
+    rotation: index % 4 === 2 ? 0 : 0,
+    seatCount: index < 4 ? 2 : index < 10 ? 4 : 6,
+    sortOrder: index + 1,
     locationId: 'crash-location-main',
     status: active,
     updatedAt: timestamp,
@@ -926,6 +969,7 @@ export function createCoffeeCrashTestSeed(timestamp: string): CoffeeDevelopmentS
     id: coffeeCrashTestSeedId,
     projectDisplayName: 'Север Coffee Lab — CRASH TEST',
     locations: locations(timestamp),
+    floorPlanZones: floorPlanZones(timestamp),
     tables: tables(timestamp),
     registers: [
       {

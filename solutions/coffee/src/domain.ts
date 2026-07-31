@@ -109,10 +109,40 @@ export interface CoffeeLocation extends BaseEntity {
   operationalPurpose?: string;
 }
 
+export type CoffeeServiceZoneType =
+  'MAIN_HALL' | 'TERRACE' | 'STREET' | 'BAR_COUNTER' | 'OTHER';
+
+export interface CoffeeFloorPlanZone {
+  id: string;
+  locationId: string;
+  name: string;
+  zoneType: CoffeeServiceZoneType;
+  canvasWidth: number;
+  canvasHeight: number;
+  active: boolean;
+  sortOrder: number;
+  updatedAt: string;
+}
+
+export type CoffeeTableShape = 'ROUND' | 'SQUARE' | 'RECTANGLE' | 'BAR_SEAT';
+
 export interface CoffeeTable extends BaseEntity {
   locationId: string;
+  zoneId: string;
   code: string;
-  seats: number;
+  shape: CoffeeTableShape;
+  positionX: number;
+  positionY: number;
+  width: number;
+  height: number;
+  rotation: number;
+  seatCount: number;
+  sortOrder: number;
+}
+
+export interface CoffeeFloorPlan {
+  zones: CoffeeFloorPlanZone[];
+  tables: CoffeeTable[];
 }
 
 export interface CoffeeRegister extends BaseEntity {
@@ -315,6 +345,7 @@ export interface CoffeeSnapshot {
   businessProfile: BusinessProfile;
   settings: CoffeeSettings;
   locations: CoffeeLocation[];
+  floorPlanZones: CoffeeFloorPlanZone[];
   tables: CoffeeTable[];
   registers: CoffeeRegister[];
   workstations: CoffeeWorkstation[];
@@ -341,6 +372,7 @@ export interface CoffeeDevelopmentSeed {
   id: string;
   projectDisplayName: string;
   locations: CoffeeLocation[];
+  floorPlanZones: CoffeeFloorPlanZone[];
   tables: CoffeeTable[];
   registers: CoffeeRegister[];
   workstations: CoffeeWorkstation[];
@@ -361,6 +393,7 @@ export interface CoffeeOperationalSnapshot {
   businessProfile: BusinessProfile;
   settings: CoffeeSettings;
   locations: ReadonlyArray<CoffeeLocation>;
+  floorPlanZones: ReadonlyArray<CoffeeFloorPlanZone>;
   tables: ReadonlyArray<CoffeeTable>;
   warehouses: ReadonlyArray<Warehouse>;
   units: ReadonlyArray<UnitOfMeasure>;

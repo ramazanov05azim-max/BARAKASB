@@ -12,35 +12,51 @@ export {
 export { CoffeeSettingsScreen } from './settings-screen';
 export { CoffeeNotFoundScreen } from './not-found-screen';
 export { CoffeeBarWorkspaceScreen } from './bar-workspace-screen';
+export { CoffeeFloorPlanScreen } from './floor-plan-screen';
 export { createCoffeeBarService } from './bar-service';
+export {
+  CoffeeFloorPlanError,
+  createCoffeeFloorPlanService,
+} from './floor-plan-service';
 export { createLocalCoffeeBarOrderRepository } from './bar-local-repository';
 export type {
   CoffeeBarRuntimeContext,
   CoffeeBarState,
   CoffeeBarStore,
   CoffeeBarTableView,
+  CoffeeBarZoneView,
   CoffeeOrder,
+  CoffeeOrderBatch,
   CoffeeOrderItem,
   CoffeeOrderItemDraftInput,
   CoffeeOrderItemModifier,
   CoffeeOrderItemStatus,
   CoffeeOrderStatus,
   CoffeeOrderType,
+  CoffeePaymentMethod,
   CoffeePaymentStatus,
   CoffeePreparationWorkspace,
+  CoffeeSeatingInput,
   CoffeeTableOperationalStatus,
 } from './bar-domain';
 export type { CoffeeBarService } from './bar-service';
+export type {
+  CoffeeFloorPlanErrorCode,
+  CoffeeFloorPlanService,
+} from './floor-plan-service';
 export {
   CoffeeBarOperationError,
   type CoffeeBarOrderRepository,
 } from './bar-repository-contracts';
 export type {
   CoffeeDevelopmentSeed,
+  CoffeeFloorPlan,
+  CoffeeFloorPlanZone,
   CoffeeLocale,
   CoffeeOperationalSnapshot,
   CoffeeOperationalWorkspace,
   CoffeeTable,
+  CoffeeTableShape,
   CoffeeSolutionModuleId,
   CoffeeSolutionStructure,
   Employee,
@@ -61,6 +77,7 @@ export type {
   ActivityRepository,
   BusinessProfileRepository,
   CoffeeDevelopmentSeedRepository,
+  CoffeeFloorPlanRepository,
   CoffeeManagerRepositories,
   CoffeeOperationalReadRepository,
   CoffeeProjectRepository,

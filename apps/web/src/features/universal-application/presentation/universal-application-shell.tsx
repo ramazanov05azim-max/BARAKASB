@@ -27,7 +27,7 @@ export function UniversalApplicationShell({ children }: { children: ReactNode })
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex min-h-[calc(100dvh-8.5rem)] w-full max-w-6xl items-center justify-center px-[max(1rem,env(safe-area-inset-left))] py-10 sm:py-14">
+      <main className="relative z-10 mx-auto flex min-h-[calc(100dvh-8.5rem)] w-full max-w-[1600px] items-center justify-center px-[max(1rem,env(safe-area-inset-left))] py-10 sm:py-14 lg:h-[calc(100dvh-8rem)] lg:min-h-0 lg:items-start lg:py-4">
         {children}
       </main>
 

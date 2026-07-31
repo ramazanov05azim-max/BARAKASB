@@ -1,6 +1,11 @@
 'use client';
 
-import type { CoffeeBarStore } from './bar-domain';
+import type {
+  CoffeeBarAuditEntry,
+  CoffeeBarStore,
+  CoffeeOrder,
+  CoffeeOrderItem,
+} from './bar-domain';
 import type { CoffeeBarOrderRepository } from './bar-repository-contracts';
 
 export const coffeeBarOrderStoragePrefix = 'barakasb.mock.coffee.bar-orders.v1';
@@ -21,6 +26,181 @@ function browserStorage(): Storage {
   return window.localStorage;
 }
 
+function objectValue(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function normalizeItem(value: unknown, legacyBatchId: string): CoffeeOrderItem {
+  const item = objectValue(value);
+  const modifiers = Array.isArray(item.modifiers) ? item.modifiers : [];
+  const unitPrice = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+  const modifierPrice = modifiers.reduce((sum, modifier) => {
+    const record = objectValue(modifier);
+    return (
+      sum + (typeof record.priceAdjustment === 'number' ? record.priceAdjustment : 0)
+    );
+  }, 0);
+  const status = typeof item.status === 'string' ? item.status : 'DRAFT';
+  const submitted = status !== 'DRAFT';
+  return {
+    id: String(item.id ?? ''),
+    productId: String(item.productId ?? ''),
+    productName: String(item.productName ?? ''),
+    variantName: typeof item.variantName === 'string' ? item.variantName : null,
+    quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+    unitPrice,
+    finalUnitPrice:
+      typeof item.finalUnitPrice === 'number'
+        ? item.finalUnitPrice
+        : unitPrice + modifierPrice,
+    modifiers: modifiers as CoffeeOrderItem['modifiers'],
+    comment: typeof item.comment === 'string' ? item.comment : '',
+    preparationWorkspace:
+      item.preparationWorkspace === 'KITCHEN' ||
+      item.preparationWorkspace === 'IMMEDIATE'
+        ? item.preparationWorkspace
+        : 'BAR',
+    status:
+      status === 'NEW' ||
+      status === 'ACCEPTED' ||
+      status === 'PREPARING' ||
+      status === 'READY' ||
+      status === 'CANCELLED'
+        ? status
+        : 'DRAFT',
+    submittedBatchId:
+      typeof item.submittedBatchId === 'string'
+        ? item.submittedBatchId
+        : submitted
+          ? legacyBatchId
+          : null,
+  };
+}
+
+function normalizeOrder(value: unknown): CoffeeOrder {
+  const order = objectValue(value);
+  const orderId = String(order.orderId ?? '');
+  const updatedAt = String(
+    order.updatedAt ?? order.createdAt ?? new Date(0).toISOString(),
+  );
+  const legacyBatchId = `legacy-${orderId}`;
+  const items = Array.isArray(order.items)
+    ? order.items.map((item) => normalizeItem(item, legacyBatchId))
+    : [];
+  const hasSubmitted = items.some((item) => item.submittedBatchId);
+  const oldPayment = order.paymentStatus;
+  const isPaid =
+    oldPayment === 'PAID' || oldPayment === 'CASH' || oldPayment === 'CARD';
+  const oldStatus = order.status;
+  const status =
+    oldStatus === 'ISSUED'
+      ? 'COMPLETED'
+      : oldStatus === 'SENT' ||
+          oldStatus === 'IN_PREPARATION' ||
+          oldStatus === 'READY' ||
+          oldStatus === 'COMPLETED' ||
+          oldStatus === 'CANCELLED'
+        ? oldStatus
+        : 'DRAFT';
+  return {
+    orderId,
+    projectId: String(order.projectId ?? ''),
+    businessEnvironmentId: String(order.businessEnvironmentId ?? ''),
+    workspaceId: String(order.workspaceId ?? ''),
+    locationId: String(order.locationId ?? ''),
+    orderType: order.orderType === 'TABLE' ? 'TABLE' : 'TAKEAWAY',
+    tableId: typeof order.tableId === 'string' ? order.tableId : null,
+    orderNumber: String(order.orderNumber ?? ''),
+    status,
+    guestCount: typeof order.guestCount === 'number' ? order.guestCount : 1,
+    seatingNote: typeof order.seatingNote === 'string' ? order.seatingNote : '',
+    openedAt: String(order.openedAt ?? order.createdAt ?? updatedAt),
+    openedByEmployeeId: String(
+      order.openedByEmployeeId ?? order.createdByEmployeeId ?? '',
+    ),
+    createdAt: String(order.createdAt ?? updatedAt),
+    createdByEmployeeId: String(order.createdByEmployeeId ?? ''),
+    paymentStatus: isPaid ? 'PAID' : 'UNPAID',
+    paymentMethod:
+      oldPayment === 'CASH' || oldPayment === 'CARD'
+        ? oldPayment
+        : order.paymentMethod === 'CASH' || order.paymentMethod === 'CARD'
+          ? order.paymentMethod
+          : null,
+    paidAmount: isPaid && typeof order.total === 'number' ? order.total : null,
+    paidAt: isPaid ? String(order.paidAt ?? updatedAt) : null,
+    paidByEmployeeId: isPaid
+      ? String(order.paidByEmployeeId ?? order.createdByEmployeeId ?? '')
+      : null,
+    total: typeof order.total === 'number' ? order.total : 0,
+    issuedAt: typeof order.issuedAt === 'string' ? order.issuedAt : null,
+    completedAt:
+      status === 'COMPLETED'
+        ? String(order.completedAt ?? order.issuedAt ?? updatedAt)
+        : null,
+    completedByEmployeeId:
+      status === 'COMPLETED'
+        ? String(order.completedByEmployeeId ?? order.createdByEmployeeId ?? '')
+        : null,
+    cancellationReason:
+      typeof order.cancellationReason === 'string' ? order.cancellationReason : null,
+    updatedAt,
+    items,
+    batches: Array.isArray(order.batches)
+      ? (order.batches as CoffeeOrder['batches'])
+      : hasSubmitted
+        ? [
+            {
+              batchId: legacyBatchId,
+              orderId,
+              createdAt: String(order.createdAt ?? updatedAt),
+              createdByEmployeeId: String(order.createdByEmployeeId ?? ''),
+              itemIds: items
+                .filter((item) => item.submittedBatchId)
+                .map((item) => item.id),
+              sentAt: updatedAt,
+              status: 'SENT',
+            },
+          ]
+        : [],
+  };
+}
+
+function normalizeAudit(value: unknown): CoffeeBarAuditEntry | null {
+  const entry = objectValue(value);
+  if (!entry.id || !entry.orderId) return null;
+  const operation =
+    entry.operation === 'ORDER_SENT'
+      ? 'BATCH_SENT'
+      : entry.operation === 'ORDER_ISSUED'
+        ? 'ORDER_COMPLETED'
+        : entry.operation;
+  const supported: ReadonlyArray<CoffeeBarAuditEntry['operation']> = [
+    'ORDER_CREATED',
+    'GUEST_COUNT_CHANGED',
+    'ORDER_TRANSFERRED',
+    'ORDER_RELEASED',
+    'BATCH_SENT',
+    'ITEM_STATUS_CHANGED',
+    'PAYMENT_RECORDED',
+    'ORDER_COMPLETED',
+    'ORDER_CANCELLED',
+  ];
+  if (!supported.includes(operation as CoffeeBarAuditEntry['operation'])) return null;
+  return {
+    id: String(entry.id),
+    projectId: String(entry.projectId ?? ''),
+    businessEnvironmentId: String(entry.businessEnvironmentId ?? ''),
+    orderId: String(entry.orderId),
+    employeeId: String(entry.employeeId ?? ''),
+    operation: operation as CoffeeBarAuditEntry['operation'],
+    occurredAt: String(entry.occurredAt ?? new Date(0).toISOString()),
+    detail: typeof entry.detail === 'string' ? entry.detail : null,
+  };
+}
+
 function read(storage: Storage, projectId: string): CoffeeBarStore {
   const stored = storage.getItem(key(projectId));
   if (!stored) return emptyStore();
@@ -36,7 +216,12 @@ function read(storage: Storage, projectId: string): CoffeeBarStore {
     ) {
       return emptyStore();
     }
-    return parsed as CoffeeBarStore;
+    return {
+      orders: parsed.orders.map(normalizeOrder),
+      audit: parsed.audit
+        .map(normalizeAudit)
+        .filter((entry): entry is CoffeeBarAuditEntry => entry !== null),
+    };
   } catch {
     return emptyStore();
   }

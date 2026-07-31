@@ -24,8 +24,8 @@ environment.
 | Business Environment ID    | `business-environment-coffee-crash-test-v2`         |
 | Business Environment Code  | `5715 4221 5648 5027`                               |
 | Bar Workspace Access Code  | `6728 0175 1693`                                    |
-| Seed ID                    | `coffee-crash-test-v3`                              |
-| Seed schema version        | `3`                                                 |
+| Seed ID                    | `coffee-crash-test-v4`                              |
+| Seed schema version        | `4`                                                 |
 
 The 16-digit code is deterministic, immutable after creation, and resolves only the
 canonical project in the current browser.
@@ -70,6 +70,7 @@ After a successful reset, the invariants are:
 | Manager project overview        | `/projects/barakasb-coffee-crash-test-v2`                                    |
 | Coffee setup and generated code | `/projects/barakasb-coffee-crash-test-v2/admin/solutions/coffee/setup`       |
 | Coffee administration           | `/projects/barakasb-coffee-crash-test-v2/coffee`                             |
+| Manager floor-plan editor       | `/projects/barakasb-coffee-crash-test-v2/coffee/floor-plan`                  |
 | Solution Constructor            | `/projects/barakasb-coffee-crash-test-v2/admin/solutions/coffee/constructor` |
 | Universal code entry            | `/app/connect`                                                               |
 | Resolved operational preview    | `/app/runtime/barakasb-coffee-crash-test-v2`                                 |
@@ -77,11 +78,11 @@ After a successful reset, the invariants are:
 
 ## Dataset coverage
 
-The version 3 seed contains:
+The version 4 seed contains:
 
 - one complete business profile, configured Coffee project, and generated Bar workspace;
 - two locations, one register, five workstations, and four storage areas;
-- twelve configured tables in the main location;
+- two service zones and twelve positioned tables in the main location;
 - eight units of measure with supported conversion data;
 - five suppliers;
 - at least 30 ingredients and opening balances;
@@ -126,20 +127,34 @@ business test data and is intentionally preserved.
 7. Open `/app/connect`, enter `6728 0175 1693`, and continue.
 8. Select Иван Беляев as the current employee. The access code identifies the workspace,
    while the explicit selection establishes the current local employee context.
-9. Verify `Север Coffee Lab`, the main location, table plan, Russian catalog, open-order
-   counters, and empty recent-issued history.
-10. Select `Стол 1`, add `Капучино`, choose `Овсяное +70 ₽`, add a comment, and change
-    quantity. Verify the total is recalculated.
-11. Send the order, advance the Bar item through `Принят`, `Готовится`, and `Готов`,
-    mark `Карта`, then issue the order. Verify the table returns to `Свободен` and the
-    order appears in recent history.
-12. Create a takeaway order with `Вода без газа`; verify it becomes ready immediately,
-    but cannot be issued until a local payment method is selected.
-13. Verify identity, active location, catalog, recipe, stock, supplier, and employee
+9. In Manager Platform open the floor-plan editor. Verify `Основной зал` and `Улица`,
+   drag `Стол 1`, change its dimensions, save, and reload. The position and size must
+   persist. Verify that an active-order table cannot be disabled or deleted.
+10. Return to `/app/connect`, enter `6728 0175 1693`, select Иван Беляев, and verify the
+    Bar opens with the Manager-owned read-only floor plan and Russian catalog.
+11. Select free `Стол 1`, enter two guests and a seating note, and open the table.
+12. Add `Капучино`, choose `Овсяное +70 ₽`, enter variant `Большой`, add a comment, and
+    set quantity to two. Verify the modifier snapshot and total.
+13. Send the first batch. Add `Вода без газа` to the same table and verify it appears
+    under `Новые позиции` while the cappuccino remains immutable under `Уже отправлено`.
+    Send only the additional batch.
+14. Advance the Bar item through `Принят`, `Готовится`, and `Готов`. Verify a
+    Kitchen-routed item cannot be completed from Bar.
+15. Mark `Карта`. Verify payment does not change preparation state and cannot be
+    recorded twice.
+16. When all positions are ready and the order is paid, choose
+    `Выдать, завершить и освободить стол`. Verify status `Завершён`, immutable history,
+    completion metadata, and the table returning to `Свободен`.
+17. Create a takeaway order with `Вода без газа`; verify it becomes ready immediately,
+    but cannot be completed until a local payment method is selected.
+18. Open another table, send an item, and cancel it. Verify a reason is required and
+    retained in history. Verify an empty unsent table can be released.
+19. Verify identity, active location, catalog, recipe, stock, supplier, and employee
     summaries appear while unfinished transactional modules stay disabled.
-14. Reload the page and verify the selected workspace, orders, and issued history remain
-    readable.
-15. Repeat at tablet widths. No horizontal page overflow is permitted.
+20. Reload the page and verify the selected workspace, orders, and completed history
+    remain readable.
+21. Repeat at 1024 × 768 and 1280 × 800. The three POS columns must use internal
+    scrolling and the document must not overflow horizontally.
 
 ## Current prototype limitations
 
@@ -147,7 +162,7 @@ business test data and is intentionally preserved.
   used;
 - Kitchen-routed items are visible but cannot be completed because Kitchen UI is not
   part of this stage;
-- issuing an order does not deduct stock or create warehouse, finance, or reporting
+- completing an order does not deduct stock or create warehouse, finance, or reporting
   postings;
 - localStorage is the replaceable prototype adapter and is not a security boundary;
 - same-origin tabs synchronize order changes, but no realtime backend events exist.

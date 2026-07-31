@@ -1,11 +1,22 @@
+import type { CoffeeTableShape } from './domain';
+
 export type CoffeeOrderType = 'TABLE' | 'TAKEAWAY';
 export type CoffeeOrderStatus =
-  'DRAFT' | 'SENT' | 'IN_PREPARATION' | 'READY' | 'ISSUED' | 'CANCELLED';
-export type CoffeePaymentStatus = 'UNPAID' | 'CASH' | 'CARD';
+  'DRAFT' | 'SENT' | 'IN_PREPARATION' | 'READY' | 'COMPLETED' | 'CANCELLED';
+export type CoffeePaymentStatus = 'UNPAID' | 'PAID';
+export type CoffeePaymentMethod = 'CASH' | 'CARD';
 export type CoffeePreparationWorkspace = 'BAR' | 'KITCHEN' | 'IMMEDIATE';
 export type CoffeeOrderItemStatus =
   'DRAFT' | 'NEW' | 'ACCEPTED' | 'PREPARING' | 'READY' | 'CANCELLED';
-export type CoffeeTableOperationalStatus = 'FREE' | 'OCCUPIED' | 'READY' | 'UNPAID';
+export type CoffeeTableOperationalStatus =
+  | 'FREE'
+  | 'OCCUPIED'
+  | 'DRAFT'
+  | 'SENT'
+  | 'IN_PREPARATION'
+  | 'READY'
+  | 'PAID'
+  | 'AWAITING_COMPLETION';
 
 export interface CoffeeOrderItemModifier {
   readonly modifierGroupId: string;
@@ -18,12 +29,25 @@ export interface CoffeeOrderItem {
   readonly id: string;
   readonly productId: string;
   readonly productName: string;
+  readonly variantName: string | null;
   readonly quantity: number;
   readonly unitPrice: number;
+  readonly finalUnitPrice: number;
   readonly modifiers: ReadonlyArray<CoffeeOrderItemModifier>;
   readonly comment: string;
   readonly preparationWorkspace: CoffeePreparationWorkspace;
   readonly status: CoffeeOrderItemStatus;
+  readonly submittedBatchId: string | null;
+}
+
+export interface CoffeeOrderBatch {
+  readonly batchId: string;
+  readonly orderId: string;
+  readonly createdAt: string;
+  readonly createdByEmployeeId: string;
+  readonly itemIds: ReadonlyArray<string>;
+  readonly sentAt: string;
+  readonly status: 'SENT';
 }
 
 export interface CoffeeOrder {
@@ -36,13 +60,25 @@ export interface CoffeeOrder {
   readonly tableId: string | null;
   readonly orderNumber: string;
   readonly status: CoffeeOrderStatus;
+  readonly guestCount: number;
+  readonly seatingNote: string;
+  readonly openedAt: string;
+  readonly openedByEmployeeId: string;
   readonly createdAt: string;
   readonly createdByEmployeeId: string;
   readonly paymentStatus: CoffeePaymentStatus;
+  readonly paymentMethod: CoffeePaymentMethod | null;
+  readonly paidAmount: number | null;
+  readonly paidAt: string | null;
+  readonly paidByEmployeeId: string | null;
   readonly total: number;
   readonly issuedAt: string | null;
+  readonly completedAt: string | null;
+  readonly completedByEmployeeId: string | null;
+  readonly cancellationReason: string | null;
   readonly updatedAt: string;
   readonly items: ReadonlyArray<CoffeeOrderItem>;
+  readonly batches: ReadonlyArray<CoffeeOrderBatch>;
 }
 
 export interface CoffeeBarAuditEntry {
@@ -53,12 +89,16 @@ export interface CoffeeBarAuditEntry {
   readonly employeeId: string;
   readonly operation:
     | 'ORDER_CREATED'
-    | 'ORDER_SENT'
+    | 'GUEST_COUNT_CHANGED'
+    | 'ORDER_TRANSFERRED'
+    | 'ORDER_RELEASED'
+    | 'BATCH_SENT'
     | 'ITEM_STATUS_CHANGED'
-    | 'PAYMENT_CHANGED'
-    | 'ORDER_ISSUED'
+    | 'PAYMENT_RECORDED'
+    | 'ORDER_COMPLETED'
     | 'ORDER_CANCELLED';
   readonly occurredAt: string;
+  readonly detail: string | null;
 }
 
 export interface CoffeeBarStore {
@@ -73,11 +113,25 @@ export interface CoffeeBarRuntimeContext {
   readonly employeeId: string;
 }
 
-export interface CoffeeBarTableView {
+export interface CoffeeBarZoneView {
   readonly id: string;
   readonly name: string;
+  readonly canvasWidth: number;
+  readonly canvasHeight: number;
+}
+
+export interface CoffeeBarTableView {
+  readonly id: string;
+  readonly zoneId: string;
+  readonly name: string;
   readonly code: string;
-  readonly seats: number;
+  readonly seatCount: number;
+  readonly shape: CoffeeTableShape;
+  readonly positionX: number;
+  readonly positionY: number;
+  readonly width: number;
+  readonly height: number;
+  readonly rotation: number;
   readonly status: CoffeeTableOperationalStatus;
   readonly activeOrderId: string | null;
 }
@@ -88,6 +142,7 @@ export interface CoffeeBarState {
   readonly locationName: string;
   readonly employeeId: string;
   readonly employeeName: string;
+  readonly zones: ReadonlyArray<CoffeeBarZoneView>;
   readonly tables: ReadonlyArray<CoffeeBarTableView>;
   readonly categories: ReadonlyArray<{
     readonly id: string;
@@ -104,6 +159,11 @@ export interface CoffeeBarState {
   readonly modifierGroups: ReadonlyArray<{
     readonly id: string;
     readonly name: string;
+    readonly selectionType: 'single' | 'multiple';
+    readonly required: boolean;
+    readonly minimumSelections: number;
+    readonly maximumSelections: number;
+    readonly defaultOptionName: string | null;
     readonly options: ReadonlyArray<{
       readonly name: string;
       readonly priceAdjustment: number;
@@ -114,9 +174,16 @@ export interface CoffeeBarState {
 
 export interface CoffeeOrderItemDraftInput {
   readonly productId: string;
+  readonly variantName?: string | null;
   readonly modifiers?: ReadonlyArray<{
     readonly modifierGroupId: string;
     readonly optionName: string;
   }>;
   readonly comment?: string;
+}
+
+export interface CoffeeSeatingInput {
+  readonly guestCount: number;
+  readonly note?: string;
+  readonly allowCapacityOverride?: boolean;
 }

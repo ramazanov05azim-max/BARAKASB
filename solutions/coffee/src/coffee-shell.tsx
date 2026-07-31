@@ -20,6 +20,7 @@ import {
   Gauge,
   LayoutGrid,
   LockKeyhole,
+  Map,
   Menu,
   PackageOpen,
   Plus,
@@ -154,6 +155,12 @@ const navigationGroups: NavigationGroup[] = [
         suffix: '/workstations',
         icon: Building2,
         capability: 'workstations.read',
+      },
+      {
+        key: 'nav.floorPlan',
+        suffix: '/floor-plan',
+        icon: Map,
+        capability: 'locations.manage',
       },
       {
         key: 'nav.reports',

@@ -2,6 +2,7 @@ import type {
   BusinessProfile,
   CoffeeCapability,
   CoffeeDevelopmentSeed,
+  CoffeeFloorPlan,
   CoffeeOperationalSnapshot,
   CoffeeProject,
   CoffeeSolutionModuleId,
@@ -63,6 +64,11 @@ export interface CoffeeSolutionConstructorRepository {
   ): Promise<CoffeeSolutionStructure>;
 }
 
+export interface CoffeeFloorPlanRepository {
+  load(projectId: string): Promise<CoffeeFloorPlan>;
+  save(projectId: string, floorPlan: CoffeeFloorPlan): Promise<CoffeeFloorPlan>;
+}
+
 export interface PermissionRepository {
   list(projectId: string): Promise<PermissionRow[]>;
   capabilitiesForRole(
@@ -102,6 +108,7 @@ export interface CoffeeManagerRepositories {
   suppliers: CollectionRepository<CollectionEntityMap['suppliers']>;
   employees: CollectionRepository<CollectionEntityMap['employees']>;
   solutionConstructor: CoffeeSolutionConstructorRepository;
+  floorPlan: CoffeeFloorPlanRepository;
   roles: RoleRepository;
   permissions: PermissionRepository;
   setupChecklist: SetupChecklistRepository;

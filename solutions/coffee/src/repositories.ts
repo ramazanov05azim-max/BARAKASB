@@ -22,6 +22,7 @@ import {
   type CollectionRepository,
 } from './repository-contracts';
 import { coffeeBarOrderStoragePrefix } from './bar-local-repository';
+import { createCoffeeCrashTestSeed } from './coffee-crash-test-seed';
 
 const storagePrefix = 'barakasb.mock.coffee.project.v1';
 
@@ -253,6 +254,7 @@ function initialSnapshot(projectId: string, projectName: string): CoffeeSnapshot
       updatedAt: timestamp,
     },
     locations: [],
+    floorPlanZones: [],
     tables: [],
     registers: [],
     workstations: [],
@@ -346,16 +348,14 @@ function storageKey(projectId: string): string {
   return `${storagePrefix}.${encodeURIComponent(projectId)}`;
 }
 
-function crashTestTables(timestamp: string): CoffeeSnapshot['tables'] {
-  return Array.from({ length: 12 }, (_, index) => ({
-    id: `crash-table-${String(index + 1).padStart(2, '0')}`,
-    name: `Стол ${index + 1}`,
-    code: `T-${String(index + 1).padStart(2, '0')}`,
-    seats: index < 4 ? 2 : index < 10 ? 4 : 6,
-    locationId: 'crash-location-main',
-    status: 'active',
-    updatedAt: timestamp,
-  }));
+function crashTestFloorPlan(
+  timestamp: string,
+): Pick<CoffeeSnapshot, 'floorPlanZones' | 'tables'> {
+  const seed = createCoffeeCrashTestSeed(timestamp);
+  return {
+    floorPlanZones: structuredClone(seed.floorPlanZones),
+    tables: structuredClone(seed.tables),
+  };
 }
 
 function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
@@ -377,14 +377,73 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
     if (!parsed.openingStockBalances) {
       parsed.openingStockBalances = [];
     }
-    if (!parsed.tables) {
-      parsed.tables = [];
+    if (!parsed.tables || !parsed.floorPlanZones) {
+      const legacyTables = Array.isArray(parsed.tables) ? parsed.tables : [];
+      const defaultLocationId =
+        parsed.project.defaultLocationId ?? parsed.locations[0]?.id ?? '';
+      const legacyZoneId = `zone-${defaultLocationId || 'main'}`;
+      parsed.floorPlanZones =
+        parsed.floorPlanZones ??
+        (defaultLocationId
+          ? [
+              {
+                id: legacyZoneId,
+                locationId: defaultLocationId,
+                name: 'Основной зал',
+                zoneType: 'MAIN_HALL',
+                canvasWidth: 800,
+                canvasHeight: 500,
+                active: true,
+                sortOrder: 1,
+                updatedAt: now(),
+              },
+            ]
+          : []);
+      parsed.tables = legacyTables.map((table, index) => {
+        const legacy = table as unknown as Record<string, unknown>;
+        return {
+          ...table,
+          locationId:
+            typeof legacy.locationId === 'string'
+              ? legacy.locationId
+              : defaultLocationId,
+          zoneId: typeof legacy.zoneId === 'string' ? legacy.zoneId : legacyZoneId,
+          shape:
+            legacy.shape === 'SQUARE' ||
+            legacy.shape === 'RECTANGLE' ||
+            legacy.shape === 'BAR_SEAT'
+              ? legacy.shape
+              : 'ROUND',
+          positionX:
+            typeof legacy.positionX === 'number'
+              ? legacy.positionX
+              : 40 + (index % 4) * 175,
+          positionY:
+            typeof legacy.positionY === 'number'
+              ? legacy.positionY
+              : 40 + Math.floor(index / 4) * 140,
+          width: typeof legacy.width === 'number' ? legacy.width : 100,
+          height: typeof legacy.height === 'number' ? legacy.height : 100,
+          rotation: typeof legacy.rotation === 'number' ? legacy.rotation : 0,
+          seatCount:
+            typeof legacy.seatCount === 'number'
+              ? legacy.seatCount
+              : typeof legacy.seats === 'number'
+                ? legacy.seats
+                : 2,
+          sortOrder:
+            typeof legacy.sortOrder === 'number' ? legacy.sortOrder : index + 1,
+        };
+      });
+      writeSnapshot(projectId, parsed);
     }
     if (
-      parsed.tables.length === 0 &&
+      (parsed.tables.length === 0 || parsed.floorPlanZones.length === 0) &&
       parsed.project.developmentLabel === 'crash-test'
     ) {
-      parsed.tables = crashTestTables(now());
+      const floorPlan = crashTestFloorPlan(now());
+      parsed.floorPlanZones = floorPlan.floorPlanZones;
+      parsed.tables = floorPlan.tables;
       writeSnapshot(projectId, parsed);
     }
     if (parsed.developmentSeedId === undefined) {
@@ -678,6 +737,25 @@ export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
       return structuredClone(snapshot.solutionStructure);
     },
   },
+  floorPlan: {
+    async load(projectId) {
+      await wait(80);
+      const snapshot = readSnapshot(projectId);
+      return structuredClone({
+        zones: snapshot.floorPlanZones,
+        tables: snapshot.tables,
+      });
+    },
+    async save(projectId, floorPlan) {
+      await wait(120);
+      const snapshot = readSnapshot(projectId);
+      snapshot.floorPlanZones = structuredClone(floorPlan.zones);
+      snapshot.tables = structuredClone(floorPlan.tables);
+      appendActivity(snapshot, 'activity.floorPlanUpdated', snapshot.project.name);
+      writeSnapshot(projectId, snapshot);
+      return structuredClone(floorPlan);
+    },
+  },
   roles: {
     async list(projectId) {
       await wait();
@@ -767,6 +845,7 @@ export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
       snapshot.project.solutionStatus = 'configured';
       snapshot.project.updatedAt = now();
       snapshot.locations = structuredClone(seed.locations);
+      snapshot.floorPlanZones = structuredClone(seed.floorPlanZones);
       snapshot.tables = structuredClone(seed.tables);
       snapshot.registers = structuredClone(seed.registers);
       snapshot.workstations = structuredClone(seed.workstations);
@@ -814,6 +893,7 @@ export const localCoffeeOperationalReadRepository: CoffeeOperationalReadReposito
       businessProfile: snapshot.businessProfile,
       settings: snapshot.settings,
       locations: snapshot.locations,
+      floorPlanZones: snapshot.floorPlanZones,
       tables: snapshot.tables,
       warehouses: snapshot.warehouses,
       units: snapshot.units,

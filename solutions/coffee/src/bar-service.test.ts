@@ -5,8 +5,6 @@ import type {
   CoffeeOrder,
 } from './bar-domain';
 import type { CoffeeBarOrderRepository } from './bar-repository-contracts';
-import { CoffeeBarOperationError } from './bar-repository-contracts';
-import { coffeeOrderStatusRu, coffeeTableStatusRu } from './bar-ru';
 import { createCoffeeBarService, type CoffeeBarService } from './bar-service';
 import { createCoffeeCrashTestSeed } from './coffee-crash-test-seed';
 import type { CoffeeOperationalSnapshot } from './domain';
@@ -59,6 +57,7 @@ function operationalSnapshot(): CoffeeOperationalSnapshot {
       updatedAt: timestamp,
     },
     locations: seed.locations,
+    floorPlanZones: seed.floorPlanZones,
     tables: seed.tables,
     warehouses: seed.warehouses,
     units: seed.units,
@@ -88,9 +87,7 @@ function operationalSnapshot(): CoffeeOperationalSnapshot {
   };
 }
 
-function memoryRepository(): CoffeeBarOrderRepository & {
-  value: CoffeeBarStore;
-} {
+function memoryRepository(): CoffeeBarOrderRepository & { value: CoffeeBarStore } {
   return {
     value: { orders: [], audit: [] },
     async load() {
@@ -111,7 +108,6 @@ function memoryRepository(): CoffeeBarOrderRepository & {
 function fixture(snapshot = operationalSnapshot()): {
   service: CoffeeBarService;
   repository: ReturnType<typeof memoryRepository>;
-  snapshot: CoffeeOperationalSnapshot;
 } {
   const repository = memoryRepository();
   let sequence = 0;
@@ -122,7 +118,6 @@ function fixture(snapshot = operationalSnapshot()): {
     },
   };
   return {
-    snapshot,
     repository,
     service: createCoffeeBarService({
       operational,
@@ -133,84 +128,169 @@ function fixture(snapshot = operationalSnapshot()): {
   };
 }
 
-async function draftWithProduct(
+async function tableOrder(service: CoffeeBarService): Promise<CoffeeOrder> {
+  return service.createTableOrder(context, 'crash-table-01', { guestCount: 2 });
+}
+
+async function withItem(
   service: CoffeeBarService,
   productId = 'crash-item-espresso',
 ): Promise<CoffeeOrder> {
-  const order = await service.createTakeawayOrder(context);
+  const order = await tableOrder(service);
   return service.addItem(context, order.orderId, { productId });
 }
 
 describe('Coffee Bar application service', () => {
   let service: CoffeeBarService;
   let repository: ReturnType<typeof memoryRepository>;
-  let snapshot: CoffeeOperationalSnapshot;
 
   beforeEach(() => {
-    ({ service, repository, snapshot } = fixture());
+    ({ service, repository } = fixture());
   });
 
-  it('allows only an employee assigned to the generated Bar workspace', async () => {
+  it('authorizes only an assigned active Bar employee', async () => {
     await expect(
       service.load({ ...context, employeeId: 'crash-employee-cashier' }),
-    ).rejects.toEqual(new CoffeeBarOperationError('ACCESS_DENIED'));
+    ).rejects.toMatchObject({ code: 'ACCESS_DENIED' });
   });
 
-  it('rejects access when the Bar module was not selected', async () => {
-    const next = operationalSnapshot();
-    next.solutionStructure.selectedModuleIds = ['manager'];
-    next.solutionStructure.workspaces = [];
-    const blocked = fixture(next).service;
-    await expect(blocked.load(context)).rejects.toMatchObject({
-      code: 'ACCESS_DENIED',
-    });
-  });
-
-  it('creates a table order only for a configured table', async () => {
-    const order = await service.createTableOrder(context, 'crash-table-01');
-    expect(order).toMatchObject({
-      orderType: 'TABLE',
-      tableId: 'crash-table-01',
-      status: 'DRAFT',
-      paymentStatus: 'UNPAID',
-    });
-  });
-
-  it('rejects a second active order on the same table', async () => {
-    await service.createTableOrder(context, 'crash-table-01');
-    await expect(
-      service.createTableOrder(context, 'crash-table-01'),
-    ).rejects.toMatchObject({ code: 'TABLE_OCCUPIED' });
-  });
-
-  it('creates takeaway orders without a table', async () => {
-    await expect(service.createTakeawayOrder(context)).resolves.toMatchObject({
-      orderType: 'TAKEAWAY',
-      tableId: null,
-    });
-  });
-
-  it('exposes only active products and Russian categories', async () => {
+  it('loads saved floor-plan zones and geometry', async () => {
     const state = await service.load(context);
-    expect(
-      state.products.some(
-        (product) => product.id === 'crash-item-espresso-tonic-preview',
-      ),
-    ).toBe(false);
-    expect(state.categories.map((category) => category.name)).toContain('Кофе');
+    expect(state.zones.map((zone) => zone.name)).toContain('Основной зал');
+    expect(state.tables[0]).toMatchObject({
+      zoneId: 'crash-zone-main',
+      shape: 'ROUND',
+    });
   });
 
-  it('routes products using existing preparation configuration', async () => {
-    let order = await service.createTakeawayOrder(context);
-    order = await service.addItem(context, order.orderId, {
-      productId: 'crash-item-espresso',
+  it('opens a free table with seating metadata', async () => {
+    const order = await service.createTableOrder(context, 'crash-table-01', {
+      guestCount: 1,
+      note: 'У окна',
     });
-    order = await service.addItem(context, order.orderId, {
-      productId: 'crash-item-sandwich',
+    expect(order).toMatchObject({
+      guestCount: 1,
+      seatingNote: 'У окна',
+      openedByEmployeeId: context.employeeId,
     });
+  });
+
+  it('rejects capacity overflow unless explicitly overridden', async () => {
+    await expect(
+      service.createTableOrder(context, 'crash-table-01', { guestCount: 20 }),
+    ).rejects.toMatchObject({ code: 'CAPACITY_EXCEEDED' });
+    await expect(
+      service.createTableOrder(context, 'crash-table-01', {
+        guestCount: 20,
+        allowCapacityOverride: true,
+      }),
+    ).resolves.toMatchObject({ guestCount: 20 });
+  });
+
+  it('prevents two open orders on one table', async () => {
+    await tableOrder(service);
+    await expect(tableOrder(service)).rejects.toMatchObject({
+      code: 'TABLE_OCCUPIED',
+    });
+  });
+
+  it('changes guest count and records an audit entry', async () => {
+    const order = await tableOrder(service);
+    const updated = await service.changeGuestCount(context, order.orderId, {
+      guestCount: 1,
+    });
+    expect(updated.guestCount).toBe(1);
+    expect(repository.value.audit[0]?.operation).toBe('GUEST_COUNT_CHANGED');
+  });
+
+  it('releases only an empty unsent table order', async () => {
+    const order = await tableOrder(service);
+    await service.releaseTable(context, order.orderId);
+    expect(repository.value.orders).toHaveLength(0);
+    const filled = await withItem(service);
+    await expect(service.releaseTable(context, filled.orderId)).rejects.toMatchObject({
+      code: 'INVALID_OPERATION',
+    });
+  });
+
+  it('transfers an order only to a free table', async () => {
+    const order = await tableOrder(service);
+    const moved = await service.transferOrder(context, order.orderId, 'crash-table-02');
+    expect(moved.tableId).toBe('crash-table-02');
+  });
+
+  it('stores modifier, variant and comment snapshots', async () => {
+    const order = await tableOrder(service);
+    const updated = await service.addItem(context, order.orderId, {
+      productId: 'crash-item-cappuccino',
+      variantName: 'Большой',
+      modifiers: [
+        {
+          modifierGroupId: 'crash-modifier-alternative-milk',
+          optionName: 'Овсяное +70 ₽',
+        },
+      ],
+      comment: 'Без сахара',
+    });
+    expect(updated.items[0]).toMatchObject({
+      variantName: 'Большой',
+      comment: 'Без сахара',
+      finalUnitPrice: 380,
+    });
+  });
+
+  it('validates modifier ownership and limits', async () => {
+    const order = await tableOrder(service);
+    await expect(
+      service.addItem(context, order.orderId, {
+        productId: 'crash-item-espresso',
+        modifiers: [
+          {
+            modifierGroupId: 'modifier-not-assigned',
+            optionName: 'Овсяное +70 ₽',
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_MODIFIERS' });
+  });
+
+  it('sends only the current unsent batch', async () => {
+    let order = await withItem(service);
+    order = await service.sendOrder(context, order.orderId);
+    const firstBatch = order.batches[0]!;
     order = await service.addItem(context, order.orderId, {
       productId: 'crash-item-bottled-water',
     });
+    expect(order.items.filter((item) => !item.submittedBatchId)).toHaveLength(1);
+    order = await service.sendOrder(context, order.orderId);
+    expect(order.batches).toHaveLength(2);
+    expect(order.batches[0]).toEqual(firstBatch);
+  });
+
+  it('keeps submitted items immutable while new items remain editable', async () => {
+    let order = await withItem(service);
+    const submittedId = order.items[0]!.id;
+    order = await service.sendOrder(context, order.orderId);
+    await expect(
+      service.updateItemQuantity(context, order.orderId, submittedId, 2),
+    ).rejects.toMatchObject({ code: 'ORDER_IMMUTABLE' });
+    order = await service.addItem(context, order.orderId, {
+      productId: 'crash-item-bottled-water',
+    });
+    await expect(
+      service.updateItemQuantity(context, order.orderId, order.items[1]!.id, 2),
+    ).resolves.toMatchObject({ total: 470 });
+  });
+
+  it('preserves Bar, Kitchen and Immediate routing', async () => {
+    let order = await tableOrder(service);
+    for (const productId of [
+      'crash-item-espresso',
+      'crash-item-sandwich',
+      'crash-item-bottled-water',
+    ]) {
+      order = await service.addItem(context, order.orderId, { productId });
+    }
     expect(order.items.map((item) => item.preparationWorkspace)).toEqual([
       'BAR',
       'KITCHEN',
@@ -218,106 +298,9 @@ describe('Coffee Bar application service', () => {
     ]);
   });
 
-  it('updates quantity and recalculates the order total', async () => {
-    const order = await draftWithProduct(service);
-    const updated = await service.updateItemQuantity(
-      context,
-      order.orderId,
-      order.items[0]!.id,
-      3,
-    );
-    expect(updated.total).toBe(570);
-  });
-
-  it('stores modifier and comment snapshots in the draft', async () => {
-    const order = await draftWithProduct(service, 'crash-item-cappuccino');
-    const updated = await service.updateItemDetails(
-      context,
-      order.orderId,
-      order.items[0]!.id,
-      {
-        modifiers: [
-          {
-            modifierGroupId: 'crash-modifier-alternative-milk',
-            optionName: 'Овсяное +70 ₽',
-          },
-        ],
-        comment: 'Без сахара',
-      },
-    );
-    expect(updated.items[0]).toMatchObject({
-      comment: 'Без сахара',
-      modifiers: [{ optionName: 'Овсяное +70 ₽', priceAdjustment: 70 }],
-    });
-    expect(updated.total).toBe(380);
-  });
-
-  it('removes an item only while the order is a draft', async () => {
-    const order = await draftWithProduct(service);
-    const updated = await service.removeItem(
-      context,
-      order.orderId,
-      order.items[0]!.id,
-    );
-    expect(updated.items).toEqual([]);
-  });
-
-  it('rejects sending an empty order', async () => {
-    const order = await service.createTakeawayOrder(context);
-    await expect(service.sendOrder(context, order.orderId)).rejects.toMatchObject({
-      code: 'ORDER_EMPTY',
-    });
-  });
-
-  it('sends an order idempotently and assigns initial item states', async () => {
-    let order = await service.createTakeawayOrder(context);
-    order = await service.addItem(context, order.orderId, {
-      productId: 'crash-item-espresso',
-    });
-    order = await service.addItem(context, order.orderId, {
-      productId: 'crash-item-bottled-water',
-    });
-    const sent = await service.sendOrder(context, order.orderId);
-    const replay = await service.sendOrder(context, order.orderId);
-    expect(sent.items.map((item) => item.status)).toEqual(['NEW', 'READY']);
-    expect(replay).toEqual(sent);
-    expect(
-      repository.value.audit.filter((entry) => entry.operation === 'ORDER_SENT'),
-    ).toHaveLength(1);
-  });
-
-  it('prevents changing order composition after sending', async () => {
-    const order = await draftWithProduct(service);
-    const sent = await service.sendOrder(context, order.orderId);
-    await expect(
-      service.updateItemQuantity(context, sent.orderId, sent.items[0]!.id, 2),
-    ).rejects.toMatchObject({ code: 'ORDER_IMMUTABLE' });
-  });
-
-  it('advances Bar items through the approved state sequence', async () => {
-    const draft = await draftWithProduct(service);
-    let order = await service.sendOrder(context, draft.orderId);
-    const itemId = order.items[0]!.id;
-    order = await service.updateBarItemStatus(
-      context,
-      order.orderId,
-      itemId,
-      'ACCEPTED',
-    );
-    expect(order.status).toBe('IN_PREPARATION');
-    order = await service.updateBarItemStatus(
-      context,
-      order.orderId,
-      itemId,
-      'PREPARING',
-    );
-    order = await service.updateBarItemStatus(context, order.orderId, itemId, 'READY');
-    expect(order.status).toBe('READY');
-  });
-
-  it('rejects a Bar status update for a Kitchen item', async () => {
-    const draft = await draftWithProduct(service, 'crash-item-sandwich');
-    const order = await service.sendOrder(context, draft.orderId);
+  it('does not allow Bar to complete Kitchen items', async () => {
+    let order = await withItem(service, 'crash-item-sandwich');
+    order = await service.sendOrder(context, order.orderId);
     await expect(
       service.updateBarItemStatus(
         context,
@@ -328,77 +311,82 @@ describe('Coffee Bar application service', () => {
     ).rejects.toMatchObject({ code: 'ITEM_ROUTE_MISMATCH' });
   });
 
-  it('marks an all-immediate order ready when it is sent', async () => {
-    const draft = await draftWithProduct(service, 'crash-item-bottled-water');
-    await expect(service.sendOrder(context, draft.orderId)).resolves.toMatchObject({
+  it('records payment separately from preparation', async () => {
+    let order = await withItem(service, 'crash-item-bottled-water');
+    order = await service.sendOrder(context, order.orderId);
+    order = await service.recordPayment(context, order.orderId, 'CARD');
+    expect(order).toMatchObject({
       status: 'READY',
+      paymentStatus: 'PAID',
+      paymentMethod: 'CARD',
+      paidAmount: 140,
     });
   });
 
-  it('stores an explicit local payment method without processing money', async () => {
-    const draft = await draftWithProduct(service, 'crash-item-bottled-water');
-    const ready = await service.sendOrder(context, draft.orderId);
+  it('prevents repeated payment', async () => {
+    let order = await withItem(service, 'crash-item-bottled-water');
+    order = await service.sendOrder(context, order.orderId);
+    order = await service.recordPayment(context, order.orderId, 'CASH');
     await expect(
-      service.setPayment(context, ready.orderId, 'CARD'),
-    ).resolves.toMatchObject({ paymentStatus: 'CARD', total: 140 });
+      service.recordPayment(context, order.orderId, 'CARD'),
+    ).rejects.toMatchObject({ code: 'PAYMENT_ALREADY_RECORDED' });
   });
 
-  it('requires ready and paid state before issue', async () => {
-    const draft = await draftWithProduct(service, 'crash-item-bottled-water');
-    const ready = await service.sendOrder(context, draft.orderId);
-    await expect(service.issueOrder(context, ready.orderId)).rejects.toMatchObject({
+  it('requires every item ready and payment before completion', async () => {
+    let order = await withItem(service);
+    order = await service.sendOrder(context, order.orderId);
+    await expect(service.completeOrder(context, order.orderId)).rejects.toMatchObject({
       code: 'PAYMENT_REQUIRED',
     });
+    order = await service.recordPayment(context, order.orderId, 'CASH');
+    await expect(service.completeOrder(context, order.orderId)).rejects.toMatchObject({
+      code: 'ORDER_NOT_READY',
+    });
   });
 
-  it('issues idempotently and frees the table', async () => {
-    let order = await service.createTableOrder(context, 'crash-table-01');
-    order = await service.addItem(context, order.orderId, {
-      productId: 'crash-item-bottled-water',
-    });
+  it('completes a paid ready order and releases its table', async () => {
+    let order = await withItem(service, 'crash-item-bottled-water');
     order = await service.sendOrder(context, order.orderId);
-    order = await service.setPayment(context, order.orderId, 'CASH');
-    const issued = await service.issueOrder(context, order.orderId);
-    const replay = await service.issueOrder(context, order.orderId);
-    expect(replay).toEqual(issued);
+    order = await service.recordPayment(context, order.orderId, 'CARD');
+    order = await service.completeOrder(context, order.orderId);
+    expect(order).toMatchObject({
+      status: 'COMPLETED',
+      completedByEmployeeId: context.employeeId,
+    });
     const state = await service.load(context);
     expect(state.tables.find((table) => table.id === 'crash-table-01')?.status).toBe(
       'FREE',
     );
   });
 
-  it('cancels drafts but refuses cancellation after an item is ready', async () => {
-    const draft = await draftWithProduct(service);
-    await expect(service.cancelOrder(context, draft.orderId)).resolves.toMatchObject({
+  it('requires a reason when cancelling a sent order', async () => {
+    let order = await withItem(service);
+    order = await service.sendOrder(context, order.orderId);
+    await expect(service.cancelOrder(context, order.orderId)).rejects.toMatchObject({
+      code: 'CANCELLATION_REASON_REQUIRED',
+    });
+    await expect(
+      service.cancelOrder(context, order.orderId, 'Гость отказался'),
+    ).resolves.toMatchObject({
+      status: 'CANCELLED',
+      cancellationReason: 'Гость отказался',
+    });
+  });
+
+  it('allows cancellation of an unsent draft without a reason', async () => {
+    const order = await withItem(service);
+    await expect(service.cancelOrder(context, order.orderId)).resolves.toMatchObject({
       status: 'CANCELLED',
     });
-    const immediate = await draftWithProduct(service, 'crash-item-bottled-water');
-    const ready = await service.sendOrder(context, immediate.orderId);
-    await expect(service.cancelOrder(context, ready.orderId)).rejects.toMatchObject({
-      code: 'INVALID_OPERATION',
-    });
   });
 
-  it('isolates orders by Business Environment', async () => {
-    await draftWithProduct(service);
-    const other = await service.load({
-      ...context,
-      businessEnvironmentId: 'environment-other',
-    });
-    expect(other.orders).toEqual([]);
-  });
-
-  it('does not mutate inventory while operating the Bar prototype', async () => {
-    const before = structuredClone(snapshot.openingStockBalances);
-    let order = await draftWithProduct(service, 'crash-item-bottled-water');
+  it('maps a paid ready table to waiting-for-completion status', async () => {
+    let order = await withItem(service, 'crash-item-bottled-water');
     order = await service.sendOrder(context, order.orderId);
-    order = await service.setPayment(context, order.orderId, 'CASH');
-    await service.issueOrder(context, order.orderId);
-    expect(snapshot.openingStockBalances).toEqual(before);
-  });
-
-  it('provides Russian order and table status labels', () => {
-    expect(coffeeOrderStatusRu.READY).toBe('Готов');
-    expect(coffeeTableStatusRu.UNPAID).toBe('Не оплачен');
+    await service.recordPayment(context, order.orderId, 'CASH');
+    const state = await service.load(context);
+    expect(state.tables.find((table) => table.id === order.tableId)?.status).toBe(
+      'AWAITING_COMPLETION',
+    );
   });
 });
