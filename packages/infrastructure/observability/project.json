@@ -4,5 +4,19 @@
   "projectType": "library",
   "root": "packages/infrastructure/observability",
   "tags": ["type:infrastructure", "scope:shared", "runtime:universal"],
-  "targets": {}
+  "targets": {
+    "build": {
+      "command": "pnpm exec tsc -p packages/infrastructure/observability/tsconfig.build.json --incremental false",
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "lint": {
+      "command": "pnpm --filter @barakasb/infrastructure-observability exec eslint ."
+    },
+    "test": {
+      "command": "pnpm exec vitest run packages/infrastructure/observability/src"
+    },
+    "typecheck": {
+      "command": "pnpm exec tsc -p packages/infrastructure/observability/tsconfig.json --noEmit --incremental false"
+    }
+  }
 }
