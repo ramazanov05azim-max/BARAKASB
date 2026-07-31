@@ -155,6 +155,18 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/infrastructure/config:
+    devDependencies:
+      eslint:
+        specifier: ^9.39.0
+        version: 9.39.5(jiti@2.7.0)
+      eslint-config-next:
+        specifier: ^16.2.12
+        version: 16.2.12(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   solutions/coffee:
     dependencies:
       '@radix-ui/react-dialog':

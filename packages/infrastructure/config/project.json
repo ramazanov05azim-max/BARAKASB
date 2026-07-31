@@ -4,5 +4,19 @@
   "projectType": "library",
   "root": "packages/infrastructure/config",
   "tags": ["type:infrastructure", "scope:shared", "runtime:universal"],
-  "targets": {}
+  "targets": {
+    "build": {
+      "command": "pnpm exec tsc -p packages/infrastructure/config/tsconfig.build.json --incremental false",
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "lint": {
+      "command": "pnpm --filter @barakasb/infrastructure-config exec eslint ."
+    },
+    "test": {
+      "command": "pnpm exec vitest run packages/infrastructure/config/src"
+    },
+    "typecheck": {
+      "command": "pnpm exec tsc -p packages/infrastructure/config/tsconfig.json --noEmit --incremental false"
+    }
+  }
 }
