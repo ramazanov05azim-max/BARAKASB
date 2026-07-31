@@ -4,5 +4,19 @@
   "projectType": "library",
   "root": "packages/core/kernel",
   "tags": ["type:core", "scope:platform", "runtime:universal"],
-  "targets": {}
+  "targets": {
+    "build": {
+      "command": "pnpm exec tsc -p packages/core/kernel/tsconfig.build.json --incremental false",
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "lint": {
+      "command": "pnpm --filter @barakasb/core-kernel exec eslint ."
+    },
+    "test": {
+      "command": "pnpm exec vitest run packages/core/kernel/src"
+    },
+    "typecheck": {
+      "command": "pnpm exec tsc -p packages/core/kernel/tsconfig.json --noEmit --incremental false"
+    }
+  }
 }
