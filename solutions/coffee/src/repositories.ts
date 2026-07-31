@@ -21,6 +21,7 @@ import {
   type CoffeeOperationalReadRepository,
   type CollectionRepository,
 } from './repository-contracts';
+import { coffeeBarOrderStoragePrefix } from './bar-local-repository';
 
 const storagePrefix = 'barakasb.mock.coffee.project.v1';
 
@@ -252,6 +253,7 @@ function initialSnapshot(projectId: string, projectName: string): CoffeeSnapshot
       updatedAt: timestamp,
     },
     locations: [],
+    tables: [],
     registers: [],
     workstations: [],
     menuCategories: [],
@@ -344,6 +346,18 @@ function storageKey(projectId: string): string {
   return `${storagePrefix}.${encodeURIComponent(projectId)}`;
 }
 
+function crashTestTables(timestamp: string): CoffeeSnapshot['tables'] {
+  return Array.from({ length: 12 }, (_, index) => ({
+    id: `crash-table-${String(index + 1).padStart(2, '0')}`,
+    name: `Стол ${index + 1}`,
+    code: `T-${String(index + 1).padStart(2, '0')}`,
+    seats: index < 4 ? 2 : index < 10 ? 4 : 6,
+    locationId: 'crash-location-main',
+    status: 'active',
+    updatedAt: timestamp,
+  }));
+}
+
 function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
   if (typeof window === 'undefined') {
     return initialSnapshot(projectId, projectName ?? 'Coffee Project');
@@ -362,6 +376,16 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
     }
     if (!parsed.openingStockBalances) {
       parsed.openingStockBalances = [];
+    }
+    if (!parsed.tables) {
+      parsed.tables = [];
+    }
+    if (
+      parsed.tables.length === 0 &&
+      parsed.project.developmentLabel === 'crash-test'
+    ) {
+      parsed.tables = crashTestTables(now());
+      writeSnapshot(projectId, parsed);
     }
     if (parsed.developmentSeedId === undefined) {
       parsed.developmentSeedId = null;
@@ -530,6 +554,9 @@ export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
       await wait(60);
       if (typeof window !== 'undefined') {
         window.localStorage.removeItem(storageKey(projectId));
+        window.localStorage.removeItem(
+          `${coffeeBarOrderStoragePrefix}.${encodeURIComponent(projectId)}`,
+        );
       }
     },
   },
@@ -740,6 +767,7 @@ export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
       snapshot.project.solutionStatus = 'configured';
       snapshot.project.updatedAt = now();
       snapshot.locations = structuredClone(seed.locations);
+      snapshot.tables = structuredClone(seed.tables);
       snapshot.registers = structuredClone(seed.registers);
       snapshot.workstations = structuredClone(seed.workstations);
       snapshot.warehouses = structuredClone(seed.warehouses);
@@ -786,15 +814,18 @@ export const localCoffeeOperationalReadRepository: CoffeeOperationalReadReposito
       businessProfile: snapshot.businessProfile,
       settings: snapshot.settings,
       locations: snapshot.locations,
+      tables: snapshot.tables,
       warehouses: snapshot.warehouses,
       units: snapshot.units,
       ingredients: snapshot.ingredients,
       menuItems: snapshot.menuItems,
+      menuCategories: snapshot.menuCategories,
       modifiers: snapshot.modifiers,
       recipes: snapshot.recipes,
       openingStockBalances: snapshot.openingStockBalances,
       suppliers: snapshot.suppliers,
       employees: snapshot.employees,
+      solutionStructure: snapshot.solutionStructure,
     });
   },
 };
@@ -803,7 +834,11 @@ export function clearLocalCoffeeDevelopmentStorage(storage: Storage): number {
   const keys = Array.from({ length: storage.length }, (_, index) =>
     storage.key(index),
   ).filter((key): key is string => Boolean(key));
-  const targets = keys.filter((key) => key.startsWith(`${storagePrefix}.`));
+  const targets = keys.filter(
+    (key) =>
+      key.startsWith(`${storagePrefix}.`) ||
+      key.startsWith(`${coffeeBarOrderStoragePrefix}.`),
+  );
   for (const key of targets) storage.removeItem(key);
   return targets.length;
 }

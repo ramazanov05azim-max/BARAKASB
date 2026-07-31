@@ -10,6 +10,7 @@ export interface OperationalWorkspaceAccessInput {
   readonly businessEnvironmentId: string;
   readonly environmentDisplayName: string;
   readonly workspaceId: string;
+  readonly workspaceType: string;
   readonly workspaceName: string;
   readonly assignedEmployees: ReadonlyArray<OperationalWorkspaceEmployee>;
 }

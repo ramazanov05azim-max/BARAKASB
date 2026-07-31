@@ -16,6 +16,7 @@ const activeSession: OperationalWorkspaceSession = {
     businessEnvironmentId: 'environment-1',
     environmentDisplayName: 'Север',
     workspaceId: 'workspace-bar',
+    workspaceType: 'manager',
     workspaceName: 'Бар',
     assignedEmployees: [{ employeeId: 'employee-1', displayName: 'Анна Петрова' }],
     createdAt: '2026-07-31T10:00:00.000Z',
@@ -37,7 +38,7 @@ function createSession(
 }
 
 describe('OperationalWorkspaceScreen', () => {
-  it('renders a Russian placeholder with environment, code and employee context', () => {
+  it('renders a Russian placeholder with environment, code and employee context', async () => {
     const session = createSession(activeSession);
     render(
       <I18nProvider>
@@ -49,7 +50,7 @@ describe('OperationalWorkspaceScreen', () => {
       </I18nProvider>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Бар' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Бар' })).toBeInTheDocument();
     expect(screen.getByText('Север')).toBeInTheDocument();
     expect(screen.getByText('1234 5678 9012')).toBeInTheDocument();
     expect(screen.getAllByText('Анна Петрова')).toHaveLength(2);

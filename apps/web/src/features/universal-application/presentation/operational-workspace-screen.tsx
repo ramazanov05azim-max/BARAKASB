@@ -2,7 +2,8 @@
 
 import { ArrowLeft, KeyRound, UserRound, UsersRound } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { CoffeeBarWorkspaceScreen } from '@barakasb/solution-coffee';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,9 +28,14 @@ export function OperationalWorkspaceScreen({
   session?: OperationalWorkspaceSessionStore;
 }) {
   const { t } = useTranslation();
-  const [current, setCurrent] = useState<OperationalWorkspaceSession | null>(() =>
-    session.read(projectId, workspaceId),
-  );
+  const [current, setCurrent] = useState<OperationalWorkspaceSession | null>(null);
+
+  useEffect(() => {
+    const readSession = window.setTimeout(() => {
+      setCurrent(session.read(projectId, workspaceId));
+    }, 0);
+    return () => window.clearTimeout(readSession);
+  }, [projectId, session, workspaceId]);
 
   if (!current) {
     return (
@@ -58,6 +64,24 @@ export function OperationalWorkspaceScreen({
         workspaceId,
         employeeId.length > 0 ? employeeId : null,
       ),
+    );
+  }
+
+  if (
+    selectedEmployee &&
+    (current.workspace.workspaceType === 'bar' ||
+      current.workspace.workspaceId === 'workspace-bar')
+  ) {
+    return (
+      <CoffeeBarWorkspaceScreen
+        accessCode={formatWorkspaceAccessCode(current.workspace.accessCode)}
+        context={{
+          projectId: current.workspace.projectId,
+          businessEnvironmentId: current.workspace.businessEnvironmentId,
+          workspaceId: current.workspace.workspaceId,
+          employeeId: selectedEmployee.employeeId,
+        }}
+      />
     );
   }
 

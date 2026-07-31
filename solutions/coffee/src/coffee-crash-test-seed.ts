@@ -1,6 +1,7 @@
 import type {
   CoffeeDevelopmentSeed,
   CoffeeLocation,
+  CoffeeTable,
   Employee,
   Ingredient,
   MenuItem,
@@ -10,7 +11,7 @@ import type {
   Warehouse,
 } from './domain';
 
-export const coffeeCrashTestSeedVersion = 2;
+export const coffeeCrashTestSeedVersion = 3;
 export const coffeeCrashTestSeedId = `coffee-crash-test-v${coffeeCrashTestSeedVersion}`;
 
 const active = 'active' as const;
@@ -72,6 +73,18 @@ function locations(timestamp: string): CoffeeLocation[] {
       updatedAt: timestamp,
     },
   ];
+}
+
+function tables(timestamp: string): CoffeeTable[] {
+  return Array.from({ length: 12 }, (_, index) => ({
+    id: `crash-table-${String(index + 1).padStart(2, '0')}`,
+    name: `Стол ${index + 1}`,
+    code: `T-${String(index + 1).padStart(2, '0')}`,
+    seats: index < 4 ? 2 : index < 10 ? 4 : 6,
+    locationId: 'crash-location-main',
+    status: active,
+    updatedAt: timestamp,
+  }));
 }
 
 function warehouses(timestamp: string): Warehouse[] {
@@ -913,6 +926,7 @@ export function createCoffeeCrashTestSeed(timestamp: string): CoffeeDevelopmentS
     id: coffeeCrashTestSeedId,
     projectDisplayName: 'Север Coffee Lab — CRASH TEST',
     locations: locations(timestamp),
+    tables: tables(timestamp),
     registers: [
       {
         id: 'crash-register-main',

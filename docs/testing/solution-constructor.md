@@ -14,7 +14,8 @@ The prototype supports:
 5. assigning an employee to one or more workspaces;
 6. manually issuing one immutable twelve-digit Workspace Access Code per workspace;
 7. resolving that code in the Universal Application;
-8. opening a generic Russian-language placeholder for the resolved workspace.
+8. opening the real Russian-language Bar workspace when `Бар` is resolved;
+9. opening a generic Russian-language placeholder for modules not implemented yet.
 
 ## Routes
 
@@ -28,16 +29,18 @@ The prototype supports:
 
 - Coffee Solution owns the module identifiers, generated structure, and assignments.
 - Manager Platform composes the owner workflow and local prototype adapters.
-- Universal Application owns generic code resolution, its runtime session, and the
-  placeholder shell.
+- Universal Application owns generic code resolution and its runtime session.
+- Coffee Solution owns Bar orders, order rules, preparation routing, tables, and the Bar
+  screen exposed through its existing public solution boundary.
 - A Workspace Access Code identifies the Installed Solution, Business Environment, and
   Operational Workspace. It never identifies an employee.
 
 ## Explicit exclusions
 
-The placeholders implement no orders, kitchen flow, warehouse operations, inventory,
-payments, reporting, production, delivery, or other business behavior. The local
-directory is not an authentication or security boundary.
+Only `Бар` implements local order capture, Bar preparation states, local payment marks,
+and issue history. Other workspaces remain placeholders. Kitchen execution, warehouse
+operations, inventory deduction, real payments, reporting, production, and delivery are
+not implemented. The local directory is not an authentication or security boundary.
 
 ## Replacement seam
 

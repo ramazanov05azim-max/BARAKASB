@@ -60,7 +60,16 @@ function readEntries(storage: Storage): ResolvedOperationalWorkspace[] {
   if (!stored) return [];
   try {
     const parsed: unknown = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed.filter(isWorkspace) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter(isWorkspace).map((entry) => ({
+          ...entry,
+          workspaceType:
+            typeof (entry as Partial<ResolvedOperationalWorkspace>).workspaceType ===
+            'string'
+              ? (entry as ResolvedOperationalWorkspace).workspaceType
+              : entry.workspaceId.replace(/^workspace-/u, ''),
+        }))
+      : [];
   } catch {
     return [];
   }

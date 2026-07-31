@@ -101,6 +101,7 @@ function toAccessInput(
       setup.establishment?.establishmentName ??
       setup.project.name,
     workspaceId: workspace.id,
+    workspaceType: workspace.moduleId,
     workspaceName: names[workspace.moduleId],
     assignedEmployees: employees
       .filter((employee) => assigned.has(employee.id))

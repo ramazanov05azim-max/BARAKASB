@@ -109,6 +109,12 @@ export interface CoffeeLocation extends BaseEntity {
   operationalPurpose?: string;
 }
 
+export interface CoffeeTable extends BaseEntity {
+  locationId: string;
+  code: string;
+  seats: number;
+}
+
 export interface CoffeeRegister extends BaseEntity {
   code: string;
   locationId: string;
@@ -309,6 +315,7 @@ export interface CoffeeSnapshot {
   businessProfile: BusinessProfile;
   settings: CoffeeSettings;
   locations: CoffeeLocation[];
+  tables: CoffeeTable[];
   registers: CoffeeRegister[];
   workstations: CoffeeWorkstation[];
   menuCategories: MenuCategory[];
@@ -334,6 +341,7 @@ export interface CoffeeDevelopmentSeed {
   id: string;
   projectDisplayName: string;
   locations: CoffeeLocation[];
+  tables: CoffeeTable[];
   registers: CoffeeRegister[];
   workstations: CoffeeWorkstation[];
   warehouses: Warehouse[];
@@ -353,15 +361,18 @@ export interface CoffeeOperationalSnapshot {
   businessProfile: BusinessProfile;
   settings: CoffeeSettings;
   locations: ReadonlyArray<CoffeeLocation>;
+  tables: ReadonlyArray<CoffeeTable>;
   warehouses: ReadonlyArray<Warehouse>;
   units: ReadonlyArray<UnitOfMeasure>;
   ingredients: ReadonlyArray<Ingredient>;
   menuItems: ReadonlyArray<MenuItem>;
+  menuCategories: ReadonlyArray<MenuCategory>;
   modifiers: ReadonlyArray<ModifierGroup>;
   recipes: ReadonlyArray<Recipe>;
   openingStockBalances: ReadonlyArray<OpeningStockBalance>;
   suppliers: ReadonlyArray<Supplier>;
   employees: ReadonlyArray<Employee>;
+  solutionStructure: CoffeeSolutionStructure;
 }
 
 export type CollectionKey =

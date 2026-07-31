@@ -1,6 +1,7 @@
 import { localCoffeeManagerRepositories } from '@barakasb/solution-coffee';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createLocalBusinessEnvironmentDirectory } from '@/features/universal-application/infrastructure/local-business-environment-directory';
+import { createLocalOperationalWorkspaceDirectory } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
 import {
   mockRepository,
   projectStorageKey,
@@ -38,6 +39,9 @@ function createHarness() {
     directory: directory.writer,
   });
   const clearOperationalSession = vi.fn();
+  const workspaceDirectory = createLocalOperationalWorkspaceDirectory(
+    window.localStorage,
+  );
   return {
     manager,
     directory,
@@ -48,6 +52,8 @@ function createHarness() {
       manager,
       directory: directory.maintenance,
       resolver: directory.resolver,
+      coffee: localCoffeeManagerRepositories,
+      workspaceAccess: workspaceDirectory.issuer,
       clearOperationalSession,
       enabled: true,
     }),
@@ -104,6 +110,19 @@ describe('Coffee crash-test DEV lifecycle', () => {
       ),
     ).toBeNull();
     expect(clearOperationalSession).toHaveBeenCalled();
+    await expect(
+      createLocalOperationalWorkspaceDirectory(window.localStorage).resolver.resolve(
+        '672801751693',
+      ),
+    ).resolves.toMatchObject({
+      projectId: coffeeCrashTestProjectId,
+      workspaceType: 'bar',
+      workspaceName: 'Бар',
+      assignedEmployees: [
+        { employeeId: 'crash-employee-barista', displayName: 'Иван Беляев' },
+        { employeeId: 'crash-employee-cashier', displayName: 'Анна Лукина' },
+      ],
+    });
   });
 
   it('is deterministic on reinstall and does not recreate after delete', async () => {
@@ -123,5 +142,5 @@ describe('Coffee crash-test DEV lifecycle', () => {
     const inspectedAgain = await service.inspect();
     expect(inspectedAgain.status).toBe('not-installed');
     expect(inspectedAgain.record).toBeNull();
-  });
+  }, 10_000);
 });

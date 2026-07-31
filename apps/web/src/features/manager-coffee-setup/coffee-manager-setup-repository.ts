@@ -81,7 +81,11 @@ interface CoffeeManagerSetupDependencies {
   platformProjects: Pick<MockRepository, 'ensureProject' | 'deleteProject'>;
   coffeeRepositories: Pick<
     CoffeeManagerRepositories,
-    'coffeeProject' | 'businessProfile' | 'settings' | 'developmentSeed'
+    | 'coffeeProject'
+    | 'businessProfile'
+    | 'settings'
+    | 'developmentSeed'
+    | 'solutionConstructor'
   >;
   directory: BusinessEnvironmentDirectoryWriter;
   now?: () => string;
@@ -324,6 +328,37 @@ export function createCoffeeManagerSetupRepository(
         : await configure(project.id, coffeeCrashTestEstablishment);
       const seed = createCoffeeCrashTestSeed(timestamp);
       await dependencies.coffeeRepositories.developmentSeed.apply(project.id, seed);
+      const structure =
+        await dependencies.coffeeRepositories.solutionConstructor.generate(project.id, [
+          'bar',
+          'manager',
+        ]);
+      const barWorkspace = structure.workspaces.find(
+        (workspace) => workspace.moduleId === 'bar',
+      );
+      const managerWorkspace = structure.workspaces.find(
+        (workspace) => workspace.moduleId === 'manager',
+      );
+      if (barWorkspace) {
+        for (const employeeId of ['crash-employee-barista', 'crash-employee-cashier']) {
+          await dependencies.coffeeRepositories.solutionConstructor.assignEmployee(
+            project.id,
+            barWorkspace.id,
+            employeeId,
+            true,
+          );
+        }
+      }
+      if (managerWorkspace) {
+        for (const employeeId of ['crash-employee-owner', 'crash-employee-manager']) {
+          await dependencies.coffeeRepositories.solutionConstructor.assignEmployee(
+            project.id,
+            managerWorkspace.id,
+            employeeId,
+            true,
+          );
+        }
+      }
       const profile = await dependencies.coffeeRepositories.businessProfile.get(
         project.id,
       );

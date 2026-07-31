@@ -53,6 +53,7 @@ const resolvedWorkspace: ResolvedOperationalWorkspace = {
   businessEnvironmentId: 'environment-1',
   environmentDisplayName: 'Север',
   workspaceId: 'workspace-bar',
+  workspaceType: 'bar',
   workspaceName: 'Бар',
   assignedEmployees: [],
   createdAt: '2026-07-31T10:00:00.000Z',

@@ -9,6 +9,7 @@ const bar: OperationalWorkspaceAccessInput = {
   businessEnvironmentId: 'environment-1',
   environmentDisplayName: 'Север',
   workspaceId: 'workspace-bar',
+  workspaceType: 'bar',
   workspaceName: 'Бар',
   assignedEmployees: [],
 };

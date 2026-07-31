@@ -1,6 +1,10 @@
 'use client';
 
-import { clearLocalCoffeeDevelopmentStorage } from '@barakasb/solution-coffee';
+import {
+  clearLocalCoffeeDevelopmentStorage,
+  localCoffeeManagerRepositories,
+  type CoffeeManagerRepositories,
+} from '@barakasb/solution-coffee';
 import type {
   BusinessEnvironmentDirectoryMaintenance,
   BusinessEnvironmentResolver,
@@ -16,6 +20,8 @@ import {
   operationalRuntimeSessionKey,
 } from '@/features/universal-application/infrastructure/local-operational-runtime-session';
 import { operationalWorkspaceDirectoryStorageKey } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
+import { localOperationalWorkspaceAccessIssuer } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
+import type { OperationalWorkspaceAccessIssuer } from '@/features/universal-application/application/workspace-access';
 import {
   localOperationalWorkspaceSession,
   operationalWorkspaceSessionStorageKey,
@@ -89,6 +95,8 @@ interface CoffeeCrashTestDependencies {
   manager: CoffeeManagerSetupRepository;
   directory: BusinessEnvironmentDirectoryMaintenance;
   resolver: BusinessEnvironmentResolver;
+  coffee: Pick<CoffeeManagerRepositories, 'loadSnapshot'>;
+  workspaceAccess: OperationalWorkspaceAccessIssuer;
   clearOperationalSession(): void;
   enabled: boolean;
 }
@@ -185,6 +193,30 @@ export function createCoffeeCrashTestService(
       assertEnabled();
       await clearAllLocalTestData();
       const record = await dependencies.manager.installCrashTest();
+      const snapshot = await dependencies.coffee.loadSnapshot(coffeeCrashTestProjectId);
+      const barWorkspace = snapshot.solutionStructure.workspaces.find(
+        (workspace) => workspace.moduleId === 'bar',
+      );
+      if (!barWorkspace || !record.businessEnvironmentId) {
+        throw new Error('coffee-crash-test-bar-workspace-missing');
+      }
+      const assignedEmployeeIds = new Set(barWorkspace.assignedEmployeeIds);
+      await dependencies.workspaceAccess.issue({
+        projectId: record.project.id,
+        solutionId: record.installation.solutionId,
+        solutionInstallationId: record.installation.id,
+        businessEnvironmentId: record.businessEnvironmentId,
+        environmentDisplayName: record.project.displayName ?? record.project.name,
+        workspaceId: barWorkspace.id,
+        workspaceType: barWorkspace.moduleId,
+        workspaceName: 'Бар',
+        assignedEmployees: snapshot.employees
+          .filter((employee) => assignedEmployeeIds.has(employee.id))
+          .map((employee) => ({
+            employeeId: employee.id,
+            displayName: employee.fullName,
+          })),
+      });
       dependencies.localStorage.setItem(
         selectedProjectStorageKey,
         coffeeCrashTestProjectId,
@@ -220,6 +252,8 @@ function browserService(): CoffeeCrashTestService {
     manager: localCoffeeManagerSetupRepository,
     directory: localBusinessEnvironmentDirectoryMaintenance,
     resolver: localBusinessEnvironmentResolver,
+    coffee: localCoffeeManagerRepositories,
+    workspaceAccess: localOperationalWorkspaceAccessIssuer,
     clearOperationalSession: () => {
       localOperationalRuntimeSession.clear();
       localOperationalWorkspaceSession.clear();
