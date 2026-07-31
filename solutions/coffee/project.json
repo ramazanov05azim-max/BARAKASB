@@ -8,6 +8,9 @@
     "lint": {
       "command": "pnpm --filter @barakasb/solution-coffee exec eslint ."
     },
+    "test": {
+      "command": "pnpm exec vitest run solutions/coffee/src"
+    },
     "typecheck": {
       "command": "pnpm --filter @barakasb/solution-coffee exec tsc --noEmit --incremental false"
     }

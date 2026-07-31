@@ -41,6 +41,7 @@ import {
   type CoffeeTranslationKey,
   useCoffeeTranslation,
 } from './i18n';
+import type { CoffeeRepositories } from './repository-contracts';
 import { CoffeeWorkspaceProvider, useCoffeeWorkspace } from './workspace-store';
 
 type IconComponent = typeof Gauge;
@@ -183,6 +184,7 @@ export function CoffeeProjectEnvironment({
   locale,
   projects,
   languageControl,
+  repositories,
   children,
 }: {
   projectId: string;
@@ -190,11 +192,16 @@ export function CoffeeProjectEnvironment({
   locale: CoffeeLocale;
   projects: Array<{ id: string; name: string }>;
   languageControl: ReactNode;
+  repositories?: CoffeeRepositories;
   children: ReactNode;
 }) {
   return (
     <CoffeeI18nProvider locale={locale}>
-      <CoffeeWorkspaceProvider projectId={projectId} projectName={projectName}>
+      <CoffeeWorkspaceProvider
+        projectId={projectId}
+        projectName={projectName}
+        {...(repositories ? { repositories } : {})}
+      >
         <CoffeeShell languageControl={languageControl} projects={projects}>
           {children}
         </CoffeeShell>

@@ -22,11 +22,8 @@ import type {
   SetupStep,
 } from './domain';
 import type { CoffeeTranslationKey } from './i18n';
-import {
-  CoffeeRepositoryError,
-  localCoffeeRepositories,
-  type CoffeeRepositories,
-} from './repositories';
+import { localCoffeeRepositories } from './repositories';
+import { CoffeeRepositoryError, type CoffeeRepositories } from './repository-contracts';
 
 interface CoffeeWorkspaceContextValue {
   projectId: string;

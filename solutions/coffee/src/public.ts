@@ -12,3 +12,15 @@ export {
 export { CoffeeSettingsScreen } from './settings-screen';
 export { CoffeeNotFoundScreen } from './not-found-screen';
 export type { CoffeeLocale } from './domain';
+export { CoffeeRepositoryError } from './repository-contracts';
+export type {
+  ActivityRepository,
+  BusinessProfileRepository,
+  CoffeeProjectRepository,
+  CoffeeRepositories,
+  CoffeeSettingsRepository,
+  CollectionRepository,
+  PermissionRepository,
+  RoleRepository,
+  SetupChecklistRepository,
+} from './repository-contracts';

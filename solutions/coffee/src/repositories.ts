@@ -1,102 +1,21 @@
 'use client';
 
 import type {
-  BusinessProfile,
   CoffeeCapability,
-  CoffeeProject,
   CoffeeRole,
   CoffeeRoleId,
-  CoffeeSettings,
   CoffeeSnapshot,
   CollectionEntityMap,
   CollectionKey,
-  ConfigurationActivity,
   PermissionRow,
   SetupStep,
   SetupStepStatus,
 } from './domain';
-
-export interface CoffeeProjectRepository {
-  initialize(projectId: string, projectName: string): Promise<CoffeeProject>;
-  get(projectId: string): Promise<CoffeeProject>;
-  setDefaultLocation(projectId: string, locationId: string): Promise<CoffeeProject>;
-  markReady(projectId: string): Promise<CoffeeProject>;
-}
-
-export interface BusinessProfileRepository {
-  get(projectId: string): Promise<BusinessProfile>;
-  update(projectId: string, profile: BusinessProfile): Promise<BusinessProfile>;
-}
-
-export interface CoffeeSettingsRepository {
-  get(projectId: string): Promise<CoffeeSettings>;
-  update(projectId: string, settings: CoffeeSettings): Promise<CoffeeSettings>;
-}
-
-export interface CollectionRepository<T extends { id: string }> {
-  list(projectId: string): Promise<T[]>;
-  create(projectId: string, input: Omit<T, 'id' | 'updatedAt'>): Promise<T>;
-  update(projectId: string, id: string, input: Partial<Omit<T, 'id'>>): Promise<T>;
-}
-
-export interface RoleRepository {
-  list(projectId: string): Promise<CoffeeRole[]>;
-  assign(
-    projectId: string,
-    employeeId: string,
-    roleId: CoffeeRoleId | null,
-  ): Promise<void>;
-}
-
-export interface PermissionRepository {
-  list(projectId: string): Promise<PermissionRow[]>;
-  capabilitiesForRole(
-    projectId: string,
-    roleId: CoffeeRoleId,
-  ): Promise<CoffeeCapability[]>;
-  setPreviewRole(projectId: string, roleId: CoffeeRoleId): Promise<void>;
-}
-
-export interface SetupChecklistRepository {
-  list(projectId: string): Promise<SetupStep[]>;
-  complete(projectId: string, stepId: SetupStep['id']): Promise<SetupStep[]>;
-}
-
-export interface ActivityRepository {
-  list(projectId: string): Promise<ConfigurationActivity[]>;
-}
-
-export interface CoffeeRepositories {
-  coffeeProject: CoffeeProjectRepository;
-  businessProfile: BusinessProfileRepository;
-  settings: CoffeeSettingsRepository;
-  locations: CollectionRepository<CollectionEntityMap['locations']>;
-  registers: CollectionRepository<CollectionEntityMap['registers']>;
-  workstations: CollectionRepository<CollectionEntityMap['workstations']>;
-  menuCategories: CollectionRepository<CollectionEntityMap['menuCategories']>;
-  menuItems: CollectionRepository<CollectionEntityMap['menuItems']>;
-  modifiers: CollectionRepository<CollectionEntityMap['modifiers']>;
-  recipes: CollectionRepository<CollectionEntityMap['recipes']>;
-  ingredients: CollectionRepository<CollectionEntityMap['ingredients']>;
-  units: CollectionRepository<CollectionEntityMap['units']>;
-  warehouses: CollectionRepository<CollectionEntityMap['warehouses']>;
-  suppliers: CollectionRepository<CollectionEntityMap['suppliers']>;
-  employees: CollectionRepository<CollectionEntityMap['employees']>;
-  roles: RoleRepository;
-  permissions: PermissionRepository;
-  setupChecklist: SetupChecklistRepository;
-  activity: ActivityRepository;
-  loadSnapshot(projectId: string): Promise<CoffeeSnapshot>;
-}
-
-export class CoffeeRepositoryError extends Error {
-  constructor(
-    public readonly code: 'corrupt-data' | 'not-found' | 'invalid-operation',
-  ) {
-    super(code);
-    this.name = 'CoffeeRepositoryError';
-  }
-}
+import {
+  CoffeeRepositoryError,
+  type CoffeeRepositories,
+  type CollectionRepository,
+} from './repository-contracts';
 
 const storagePrefix = 'barakasb.mock.coffee.project.v1';
 
