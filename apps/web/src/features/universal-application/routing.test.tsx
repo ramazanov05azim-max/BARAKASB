@@ -4,6 +4,7 @@ import UniversalApplicationConnectPage from '@/app/app/connect/page';
 import InvalidUniversalApplicationRoute from '@/app/app/[...invalidUniversalPath]/page';
 import UniversalApplicationUnavailablePage from '@/app/app/unavailable/page';
 import OperationalRuntimePage from '@/app/app/runtime/[projectId]/page';
+import OperationalWorkspacePage from '@/app/app/runtime/[projectId]/workspaces/[workspaceId]/page';
 import { I18nProvider } from '@/i18n/i18n-provider';
 import { UniversalBootstrapRoute } from './presentation/bootstrap-route';
 import { universalApplicationRoutes, universalApplicationRouteValues } from './routes';
@@ -68,6 +69,20 @@ describe('Universal Application routing', () => {
 
     expect(
       await screen.findByRole('heading', { name: 'Введите код бизнес-среды' }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders a workspace-scoped route safely without a session', async () => {
+    const page = await OperationalWorkspacePage({
+      params: Promise.resolve({
+        projectId: 'coffee-1',
+        workspaceId: 'workspace-bar',
+      }),
+    });
+    render(<I18nProvider>{page}</I18nProvider>);
+
+    expect(
+      screen.getByRole('heading', { name: 'Рабочее пространство недоступно' }),
     ).toBeInTheDocument();
   });
 

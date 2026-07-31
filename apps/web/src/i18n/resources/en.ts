@@ -271,6 +271,7 @@ export const en = {
   'dashboard.laterPhase': 'Available in Manager Platform',
   'dashboard.exploreSolutions': 'Explore Solutions',
   'dashboard.configureCoffee': 'Configure Coffee',
+  'dashboard.solutionConstructor': 'Собрать рабочие пространства',
   'dashboard.openCoffeeAdmin': 'Open administration',
   'solutions.eyebrow': 'Solutions',
   'solutions.title': 'Choose how your Project works',
@@ -402,12 +403,12 @@ export const en = {
   'universal.eyebrow': 'Universal Application',
   'universal.connectTitle': 'Connect to a business environment',
   'universal.connectDescription':
-    'Enter the 16-digit code created for a Project in BARAKASB. The code identifies the organization and installed Solution this device will connect to.',
-  'universal.codeLabel': 'Business Environment Code',
+    'Введите код рабочего пространства или 16-значный код бизнес-среды, созданный владельцем в BARAKASB.',
+  'universal.codeLabel': 'Код доступа',
   'universal.codePlaceholder': '0000 0000 0000 0000',
   'universal.codePrivacy':
     'The code is checked only in this browser’s local storage and is not sent anywhere.',
-  'universal.codeIncomplete': 'Enter all 16 digits of the code.',
+  'universal.codeIncomplete': 'Введите 12 или 16 цифр кода.',
   'universal.statusWaiting': 'Waiting for the complete code',
   'universal.statusReady': 'Code format is complete',
   'universal.statusLocalOnly':
@@ -417,7 +418,7 @@ export const en = {
   'universal.continue': 'Continue',
   'universal.resolving': 'Checking code…',
   'universal.invalidCode':
-    'This code was not found in this browser. Check all 16 digits and try again.',
+    'This code was not found in this browser. Check the digits and try again.',
   'universal.resolveError':
     'Local data could not be read. Check browser storage access and try again.',
   'universal.notImplemented':
@@ -480,6 +481,84 @@ export const en = {
   'operational.modules.production': 'Production by technology card',
   'operational.modules.productSales': 'Product sales',
   'operational.modules.operationalReporting': 'Operational reporting',
+  'constructor.eyebrow': 'Конструктор решения',
+  'constructor.title': 'Соберите структуру бизнеса',
+  'constructor.description':
+    'Выберите только нужные модули. Для каждого выбранного модуля будет создано отдельное рабочее пространство.',
+  'constructor.backProject': 'Вернуться к проекту',
+  'constructor.modulesTitle': '1. Выберите модули',
+  'constructor.modulesDescription':
+    'Невыбранные модули не создают рабочих пространств и не появляются в универсальном приложении.',
+  'constructor.module.bar': 'Бар',
+  'constructor.module.kitchen': 'Кухня',
+  'constructor.module.warehouse': 'Склад',
+  'constructor.module.manager': 'Руководитель',
+  'constructor.module.delivery': 'Доставка',
+  'constructor.module.production': 'Производство',
+  'constructor.module.pickup': 'Самовывоз',
+  'constructor.selected': 'Выбрано модулей',
+  'constructor.generate': 'Сформировать структуру',
+  'constructor.generating': 'Формируем структуру…',
+  'constructor.selectAtLeastOne': 'Выберите хотя бы один модуль.',
+  'constructor.regenerateWarning':
+    'Повторное формирование удалит рабочие пространства невыбранных модулей и их локальные коды доступа.',
+  'constructor.workspacesTitle': '2. Рабочие пространства',
+  'constructor.workspacesDescription':
+    'Код создаётся владельцем отдельно для каждого рабочего пространства и не связан с сотрудником.',
+  'constructor.noWorkspaces':
+    'Сначала выберите модули и сформируйте структуру бизнеса.',
+  'constructor.workspaceReady': 'Рабочее пространство создано',
+  'constructor.codeNotGenerated': 'Код ещё не создан',
+  'constructor.generateCode': 'Создать код доступа',
+  'constructor.codeGenerating': 'Создаём код…',
+  'constructor.copyCode': 'Скопировать код',
+  'constructor.codeCopied': 'Код скопирован',
+  'constructor.assignedEmployees': 'Назначенные сотрудники',
+  'constructor.noAssignments': 'Сотрудники не назначены',
+  'constructor.employeesTitle': '3. Сотрудники',
+  'constructor.employeesDescription':
+    'Создайте сотрудников и назначьте их в одно или несколько рабочих пространств.',
+  'constructor.noEmployees': 'Сотрудников пока нет.',
+  'constructor.addEmployee': 'Добавить сотрудника',
+  'constructor.fullName': 'ФИО',
+  'constructor.fullNamePlaceholder': 'Анна Петрова',
+  'constructor.email': 'Электронная почта',
+  'constructor.phone': 'Телефон',
+  'constructor.employeeCode': 'Код сотрудника',
+  'constructor.employeeCodePlaceholder': 'EMP-001',
+  'constructor.savingEmployee': 'Добавляем сотрудника…',
+  'constructor.employeeAdded': 'Сотрудник добавлен.',
+  'constructor.validation.fullName': 'Введите ФИО не короче 2 символов.',
+  'constructor.validation.phone': 'Введите корректный номер телефона.',
+  'constructor.validation.employeeCode': 'Введите код сотрудника.',
+  'constructor.openUniversal': 'Открыть универсальное приложение',
+  'constructor.resultTitle': 'Структура бизнеса сформирована',
+  'constructor.resultDescription':
+    'Созданы только выбранные рабочие пространства. Теперь назначьте сотрудников и создайте коды доступа.',
+  'constructor.loadError':
+    'Не удалось загрузить конструктор. Сначала завершите настройку заведения и создание бизнес-среды.',
+  'constructor.operationError':
+    'Операция не завершена. Проверьте локальные данные и попробуйте снова.',
+  'constructor.successGenerated': 'Структура бизнеса обновлена.',
+  'constructor.successCode': 'Код рабочего пространства создан.',
+  'constructor.permissionNotice':
+    'Прототип: действия доступны владельцу. Серверная проверка прав будет добавлена позже.',
+  'workspace.eyebrow': 'Рабочее пространство',
+  'workspace.placeholder': 'Функциональность этого модуля будет добавлена позже.',
+  'workspace.environment': 'Бизнес-среда',
+  'workspace.accessCode': 'Код рабочего пространства',
+  'workspace.currentEmployee': 'Текущий сотрудник',
+  'workspace.employeeNotSelected': 'Не выбран',
+  'workspace.selectEmployee': 'Выберите текущего сотрудника',
+  'workspace.assignedEmployees': 'Сотрудники с доступом',
+  'workspace.noAssignedEmployees':
+    'Владелец ещё не назначил сотрудников в это рабочее пространство.',
+  'workspace.codeIdentityNotice':
+    'Код определяет рабочее пространство, но не личность сотрудника.',
+  'workspace.changeCode': 'Ввести другой код',
+  'workspace.accessDeniedTitle': 'Рабочее пространство недоступно',
+  'workspace.accessDeniedDescription':
+    'Введите код рабочего пространства заново. Текущий сеанс не содержит доступа к этому адресу.',
   'notFound.title': 'This page isn’t here',
   'notFound.code': '404',
   'notFound.description':

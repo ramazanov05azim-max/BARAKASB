@@ -476,6 +476,8 @@ const ru = {
   'activity.stepCompleted': 'Завершён шаг настройки',
   'activity.projectReady': 'Project отмечен готовым',
   'activity.settingsUpdated': 'Обновлены настройки Coffee',
+  'activity.solutionStructureGenerated': 'Сформирована структура бизнеса',
+  'activity.workspaceAssignmentUpdated': 'Обновлено назначение рабочего пространства',
 } as const;
 
 export type CoffeeTranslationKey = keyof typeof ru;
@@ -958,6 +960,8 @@ Object.assign(en, {
   'activity.stepCompleted': 'Setup step completed',
   'activity.projectReady': 'Project marked ready',
   'activity.settingsUpdated': 'Coffee settings updated',
+  'activity.solutionStructureGenerated': 'Business structure generated',
+  'activity.workspaceAssignmentUpdated': 'Workspace assignment updated',
 } satisfies Partial<Record<CoffeeTranslationKey, string>>);
 
 interface CoffeeI18nContextValue {

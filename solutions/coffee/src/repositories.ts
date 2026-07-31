@@ -7,12 +7,14 @@ import type {
   CoffeeRole,
   CoffeeRoleId,
   CoffeeSnapshot,
+  CoffeeSolutionStructure,
   CollectionEntityMap,
   CollectionKey,
   PermissionRow,
   SetupStep,
   SetupStepStatus,
 } from './domain';
+import { coffeeSolutionModuleIds } from './domain';
 import {
   CoffeeRepositoryError,
   type CoffeeManagerRepositories,
@@ -313,6 +315,12 @@ function initialSnapshot(projectId: string, projectName: string): CoffeeSnapshot
     openingStockBalances: [],
     suppliers: [],
     employees: [],
+    solutionStructure: {
+      selectedModuleIds: [],
+      workspaces: [],
+      generatedAt: null,
+      updatedAt: timestamp,
+    },
     roles: structuredClone(roles),
     permissions: structuredClone(permissionRows),
     setupSteps: setupDefinitions.map((step, index) => ({
@@ -357,6 +365,13 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
     }
     if (parsed.developmentSeedId === undefined) {
       parsed.developmentSeedId = null;
+    }
+    if (!parsed.solutionStructure) {
+      parsed.solutionStructure = initialSnapshot(
+        projectId,
+        parsed.project.name,
+      ).solutionStructure;
+      writeSnapshot(projectId, parsed);
     }
     return parsed;
   } catch {
@@ -559,6 +574,83 @@ export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
   warehouses: collectionRepository('warehouses'),
   suppliers: collectionRepository('suppliers'),
   employees: collectionRepository('employees'),
+  solutionConstructor: {
+    async get(projectId) {
+      await wait();
+      return structuredClone(readSnapshot(projectId).solutionStructure);
+    },
+    async generate(projectId, selectedModuleIds) {
+      await wait(180);
+      const snapshot = readSnapshot(projectId);
+      const selected = [...new Set(selectedModuleIds)];
+      if (
+        selected.length === 0 ||
+        selected.some((moduleId) => !coffeeSolutionModuleIds.includes(moduleId))
+      ) {
+        throw new CoffeeRepositoryError('invalid-operation');
+      }
+
+      const timestamp = now();
+      const existingByModule = new Map(
+        snapshot.solutionStructure.workspaces.map((workspace) => [
+          workspace.moduleId,
+          workspace,
+        ]),
+      );
+      const structure: CoffeeSolutionStructure = {
+        selectedModuleIds: selected,
+        workspaces: selected.map((moduleId) => {
+          const existing = existingByModule.get(moduleId);
+          return (
+            existing ?? {
+              id: `workspace-${moduleId}`,
+              moduleId,
+              assignedEmployeeIds: [],
+              status: 'active',
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            }
+          );
+        }),
+        generatedAt: snapshot.solutionStructure.generatedAt ?? timestamp,
+        updatedAt: timestamp,
+      };
+      snapshot.solutionStructure = structure;
+      appendActivity(
+        snapshot,
+        'activity.solutionStructureGenerated',
+        snapshot.project.name,
+      );
+      writeSnapshot(projectId, snapshot);
+      return structuredClone(structure);
+    },
+    async assignEmployee(projectId, workspaceId, employeeId, assigned) {
+      await wait(120);
+      const snapshot = readSnapshot(projectId);
+      const workspace = snapshot.solutionStructure.workspaces.find(
+        (candidate) => candidate.id === workspaceId,
+      );
+      const employee = snapshot.employees.find(
+        (candidate) => candidate.id === employeeId,
+      );
+      if (!workspace || !employee) {
+        throw new CoffeeRepositoryError('not-found');
+      }
+      const assignments = new Set(workspace.assignedEmployeeIds);
+      if (assigned) assignments.add(employeeId);
+      else assignments.delete(employeeId);
+      workspace.assignedEmployeeIds = [...assignments];
+      workspace.updatedAt = now();
+      snapshot.solutionStructure.updatedAt = workspace.updatedAt;
+      appendActivity(
+        snapshot,
+        'activity.workspaceAssignmentUpdated',
+        employee.fullName,
+      );
+      writeSnapshot(projectId, snapshot);
+      return structuredClone(snapshot.solutionStructure);
+    },
+  },
   roles: {
     async list(projectId) {
       await wait();

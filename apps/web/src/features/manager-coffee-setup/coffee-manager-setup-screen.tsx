@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Check, Coffee, Copy } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Coffee, Copy, Layers3 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -207,8 +207,15 @@ export function CoffeeManagerSetupScreen({
 
             <div className="mt-8 flex flex-col-reverse justify-center gap-3 sm:flex-row">
               <Link
-                href={`/projects/${projectId}`}
+                href={`/projects/${projectId}/admin/solutions/coffee/constructor`}
                 className={buttonVariants({ size: 'lg' })}
+              >
+                <Layers3 className="size-4" />
+                {t('dashboard.solutionConstructor')}
+              </Link>
+              <Link
+                href={`/projects/${projectId}`}
+                className={buttonVariants({ variant: 'secondary', size: 'lg' })}
               >
                 {t('coffeeOnboarding.backToProjects')}
               </Link>

@@ -1,6 +1,14 @@
 'use client';
 
-import { ArrowRight, Check, Coffee, Copy, Settings2, UserPlus } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  Coffee,
+  Copy,
+  Layers3,
+  Settings2,
+  UserPlus,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -151,6 +159,15 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
                     <Coffee className="size-4" />
                     {t('dashboard.openCoffeeAdmin')}
                   </Link>
+                  {businessEnvironmentCode && (
+                    <Link
+                      href={`/projects/${project.id}/admin/solutions/coffee/constructor`}
+                      className={buttonVariants({ variant: 'secondary' })}
+                    >
+                      <Layers3 className="size-4" />
+                      {t('dashboard.solutionConstructor')}
+                    </Link>
+                  )}
                 </>
               )}
               <Link

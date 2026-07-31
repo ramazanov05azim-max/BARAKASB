@@ -6,6 +6,11 @@ import type {
   OperationalRuntimeSessionStore,
   ResolvedBusinessEnvironment,
 } from '../application/business-environment-resolution';
+import type {
+  OperationalWorkspaceAccessResolver,
+  OperationalWorkspaceSessionStore,
+  ResolvedOperationalWorkspace,
+} from '../application/workspace-access';
 import { I18nProvider } from '@/i18n/i18n-provider';
 import { ConnectionScreen } from './connection-screen';
 import { UniversalApplicationShell } from './universal-application-shell';
@@ -40,14 +45,49 @@ function createSession(): OperationalRuntimeSessionStore {
   };
 }
 
+const resolvedWorkspace: ResolvedOperationalWorkspace = {
+  accessCode: '123456789012',
+  projectId: 'coffee-1',
+  solutionId: 'coffee',
+  solutionInstallationId: 'installation-1',
+  businessEnvironmentId: 'environment-1',
+  environmentDisplayName: 'Север',
+  workspaceId: 'workspace-bar',
+  workspaceName: 'Бар',
+  assignedEmployees: [],
+  createdAt: '2026-07-31T10:00:00.000Z',
+};
+
+function createWorkspaceResolver(
+  resolved: ResolvedOperationalWorkspace | null = null,
+): OperationalWorkspaceAccessResolver {
+  return { resolve: vi.fn(async () => resolved) };
+}
+
+function createWorkspaceSession(): OperationalWorkspaceSessionStore {
+  return {
+    authorize: vi.fn(),
+    read: vi.fn(() => null),
+    selectEmployee: vi.fn(() => null),
+    clear: vi.fn(),
+  };
+}
+
 function renderConnectionScreen(
   resolver: BusinessEnvironmentResolver = createResolver(),
   session: OperationalRuntimeSessionStore = createSession(),
+  workspaceResolver: OperationalWorkspaceAccessResolver = createWorkspaceResolver(),
+  workspaceSession: OperationalWorkspaceSessionStore = createWorkspaceSession(),
 ) {
   return render(
     <I18nProvider>
       <UniversalApplicationShell>
-        <ConnectionScreen resolver={resolver} session={session} />
+        <ConnectionScreen
+          resolver={resolver}
+          session={session}
+          workspaceResolver={workspaceResolver}
+          workspaceSession={workspaceSession}
+        />
       </UniversalApplicationShell>
     </I18nProvider>,
   );
@@ -64,7 +104,7 @@ describe('ConnectionScreen', () => {
     expect(
       screen.getByRole('heading', { name: 'Подключение к бизнес-среде' }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('Код бизнес-среды')).toBeInTheDocument();
+    expect(screen.getByLabelText('Код доступа')).toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: /Создать Coffee/i }),
     ).not.toBeInTheDocument();
@@ -73,7 +113,7 @@ describe('ConnectionScreen', () => {
 
   it('accepts digits, removes letters, and formats groups of four', () => {
     renderConnectionScreen();
-    const input = screen.getByLabelText('Код бизнес-среды');
+    const input = screen.getByLabelText('Код доступа');
 
     fireEvent.change(input, { target: { value: '12ab3456cd7890' } });
 
@@ -82,12 +122,12 @@ describe('ConnectionScreen', () => {
 
   it('keeps continue disabled for an incomplete code', () => {
     renderConnectionScreen();
-    fireEvent.change(screen.getByLabelText('Код бизнес-среды'), {
+    fireEvent.change(screen.getByLabelText('Код доступа'), {
       target: { value: '1234' },
     });
 
     expect(screen.getByRole('button', { name: 'Продолжить' })).toBeDisabled();
-    expect(screen.getByRole('alert')).toHaveTextContent('Введите все 16 цифр кода.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Введите 12 или 16 цифр кода.');
   });
 
   it('resolves a manager-created code and opens operational runtime', async () => {
@@ -96,7 +136,7 @@ describe('ConnectionScreen', () => {
     const session = createSession();
     renderConnectionScreen(resolver, session);
 
-    await user.type(screen.getByLabelText('Код бизнес-среды'), '1234567890123456');
+    await user.type(screen.getByLabelText('Код доступа'), '1234567890123456');
     await user.click(screen.getByRole('button', { name: 'Продолжить' }));
 
     await waitFor(() => {
@@ -110,12 +150,37 @@ describe('ConnectionScreen', () => {
     const user = userEvent.setup();
     renderConnectionScreen(createResolver(null));
 
-    await user.type(screen.getByLabelText('Код бизнес-среды'), '9999999999999999');
+    await user.type(screen.getByLabelText('Код доступа'), '9999999999999999');
     await user.click(screen.getByRole('button', { name: 'Продолжить' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Такой код не найден в этом браузере.',
     );
     expect(pushSpy).not.toHaveBeenCalled();
+  });
+
+  it('resolves a Workspace Access Code and opens only that workspace', async () => {
+    const user = userEvent.setup();
+    const environmentSession = createSession();
+    const workspaceResolver = createWorkspaceResolver(resolvedWorkspace);
+    const workspaceSession = createWorkspaceSession();
+    renderConnectionScreen(
+      createResolver(),
+      environmentSession,
+      workspaceResolver,
+      workspaceSession,
+    );
+
+    await user.type(screen.getByLabelText('Код доступа'), '123456789012');
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+
+    await waitFor(() => {
+      expect(workspaceResolver.resolve).toHaveBeenCalledWith('123456789012');
+      expect(workspaceSession.authorize).toHaveBeenCalledWith(resolvedWorkspace);
+      expect(environmentSession.clear).toHaveBeenCalled();
+      expect(pushSpy).toHaveBeenCalledWith(
+        '/app/runtime/coffee-1/workspaces/workspace-bar',
+      );
+    });
   });
 });

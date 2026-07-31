@@ -146,4 +146,71 @@ describe('local Coffee repository adapter', () => {
     expect(snapshot.project.name).toBe('Operational Coffee');
     expect(Object.keys(localCoffeeOperationalReadRepository)).toEqual(['load']);
   });
+
+  it('creates Operational Workspaces only for selected modules', async () => {
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
+      'project-constructor',
+      'Constructor Coffee',
+    );
+
+    const structure = await localCoffeeManagerRepositories.solutionConstructor.generate(
+      'project-constructor',
+      ['bar', 'manager'],
+    );
+
+    expect(structure.selectedModuleIds).toEqual(['bar', 'manager']);
+    expect(structure.workspaces.map((workspace) => workspace.moduleId)).toEqual([
+      'bar',
+      'manager',
+    ]);
+    expect(
+      structure.workspaces.some((workspace) => workspace.moduleId === 'kitchen'),
+    ).toBe(false);
+  });
+
+  it('assigns one employee to multiple isolated workspaces', async () => {
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
+      'project-assignments',
+      'Assignments Coffee',
+    );
+    const employee = await localCoffeeManagerRepositories.employees.create(
+      'project-assignments',
+      {
+        name: 'Анна Петрова',
+        fullName: 'Анна Петрова',
+        email: 'anna@example.test',
+        phone: '+79990000000',
+        employeeCode: 'EMP-001',
+        assignedLocationIds: [],
+        assignedRoleId: null,
+        employmentStatus: 'active',
+        hireDate: '2026-07-31',
+        notes: '',
+        status: 'active',
+      },
+    );
+    const generated = await localCoffeeManagerRepositories.solutionConstructor.generate(
+      'project-assignments',
+      ['bar', 'kitchen'],
+    );
+
+    for (const workspace of generated.workspaces) {
+      await localCoffeeManagerRepositories.solutionConstructor.assignEmployee(
+        'project-assignments',
+        workspace.id,
+        employee.id,
+        true,
+      );
+    }
+
+    const structure =
+      await localCoffeeManagerRepositories.solutionConstructor.get(
+        'project-assignments',
+      );
+    expect(
+      structure.workspaces.every((workspace) =>
+        workspace.assignedEmployeeIds.includes(employee.id),
+      ),
+    ).toBe(true);
+  });
 });

@@ -12,6 +12,18 @@ export type CoffeeRoleId =
   | 'finance'
   | 'analyst';
 
+export const coffeeSolutionModuleIds = [
+  'bar',
+  'kitchen',
+  'warehouse',
+  'manager',
+  'delivery',
+  'production',
+  'pickup',
+] as const;
+
+export type CoffeeSolutionModuleId = (typeof coffeeSolutionModuleIds)[number];
+
 export type CoffeeCapability =
   | 'project.manage'
   | 'locations.read'
@@ -234,6 +246,22 @@ export interface Employee extends BaseEntity {
   notes: string;
 }
 
+export interface CoffeeOperationalWorkspace {
+  id: string;
+  moduleId: CoffeeSolutionModuleId;
+  assignedEmployeeIds: string[];
+  status: 'active';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoffeeSolutionStructure {
+  selectedModuleIds: CoffeeSolutionModuleId[];
+  workspaces: CoffeeOperationalWorkspace[];
+  generatedAt: string | null;
+  updatedAt: string;
+}
+
 export interface CoffeeRole {
   id: CoffeeRoleId;
   nameKey: string;
@@ -293,6 +321,7 @@ export interface CoffeeSnapshot {
   openingStockBalances: OpeningStockBalance[];
   suppliers: Supplier[];
   employees: Employee[];
+  solutionStructure: CoffeeSolutionStructure;
   roles: CoffeeRole[];
   permissions: PermissionRow[];
   setupSteps: SetupStep[];

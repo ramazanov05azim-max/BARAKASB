@@ -4,6 +4,8 @@ import type {
   CoffeeDevelopmentSeed,
   CoffeeOperationalSnapshot,
   CoffeeProject,
+  CoffeeSolutionModuleId,
+  CoffeeSolutionStructure,
   CoffeeRole,
   CoffeeRoleId,
   CoffeeSettings,
@@ -47,6 +49,20 @@ export interface RoleRepository {
   ): Promise<void>;
 }
 
+export interface CoffeeSolutionConstructorRepository {
+  get(projectId: string): Promise<CoffeeSolutionStructure>;
+  generate(
+    projectId: string,
+    selectedModuleIds: ReadonlyArray<CoffeeSolutionModuleId>,
+  ): Promise<CoffeeSolutionStructure>;
+  assignEmployee(
+    projectId: string,
+    workspaceId: string,
+    employeeId: string,
+    assigned: boolean,
+  ): Promise<CoffeeSolutionStructure>;
+}
+
 export interface PermissionRepository {
   list(projectId: string): Promise<PermissionRow[]>;
   capabilitiesForRole(
@@ -85,6 +101,7 @@ export interface CoffeeManagerRepositories {
   warehouses: CollectionRepository<CollectionEntityMap['warehouses']>;
   suppliers: CollectionRepository<CollectionEntityMap['suppliers']>;
   employees: CollectionRepository<CollectionEntityMap['employees']>;
+  solutionConstructor: CoffeeSolutionConstructorRepository;
   roles: RoleRepository;
   permissions: PermissionRepository;
   setupChecklist: SetupChecklistRepository;

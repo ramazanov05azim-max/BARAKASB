@@ -7,14 +7,21 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/i18n-provider';
 import { localBusinessEnvironmentResolver } from '../infrastructure/local-business-environment-directory';
 import { localOperationalRuntimeSession } from '../infrastructure/local-operational-runtime-session';
+import { localOperationalWorkspaceResolver } from '../infrastructure/local-operational-workspace-directory';
+import { localOperationalWorkspaceSession } from '../infrastructure/local-operational-workspace-session';
 import type {
   BusinessEnvironmentResolver,
   OperationalRuntimeSessionStore,
 } from '../application/business-environment-resolution';
+import type {
+  OperationalWorkspaceAccessResolver,
+  OperationalWorkspaceSessionStore,
+} from '../application/workspace-access';
 import {
   isBusinessEnvironmentCodeComplete,
   normalizeBusinessEnvironmentCode,
 } from '../domain/business-environment-code';
+import { isWorkspaceAccessCodeComplete } from '../domain/workspace-access-code';
 import { BusinessEnvironmentCodeInput } from './business-environment-code-input';
 
 type SubmissionState = 'idle' | 'resolving' | 'invalid' | 'error';
@@ -22,16 +29,21 @@ type SubmissionState = 'idle' | 'resolving' | 'invalid' | 'error';
 export function ConnectionScreen({
   resolver = localBusinessEnvironmentResolver,
   session = localOperationalRuntimeSession,
+  workspaceResolver = localOperationalWorkspaceResolver,
+  workspaceSession = localOperationalWorkspaceSession,
 }: {
   resolver?: BusinessEnvironmentResolver;
   session?: OperationalRuntimeSessionStore;
+  workspaceResolver?: OperationalWorkspaceAccessResolver;
+  workspaceSession?: OperationalWorkspaceSessionStore;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [code, setCode] = useState('');
   const [hasInteracted, setHasInteracted] = useState(false);
   const [submissionState, setSubmissionState] = useState<SubmissionState>('idle');
-  const isComplete = isBusinessEnvironmentCodeComplete(code);
+  const isWorkspaceCode = isWorkspaceAccessCodeComplete(code);
+  const isComplete = isWorkspaceCode || isBusinessEnvironmentCodeComplete(code);
   const isInvalid = hasInteracted && code.length > 0 && !isComplete;
 
   function handleCodeChange(value: string): void {
@@ -46,12 +58,26 @@ export function ConnectionScreen({
     if (!isComplete) return;
     setSubmissionState('resolving');
     try {
+      if (isWorkspaceCode) {
+        const workspace = await workspaceResolver.resolve(code);
+        if (!workspace) {
+          setSubmissionState('invalid');
+          return;
+        }
+        workspaceSession.authorize(workspace);
+        session.clear();
+        router.push(
+          `/app/runtime/${workspace.projectId}/workspaces/${workspace.workspaceId}`,
+        );
+        return;
+      }
       const environment = await resolver.resolve(code);
       if (!environment) {
         setSubmissionState('invalid');
         return;
       }
       session.authorize(environment);
+      workspaceSession.clear();
       router.push(`/app/runtime/${environment.projectId}`);
     } catch {
       setSubmissionState('error');

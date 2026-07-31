@@ -40,12 +40,14 @@ contracts and the extension host.
 
 ## Route model
 
-| Route              | Responsibility                                   |
-| ------------------ | ------------------------------------------------ |
-| `/app`             | Run local bootstrap and enter the required state |
-| `/app/connect`     | Collect and validate a Business Environment Code |
-| `/app/unavailable` | Render a neutral bootstrap failure state         |
-| unknown `/app/*`   | Return to the safe `/app` bootstrap entry        |
+| Route                                               | Responsibility                                       |
+| --------------------------------------------------- | ---------------------------------------------------- |
+| `/app`                                              | Run local bootstrap and enter the required state     |
+| `/app/connect`                                      | Resolve a local environment or workspace access code |
+| `/app/runtime/{projectId}`                          | Show the local environment-level operational preview |
+| `/app/runtime/{projectId}/workspaces/{workspaceId}` | Host a generic Operational Workspace placeholder     |
+| `/app/unavailable`                                  | Render a neutral bootstrap failure state             |
+| unknown `/app/*`                                    | Return to the safe `/app` bootstrap entry            |
 
 These routes form a distinct operational mode while sharing the approved `apps/web`
 build, process, runtime versions, and deployment. The mode does not render Manager
@@ -81,9 +83,14 @@ not contain business configuration and is not:
 - a Coffee-specific identifier;
 - the only security factor.
 
-Stage 7.1 validates only a sixteen-digit format. The normalized code lives solely in
-local component memory. It is not placed in a URL, log, analytics event, cookie,
-`localStorage`, `sessionStorage`, IndexedDB, repository, or network request.
+The local prototype also accepts a twelve-digit Workspace Access Code. The code resolves
+an Installed Solution, Business Environment, and one Operational Workspace. It never
+identifies an employee. Workspace authorization and employee identity remain separate
+concerns.
+
+The prototype keeps issued workspace codes in a replaceable local directory adapter and
+the resolved runtime context in `sessionStorage`. Codes are never placed in URLs, logs,
+analytics events, or source-controlled fixtures.
 
 Device authorization and employee authentication remain separate future security steps.
 Business configuration will be loaded only after authoritative environment resolution.
@@ -104,17 +111,38 @@ BARAKASB icon. Stage 7.1 adds no service worker, API cache, runtime cache, backg
 sync, push notifications, or offline business database. Authenticated and Project-scoped
 content remains uncached by default.
 
-## Stage 7.1 exclusions
+## Solution Constructor prototype
+
+The Manager Platform hosts a project-scoped constructor at:
+
+```text
+/projects/{projectId}/admin/solutions/coffee/constructor
+```
+
+Coffee owns its module catalog, generated structure, and employee-to-workspace
+assignments. The Platform-owned Universal Application receives only a neutral resolved
+workspace context. It does not import Coffee business behavior or implement Bar,
+Kitchen, Warehouse, delivery, production, sales, payments, or inventory operations.
+
+Only selected module identifiers produce Operational Workspaces. Code issuance is an
+explicit owner action and is idempotent per workspace. Removing a module removes its
+local workspace directory entry; changing employee assignments does not rotate the
+workspace code.
+
+The local directory and session adapters are prototype seams that can be replaced by the
+authoritative Stage 7.2/7.3 control plane without changing the route shell or
+placeholder presentation contract.
+
+## Current exclusions
 
 The foundation intentionally excludes:
 
-- code generation and authoritative environment resolution;
+- authoritative environment and workspace resolution;
 - backend integration;
 - device authorization or device sessions;
 - employee authentication or employee sessions;
 - runtime selection or dynamic module loading;
-- Coffee and other Solution runtimes;
-- operational workspaces;
+- Coffee and other operational business behavior;
 - offline business operations.
 
 ## Governance

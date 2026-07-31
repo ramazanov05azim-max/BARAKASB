@@ -15,6 +15,11 @@ import {
   localOperationalRuntimeSession,
   operationalRuntimeSessionKey,
 } from '@/features/universal-application/infrastructure/local-operational-runtime-session';
+import { operationalWorkspaceDirectoryStorageKey } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
+import {
+  localOperationalWorkspaceSession,
+  operationalWorkspaceSessionStorageKey,
+} from '@/features/universal-application/infrastructure/local-operational-workspace-session';
 import {
   mockRepository,
   projectStorageKey,
@@ -49,6 +54,7 @@ export const canonicalLocalStorageKeys = [
   directoryStorageKey,
   selectedProjectStorageKey,
   coffeeCrashTestSchemaKey,
+  operationalWorkspaceDirectoryStorageKey,
 ] as const;
 
 export const obsoleteStoragePrefixes = [
@@ -167,6 +173,7 @@ export function createCoffeeCrashTestService(
     dependencies.localStorage.removeItem(coffeeManagerStorageKey);
     dependencies.localStorage.removeItem(selectedProjectStorageKey);
     dependencies.localStorage.removeItem(coffeeCrashTestSchemaKey);
+    dependencies.localStorage.removeItem(operationalWorkspaceDirectoryStorageKey);
     for (const key of obsoleteKeys(dependencies.localStorage)) {
       dependencies.localStorage.removeItem(key);
     }
@@ -196,6 +203,7 @@ export function createCoffeeCrashTestService(
       assertEnabled();
       await dependencies.manager.deleteCrashTest();
       dependencies.localStorage.removeItem(selectedProjectStorageKey);
+      dependencies.localStorage.removeItem(operationalWorkspaceDirectoryStorageKey);
       dependencies.clearOperationalSession();
       return inspect();
     },
@@ -212,7 +220,10 @@ function browserService(): CoffeeCrashTestService {
     manager: localCoffeeManagerSetupRepository,
     directory: localBusinessEnvironmentDirectoryMaintenance,
     resolver: localBusinessEnvironmentResolver,
-    clearOperationalSession: () => localOperationalRuntimeSession.clear(),
+    clearOperationalSession: () => {
+      localOperationalRuntimeSession.clear();
+      localOperationalWorkspaceSession.clear();
+    },
     enabled:
       process.env.NODE_ENV === 'development' ||
       process.env.NEXT_PUBLIC_ENABLE_COFFEE_CRASH_TEST === 'true',
@@ -229,5 +240,8 @@ export const developmentStorageAudit = {
   canonicalLocalStorageKeys,
   obsoleteLocalStorageKeys,
   obsoleteStoragePrefixes,
-  sessionStorageKeys: [operationalRuntimeSessionKey],
+  sessionStorageKeys: [
+    operationalRuntimeSessionKey,
+    operationalWorkspaceSessionStorageKey,
+  ],
 } as const;

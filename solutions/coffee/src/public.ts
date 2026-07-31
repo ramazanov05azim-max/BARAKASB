@@ -15,7 +15,12 @@ export type {
   CoffeeDevelopmentSeed,
   CoffeeLocale,
   CoffeeOperationalSnapshot,
+  CoffeeOperationalWorkspace,
+  CoffeeSolutionModuleId,
+  CoffeeSolutionStructure,
+  Employee,
 } from './domain';
+export { coffeeSolutionModuleIds } from './domain';
 export {
   coffeeCrashTestSeedId,
   coffeeCrashTestSeedVersion,
@@ -34,6 +39,7 @@ export type {
   CoffeeManagerRepositories,
   CoffeeOperationalReadRepository,
   CoffeeProjectRepository,
+  CoffeeSolutionConstructorRepository,
   CoffeeSettingsRepository,
   CollectionRepository,
   PermissionRepository,
