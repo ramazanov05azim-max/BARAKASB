@@ -66,7 +66,7 @@ export function PlatformShell({
           <Button
             variant="quiet"
             size="icon"
-            className="lg:hidden"
+            className="xl:hidden"
             aria-label={t('nav.openNavigation')}
             onClick={() => setMenuOpen(true)}
           >
@@ -124,7 +124,7 @@ export function PlatformShell({
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={() => setCommandOpen(true)}
-              className="hidden min-h-10 min-w-52 items-center gap-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 text-sm text-[var(--muted)] shadow-[var(--shadow-control)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-solid)] lg:flex"
+              className="hidden min-h-10 min-w-52 items-center gap-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 text-sm text-[var(--muted)] shadow-[var(--shadow-control)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-solid)] xl:flex"
             >
               <Search className="size-4" />
               <span>{t('nav.searchOrJump')}</span>
@@ -185,7 +185,7 @@ export function PlatformShell({
       </header>
 
       <div className="mx-auto flex max-w-[1536px]">
-        <aside className="floating-chrome sticky top-24 my-4 ml-5 hidden h-[calc(100dvh-7rem)] w-64 shrink-0 rounded-[24px] p-4 lg:block">
+        <aside className="floating-chrome sticky top-24 my-4 ml-5 hidden h-[calc(100dvh-7rem)] w-64 shrink-0 rounded-[24px] p-4 xl:block">
           <Navigation items={projectItems} pathname={pathname} />
           <div className="absolute inset-x-4 bottom-4 rounded-[18px] border border-blue-100/80 bg-[linear-gradient(145deg,rgb(239_245_255_/_92%),rgb(255_255_255_/_72%))] p-4 shadow-[inset_0_1px_0_rgb(255_255_255_/_80%)]">
             <p className="text-xs font-semibold text-[var(--text)]">

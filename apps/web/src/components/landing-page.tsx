@@ -36,7 +36,7 @@ export function LandingPage() {
           <div className="network-atmosphere pointer-events-none absolute inset-0 opacity-70" />
           <div className="pointer-events-none absolute left-[5%] top-[28%] size-[420px] rounded-full bg-white/80 blur-3xl" />
           <div className="pointer-events-none absolute right-[8%] top-[18%] size-[420px] rounded-full bg-blue-300/18 blur-3xl" />
-          <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 pb-28 sm:px-8 lg:grid-cols-[.92fr_1.08fr] lg:pb-36">
+          <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 pb-28 sm:px-8 md:gap-16 xl:grid-cols-[.92fr_1.08fr] xl:pb-36">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -46,7 +46,7 @@ export function LandingPage() {
                 <span className="size-2 rounded-full bg-[var(--action)] shadow-[0_0_0_5px_var(--action-soft)]" />
                 {t('landing.badge')}
               </div>
-              <h1 className="max-w-3xl text-balance text-6xl font-semibold leading-[.94] tracking-[-0.07em] sm:text-7xl lg:text-[82px]">
+              <h1 className="max-w-3xl text-balance text-6xl font-semibold leading-[.94] tracking-[-0.07em] sm:text-7xl xl:text-[82px]">
                 {t('landing.titleLine1')}
                 <br />
                 {t('landing.titleLine2')}
@@ -79,7 +79,7 @@ export function LandingPage() {
               initial={{ opacity: 0, y: 24, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.55, delay: 0.08, ease: 'easeOut' }}
-              className="relative lg:translate-x-5"
+              className="relative mx-auto w-full max-w-[760px] xl:max-w-none xl:translate-x-5"
             >
               <ConceptNetwork
                 projectOne={t('landing.previewNorthStar')}

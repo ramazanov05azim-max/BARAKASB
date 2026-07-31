@@ -278,11 +278,11 @@ function CoffeeShell({
   return (
     <div className="relative min-h-dvh bg-transparent text-[var(--text)]">
       <header className="sticky top-0 z-40 px-3 pt-3 sm:px-4 sm:pt-4">
-        <div className="floating-chrome flex h-16 items-center gap-2 rounded-[20px] px-3 sm:px-5 lg:pl-[272px]">
+        <div className="floating-chrome flex h-16 items-center gap-2 rounded-[20px] px-3 sm:px-5 xl:pl-[272px]">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="grid size-11 place-items-center rounded-xl transition hover:bg-[var(--action-soft)] lg:hidden"
+            className="grid size-11 place-items-center rounded-xl transition hover:bg-[var(--action-soft)] xl:hidden"
             aria-label={t('nav.openNavigation')}
           >
             <Menu className="size-5" />
@@ -379,7 +379,7 @@ function CoffeeShell({
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="hidden min-h-10 min-w-64 items-center gap-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 text-sm text-[var(--muted)] shadow-[var(--shadow-control)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-solid)] lg:flex"
+              className="hidden min-h-10 min-w-64 items-center gap-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 text-sm text-[var(--muted)] shadow-[var(--shadow-control)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-solid)] xl:flex"
             >
               <Search className="size-4" />
               <span>{t('nav.globalSearch')}</span>
@@ -390,7 +390,7 @@ function CoffeeShell({
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="grid size-11 place-items-center rounded-xl transition hover:bg-[var(--action-soft)] lg:hidden"
+              className="grid size-11 place-items-center rounded-xl transition hover:bg-[var(--action-soft)] xl:hidden"
               aria-label={t('nav.globalSearch')}
             >
               <Search className="size-5" />
@@ -494,7 +494,7 @@ function CoffeeShell({
         </Dialog.Portal>
       </Dialog.Root>
 
-      <main className="min-w-0 px-4 py-9 sm:px-7 lg:ml-64 lg:px-12 lg:py-12">
+      <main className="min-w-0 px-4 py-9 sm:px-7 lg:px-12 lg:py-12 xl:ml-64">
         <div className="mx-auto max-w-[1440px]">
           <nav
             aria-label={t('nav.breadcrumb')}
@@ -617,7 +617,7 @@ function DesktopSidebar({
 }) {
   const { t } = useCoffeeTranslation();
   return (
-    <aside className="floating-chrome fixed inset-y-3 left-3 z-50 hidden w-[244px] overflow-y-auto rounded-[24px] px-4 pb-5 pt-4 text-[var(--text)] lg:block">
+    <aside className="floating-chrome fixed inset-y-3 left-3 z-50 hidden w-[244px] overflow-y-auto rounded-[24px] px-4 pb-5 pt-4 text-[var(--text)] xl:block">
       <Link href={base} className="mb-8 flex items-center gap-3 px-2">
         <span className="soft-icon-tile grid size-10 place-items-center rounded-xl">
           <Coffee className="size-5" />
