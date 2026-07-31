@@ -1,14 +1,15 @@
 # Solutions
 
-This directory intentionally contains no implemented Solutions yet.
+This directory contains independently versioned first-party Solution packages.
 
-The first approved product blueprint is [Coffee Solution](../COFFEE_SOLUTION.md). Its
-documentation defines the reference contract but does not authorize or contain
-implementation.
+The first approved product blueprint and implementation is
+[Coffee Solution](../COFFEE_SOLUTION.md). Its current frontend package provides the
+Project administration environment and typed mock repositories; operational workflows
+and backend adapters remain outside the current scope.
 
 A future Solution must be an independently versioned workspace package with an approved
 manifest, clear bounded context, project-scoped data, public contracts, migrations,
 capability definitions, health checks, and lifecycle hooks.
 
-Creating the first Solution is blocked until the foundation gates in
-[Roadmap](../docs/roadmap.md) are complete.
+Each implementation must continue to satisfy the gates in [Roadmap](../docs/roadmap.md)
+and its Solution-specific roadmap.

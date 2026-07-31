@@ -93,7 +93,11 @@ export function ProjectsView() {
           {visible.map((project) => (
             <Link
               key={project.id}
-              href={`/projects/${project.id}`}
+              href={
+                project.solutionId === 'coffee'
+                  ? `/projects/${project.id}/coffee`
+                  : `/projects/${project.id}`
+              }
               className="group rounded-[16px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
               <Card className="h-full transition duration-200 group-hover:-translate-y-0.5 group-hover:border-[var(--border-strong)]">

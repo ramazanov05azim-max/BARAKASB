@@ -170,7 +170,7 @@ export const en = {
   'wizard.retailDescription': 'Stores and independent retail operations.',
   'wizard.servicesDescription': 'Appointments and professional services.',
   'wizard.coffeeDescription':
-    'Start with the approved Coffee platform blueprint. This prototype creates an empty Project only—no POS, inventory, recipes, or employee workspaces.',
+    'Create a Coffee Project with a dedicated environment for menu, recipes, inventory setup, team, and workstations.',
   'wizard.projectName': 'Project name',
   'wizard.projectPlaceholder': 'e.g. North Star',
   'wizard.renameLater': 'You can rename it later in Project Settings.',
@@ -179,7 +179,7 @@ export const en = {
   'wizard.summarySolution': 'Solution',
   'wizard.summaryRole': 'Your role',
   'wizard.summaryNotice':
-    'This creates an isolated Project with an empty dashboard. Coffee business functionality is not included in this platform prototype.',
+    'An isolated Coffee Project will be created. Guided setup with mock data opens immediately after creation.',
   'wizard.cancel': 'Cancel',
   'wizard.back': 'Back',
   'wizard.continue': 'Continue',

@@ -3,10 +3,10 @@
 BARAKASB is a multi-project Business Operating System. One identity can manage multiple
 independent projects, while every project's business data remains strictly isolated.
 
-This repository contains the Phase 1 foundation, Phase 2 architecture hardening, Phase 3
-product/UX foundation, Phase 4 Coffee Solution blueprint, and Phase 5 platform frontend
-foundation. It includes a mock-data platform prototype but intentionally contains no
-Coffee business implementation or backend integration.
+This repository contains the architecture and UX foundations, the platform frontend, the
+Coffee Solution blueprint, and the Coffee Project administration environment. The
+current implementation uses typed mock repositories and contains no backend integration
+or live coffee-shop operations.
 
 ## Architecture at a glance
 
@@ -38,8 +38,9 @@ Core <- Solutions <- Plugins
 - **Applications** are composition roots. They contain delivery concerns, not domain
   rules.
 
-Coffee is documented as the first reference Solution; no Solution or Plugin is
-implemented.
+Coffee is the first reference Solution. Its administration environment is implemented
+without POS transactions, order processing, stock movements, finance ledger, realtime
+events, or hardware integrations. No Plugin is implemented.
 
 ## Repository map
 
@@ -51,12 +52,13 @@ implemented.
 | `packages/infrastructure/` | Business-neutral technical adapters                  |
 | `packages/frontend/`       | Shared frontend platform packages                    |
 | `packages/toolchain/`      | Workspace-wide build, lint, test, and TS policy      |
-| `solutions/`               | Future first-party business Solutions                |
+| `solutions/`               | Independently owned first-party business Solutions   |
 | `plugins/`                 | Future extensions to Solutions                       |
 | `infra/`                   | Infrastructure ownership and deployment boundaries   |
 | `docs/`                    | Architecture, decisions, standards, and operations   |
 
-New developers start with [Developer onboarding](docs/onboarding/README.md). The
+New developers start with [BARAKASB Master Context](docs/BARAKASB_MASTER_CONTEXT.md),
+followed by [Developer onboarding](docs/onboarding/README.md). The
 [documentation index](docs/index.md) provides the complete reference, and the
 [architecture decision map](docs/architecture/decision-map.md) connects every major
 design rule to the ADR that explains why it exists. The
@@ -99,7 +101,7 @@ identity and tags as described in
 
 ## Current status
 
-Phase 5 implements the platform frontend against a typed mock repository. Backend and
-Coffee business implementation remain blocked until the Core acceptance criteria in
-[Roadmap](docs/roadmap.md) and the gates in
-[Coffee Implementation Roadmap](COFFEE_IMPLEMENTATION_ROADMAP.md) are met.
+The platform frontend and Coffee Project administration environment are implemented
+against Project-scoped typed mock repositories. Backend services and live Coffee
+operations remain future work governed by [Roadmap](docs/roadmap.md) and
+[Coffee Implementation Roadmap](COFFEE_IMPLEMENTATION_ROADMAP.md).

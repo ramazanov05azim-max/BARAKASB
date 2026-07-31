@@ -2,13 +2,14 @@
 
 Next.js App Router composition root for the BARAKASB platform frontend.
 
-It implements the Phase 5 platform prototype: public and authentication screens, Project
-discovery and creation, Solution catalog, an empty Project Dashboard, profile,
-subscription, Platform Settings, responsive navigation, and safe system states.
+It implements the platform prototype: public and authentication screens, Project
+discovery and creation, Solution catalog, profile, subscription, Platform Settings,
+responsive navigation, safe system states, and route composition for installed
+Solutions.
 
-All data and authentication behavior comes from the typed mock repository. No backend or
-Coffee business module is connected. Business pages remain owned by future Solution
-packages.
+Platform data and authentication behavior comes from the typed mock repository. Coffee
+business pages remain owned by `solutions/coffee` and are composed here without moving
+Solution behavior into the application shell. No backend is connected.
 
 ```text
 src/

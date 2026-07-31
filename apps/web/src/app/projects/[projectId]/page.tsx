@@ -1,5 +1,5 @@
 import { PlatformShell } from '@/components/platform-shell';
-import { ProjectDashboard } from '@/components/project-dashboard';
+import { ProjectEntry } from '@/components/project-entry';
 
 export default async function ProjectPage({
   params,
@@ -15,7 +15,7 @@ export default async function ProjectPage({
           projectId === 'north-star' ? 'common.seedProjectName' : 'common.newProject',
       }}
     >
-      <ProjectDashboard projectId={projectId} />
+      <ProjectEntry projectId={projectId} />
     </PlatformShell>
   );
 }

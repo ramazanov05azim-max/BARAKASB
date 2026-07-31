@@ -109,7 +109,11 @@ export function ProjectWizard({ directCoffee = false }: { directCoffee?: boolean
         categoryId: selectedCategory?.id ?? 'food',
         solutionId: solution,
       });
-      router.push(`/projects/${project.id}`);
+      router.push(
+        project.solutionId === 'coffee'
+          ? `/projects/${project.id}/coffee`
+          : `/projects/${project.id}`,
+      );
     } catch {
       setError(t('wizard.errorCreate'));
       setCreating(false);

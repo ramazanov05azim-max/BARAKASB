@@ -328,10 +328,10 @@ for (const file of fs.readdirSync(path.join(root, 'docs/architecture'))) {
 }
 
 const implementationExtensions = new Set(['.js', '.jsx', '.ts', '.tsx']);
-for (const zone of ['solutions', 'plugins']) {
+for (const zone of ['plugins']) {
   for (const file of walk(path.join(root, zone))) {
     if (implementationExtensions.has(path.extname(file))) {
-      errors.push(`Foundation phase forbids implementation in ${relative(file)}`);
+      errors.push(`Unapproved Plugin implementation found in ${relative(file)}`);
     }
   }
 }

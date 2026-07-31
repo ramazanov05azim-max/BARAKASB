@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source '../../../../solutions/coffee/src';
 
 :root {
   --canvas: #f7f8fa;
