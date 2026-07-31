@@ -12,7 +12,7 @@ export function BrandNetwork({ className }: { className?: string }) {
         className="absolute inset-0 size-full overflow-visible"
       >
         <path
-          d="M274 98 H360 Q382 98 382 120 V216"
+          d="M274 98 H360 Q382 98 382 120 V207"
           fill="none"
           stroke="rgb(23 105 255 / 68%)"
           strokeDasharray="3 6"
@@ -36,23 +36,23 @@ export function BrandNetwork({ className }: { className?: string }) {
           strokeWidth="2"
         />
         <path
-          d="M365 471 V556 Q365 585 394 585 H466"
+          d="M365 481 V556 Q365 585 394 585 H466"
           fill="none"
           stroke="rgb(23 105 255 / 68%)"
           strokeDasharray="3 6"
           strokeLinecap="round"
           strokeWidth="2"
         />
-        <circle cx="382" cy="216" r="5" fill="#1769ff" />
+        <circle cx="382" cy="207" r="5" fill="#1769ff" />
         <circle cx="504" cy="338" r="5" fill="#1769ff" />
         <circle cx="230" cy="352" r="5" fill="#1769ff" />
-        <circle cx="365" cy="471" r="5" fill="#1769ff" />
+        <circle cx="365" cy="481" r="5" fill="#1769ff" />
       </svg>
 
-      <div className="brand-hub absolute left-[46.75%] top-[50.9%] grid h-[37.8%] w-[34.9%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[30px]">
-        <div className="grid size-[62%] place-items-center rounded-full border border-blue-200/95 bg-[linear-gradient(145deg,#f8faff,#eaf1ff)] shadow-[inset_0_0_24px_rgb(23_105_255_/_8%),0_10px_26px_rgb(23_105_255_/_8%)]">
-          <div className="grid size-[57%] place-items-center rounded-full border border-blue-200/90 bg-white shadow-[0_10px_24px_rgb(23_105_255_/_16%)]">
-            <span className="size-[43%] rounded-full bg-[linear-gradient(145deg,#1769ff,#7796f5)] shadow-[0_7px_16px_rgb(23_105_255_/_34%)]" />
+      <div className="brand-hub absolute left-[46.75%] top-[50.9%] grid aspect-square w-[34.9%] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[30px]">
+        <div className="grid aspect-square w-[62%] place-items-center rounded-full border border-blue-200/95 bg-[linear-gradient(145deg,#f8faff,#eaf1ff)] shadow-[inset_0_0_24px_rgb(23_105_255_/_8%),0_10px_26px_rgb(23_105_255_/_8%)]">
+          <div className="grid aspect-square w-[57%] place-items-center rounded-full border border-blue-200/90 bg-white shadow-[0_10px_24px_rgb(23_105_255_/_16%)]">
+            <span className="aspect-square w-[43%] rounded-full bg-[linear-gradient(145deg,#1769ff,#7796f5)] shadow-[0_7px_16px_rgb(23_105_255_/_34%)]" />
           </div>
         </div>
       </div>
