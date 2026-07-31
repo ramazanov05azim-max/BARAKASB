@@ -20,6 +20,7 @@ vi.mock('next/navigation', () => ({
 describe('Universal Application routing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
   });
 
   it('uses namespaced routes inside the single apps/web shell', () => {
@@ -48,15 +49,24 @@ describe('Universal Application routing', () => {
     );
   });
 
-  it('renders the connection route', () => {
-    render(
-      <I18nProvider>
-        <UniversalApplicationConnectPage />
-      </I18nProvider>,
+  it('renders the connection route', async () => {
+    window.localStorage.setItem(
+      'barakasb.local.coffee.environments.v1',
+      JSON.stringify([
+        {
+          schemaVersion: 1,
+          businessEnvironmentCode: '1234567890123456',
+          project: { id: 'coffee-1' },
+        },
+      ]),
     );
+    const page = await UniversalApplicationConnectPage({
+      searchParams: Promise.resolve({}),
+    });
+    render(<I18nProvider>{page}</I18nProvider>);
 
     expect(
-      screen.getByRole('heading', { name: 'Подключение к бизнес-среде' }),
+      await screen.findByRole('heading', { name: 'Подключение к бизнес-среде' }),
     ).toBeInTheDocument();
   });
 

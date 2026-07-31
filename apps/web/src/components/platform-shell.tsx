@@ -101,14 +101,6 @@ export function PlatformShell({
                     {t('nav.allProjects')}
                   </Link>
                 </DropdownMenu.Item>
-                <DropdownMenu.Item asChild>
-                  <Link
-                    href="/projects/north-star"
-                    className="block cursor-pointer rounded-xl px-2.5 py-2 text-sm outline-none hover:bg-[var(--action-soft)]"
-                  >
-                    {t('common.seedProjectName')}
-                  </Link>
-                </DropdownMenu.Item>
                 <DropdownMenu.Separator className="my-1 h-px bg-[var(--border)]" />
                 <DropdownMenu.Item asChild>
                   <Link

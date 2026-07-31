@@ -1,15 +1,70 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type {
+  LocalCoffeeOnboardingRepository,
+  LocalCoffeeProjectRecord,
+} from '@/features/coffee-onboarding/local-coffee-onboarding-repository';
 import { I18nProvider } from '@/i18n/i18n-provider';
 import { ConnectionScreen } from './connection-screen';
 import { UniversalApplicationShell } from './universal-application-shell';
 
-function renderConnectionScreen() {
+const { pushSpy } = vi.hoisted(() => ({ pushSpy: vi.fn() }));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushSpy }),
+}));
+
+const resolvedEnvironment: LocalCoffeeProjectRecord = {
+  schemaVersion: 1,
+  project: {
+    id: 'coffee-1',
+    name: 'North Star',
+    solutionId: 'coffee',
+    categoryId: 'food',
+    status: 'active',
+    role: 'owner',
+    createdAt: '2026-07-31T10:00:00.000Z',
+  },
+  businessEnvironmentCode: '1234567890123456',
+  establishment: {
+    establishmentName: 'North Star',
+    legalName: '',
+    ownerName: 'Alex Morgan',
+    country: 'RU',
+    city: 'Moscow',
+    address: '12 Tverskaya Street',
+    timezone: 'Europe/Moscow',
+    currency: 'RUB',
+    language: 'ru',
+    phone: '+7 999 123-45-67',
+    email: 'owner@north-star.test',
+  },
+  createdAt: '2026-07-31T10:00:00.000Z',
+};
+
+function createRepository({
+  hasProjects = true,
+  resolved = resolvedEnvironment,
+}: {
+  hasProjects?: boolean;
+  resolved?: LocalCoffeeProjectRecord | null;
+} = {}): LocalCoffeeOnboardingRepository {
+  return {
+    list: vi.fn(async () => (hasProjects ? [resolvedEnvironment] : [])),
+    hasProjects: vi.fn(async () => hasProjects),
+    create: vi.fn(async () => resolvedEnvironment),
+    resolve: vi.fn(async () => resolved),
+  };
+}
+
+function renderConnectionScreen(
+  repository: LocalCoffeeOnboardingRepository = createRepository(),
+) {
   return render(
     <I18nProvider>
       <UniversalApplicationShell>
-        <ConnectionScreen />
+        <ConnectionScreen repository={repository} />
       </UniversalApplicationShell>
     </I18nProvider>,
   );
@@ -17,14 +72,14 @@ function renderConnectionScreen() {
 
 describe('ConnectionScreen', () => {
   beforeEach(() => {
-    window.localStorage.clear();
+    vi.clearAllMocks();
   });
 
-  it('shows the start screen, brand, application name, label, and version', () => {
+  it('shows the start screen, brand, application name, label, and version', async () => {
     renderConnectionScreen();
 
     expect(
-      screen.getByRole('heading', { name: 'Подключение к бизнес-среде' }),
+      await screen.findByRole('heading', { name: 'Подключение к бизнес-среде' }),
     ).toBeInTheDocument();
     expect(screen.getByText('BARAKASB')).toBeInTheDocument();
     expect(screen.getByText('Универсальное приложение')).toBeInTheDocument();
@@ -32,18 +87,32 @@ describe('ConnectionScreen', () => {
     expect(screen.getByText('Версия 0.1.0')).toBeInTheDocument();
   });
 
-  it('accepts digits, removes letters, and formats groups of four', () => {
+  it('shows Create Coffee when local storage has no Coffee Project', async () => {
+    renderConnectionScreen(createRepository({ hasProjects: false }));
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Создайте первый Coffee Project',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Создать Coffee/ })).toHaveAttribute(
+      'href',
+      '/projects/new/coffee',
+    );
+  });
+
+  it('accepts digits, removes letters, and formats groups of four', async () => {
     renderConnectionScreen();
-    const input = screen.getByLabelText('Код бизнес-среды');
+    const input = await screen.findByLabelText('Код бизнес-среды');
 
     fireEvent.change(input, { target: { value: '12ab3456cd7890' } });
 
     expect(input).toHaveValue('1234 5678 90');
   });
 
-  it('normalizes a pasted formatted code and limits it to sixteen digits', () => {
+  it('normalizes a pasted formatted code and limits it to sixteen digits', async () => {
     renderConnectionScreen();
-    const input = screen.getByLabelText('Код бизнес-среды');
+    const input = await screen.findByLabelText('Код бизнес-среды');
 
     fireEvent.change(input, {
       target: { value: '1234-5678 9012-3456-9999' },
@@ -52,9 +121,9 @@ describe('ConnectionScreen', () => {
     expect(input).toHaveValue('1234 5678 9012 3456');
   });
 
-  it('keeps continue disabled for an incomplete code', () => {
+  it('keeps continue disabled for an incomplete code', async () => {
     renderConnectionScreen();
-    const input = screen.getByLabelText('Код бизнес-среды');
+    const input = await screen.findByLabelText('Код бизнес-среды');
 
     fireEvent.change(input, { target: { value: '1234' } });
 
@@ -63,9 +132,9 @@ describe('ConnectionScreen', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Введите все 16 цифр кода.');
   });
 
-  it('enables continue for a complete code', () => {
+  it('enables continue for a complete code', async () => {
     renderConnectionScreen();
-    const input = screen.getByLabelText('Код бизнес-среды');
+    const input = await screen.findByLabelText('Код бизнес-среды');
 
     fireEvent.change(input, { target: { value: '1234567890123456' } });
 
@@ -73,19 +142,33 @@ describe('ConnectionScreen', () => {
     expect(input).toHaveAttribute('aria-invalid', 'false');
   });
 
-  it('does not connect or persist and shows the Stage 7.1 neutral state', async () => {
+  it('resolves a valid local code and opens only its Coffee Project', async () => {
     const user = userEvent.setup();
-    renderConnectionScreen();
-    const input = screen.getByLabelText('Код бизнес-среды');
+    const repository = createRepository();
+    renderConnectionScreen(repository);
+    const input = await screen.findByLabelText('Код бизнес-среды');
 
     await user.type(input, '1234567890123456');
     await user.click(screen.getByRole('button', { name: 'Продолжить' }));
 
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Разрешение бизнес-среды будет подключено на следующем этапе.',
+    await waitFor(() => {
+      expect(repository.resolve).toHaveBeenCalledWith('1234567890123456');
+      expect(pushSpy).toHaveBeenCalledWith('/projects/coffee-1/coffee');
+    });
+  });
+
+  it('shows a validation error for an unknown complete code', async () => {
+    const user = userEvent.setup();
+    renderConnectionScreen(createRepository({ resolved: null }));
+    const input = await screen.findByLabelText('Код бизнес-среды');
+
+    await user.type(input, '9999999999999999');
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Такой код не найден в этом браузере.',
     );
-    expect(window.localStorage.length).toBe(0);
-    expect(window.location.pathname).toBe('/');
+    expect(pushSpy).not.toHaveBeenCalled();
   });
 
   it('never writes the Business Environment Code to console', async () => {
@@ -94,7 +177,10 @@ describe('ConnectionScreen', () => {
     const user = userEvent.setup();
     renderConnectionScreen();
 
-    await user.type(screen.getByLabelText('Код бизнес-среды'), '1234567890123456');
+    await user.type(
+      await screen.findByLabelText('Код бизнес-среды'),
+      '1234567890123456',
+    );
     await user.click(screen.getByRole('button', { name: 'Продолжить' }));
 
     expect(consoleLog).not.toHaveBeenCalled();
@@ -105,6 +191,7 @@ describe('ConnectionScreen', () => {
     const user = userEvent.setup();
     renderConnectionScreen();
 
+    await screen.findByLabelText('Код бизнес-среды');
     await user.tab();
     expect(screen.getByRole('link', { name: 'BARAKASB — на главную' })).toHaveFocus();
     await user.tab();

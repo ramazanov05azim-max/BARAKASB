@@ -17,6 +17,7 @@ export const ru = {
   'common.email': 'Электронная почта',
   'common.password': 'Пароль',
   'common.fullName': 'Полное имя',
+  'common.optional': 'Необязательно',
   'common.saved': 'Сохранено',
   'common.available': 'Доступно',
   'common.comingSoon': 'Скоро',
@@ -143,6 +144,7 @@ export const ru = {
   'projects.description':
     'Каждый проект — независимое рабочее пространство со своими людьми, данными и решением.',
   'projects.create': 'Создать проект',
+  'projects.createCoffee': 'Создать Coffee',
   'projects.searchPlaceholder': 'Поиск по проектам',
   'projects.searchLabel': 'Искать проекты',
   'projects.noMatches': 'По вашему запросу проекты не найдены',
@@ -150,7 +152,7 @@ export const ru = {
   'projects.noMatchesDescription':
     'Очистите поиск или попробуйте другое название проекта.',
   'projects.firstDescription':
-    'Выберите категорию бизнеса и решение — мы подготовим рабочее пространство.',
+    'Создайте кофейню, получите локальный код бизнес-среды и откройте административное пространство.',
   'projects.clearSearch': 'Очистить поиск',
   'projects.open': 'Открыть проект',
   'wizard.eyebrow': 'Создание проекта',
@@ -193,6 +195,56 @@ export const ru = {
   'wizard.errorName': 'Введите название проекта.',
   'wizard.errorCreate':
     'Не удалось создать проект. Ваш выбор сохранён — попробуйте ещё раз.',
+  'coffeeOnboarding.eyebrow': 'Локальный прототип Coffee',
+  'coffeeOnboarding.title': 'Создайте кофейню',
+  'coffeeOnboarding.description':
+    'Заполните данные заведения. Мы создадим изолированный Coffee Project и локальный 16-значный код для входа.',
+  'coffeeOnboarding.establishmentName': 'Название заведения',
+  'coffeeOnboarding.establishmentNamePlaceholder': 'Например, Северная звезда',
+  'coffeeOnboarding.legalName': 'Юридическое название',
+  'coffeeOnboarding.legalNamePlaceholder': 'Например, ООО «Северная звезда»',
+  'coffeeOnboarding.ownerName': 'Имя владельца',
+  'coffeeOnboarding.ownerNamePlaceholder': 'Алексей Иванов',
+  'coffeeOnboarding.country': 'Страна',
+  'coffeeOnboarding.countryRussia': 'Россия',
+  'coffeeOnboarding.countryAzerbaijan': 'Азербайджан',
+  'coffeeOnboarding.countryKazakhstan': 'Казахстан',
+  'coffeeOnboarding.countryUnitedStates': 'США',
+  'coffeeOnboarding.city': 'Город',
+  'coffeeOnboarding.cityPlaceholder': 'Москва',
+  'coffeeOnboarding.address': 'Адрес',
+  'coffeeOnboarding.addressPlaceholder': 'ул. Тверская, 12',
+  'coffeeOnboarding.timezone': 'Часовой пояс',
+  'coffeeOnboarding.currency': 'Валюта',
+  'coffeeOnboarding.currencyRub': 'Российский рубль (RUB)',
+  'coffeeOnboarding.currencyAzn': 'Азербайджанский манат (AZN)',
+  'coffeeOnboarding.currencyKzt': 'Казахстанский тенге (KZT)',
+  'coffeeOnboarding.currencyUsd': 'Доллар США (USD)',
+  'coffeeOnboarding.language': 'Язык проекта',
+  'coffeeOnboarding.phone': 'Телефон',
+  'coffeeOnboarding.phonePlaceholder': '+7 999 123-45-67',
+  'coffeeOnboarding.email': 'Электронная почта',
+  'coffeeOnboarding.create': 'Создать Coffee Project',
+  'coffeeOnboarding.creating': 'Создаём Coffee Project…',
+  'coffeeOnboarding.errorCreate':
+    'Не удалось создать локальный Coffee Project. Проверьте доступ к хранилищу браузера и попробуйте снова.',
+  'coffeeOnboarding.validation.establishmentName':
+    'Введите название заведения — не менее 2 символов.',
+  'coffeeOnboarding.validation.ownerName':
+    'Введите имя владельца — не менее 2 символов.',
+  'coffeeOnboarding.validation.city': 'Введите город — не менее 2 символов.',
+  'coffeeOnboarding.validation.address': 'Введите полный адрес заведения.',
+  'coffeeOnboarding.validation.phone': 'Введите корректный номер телефона.',
+  'coffeeOnboarding.validation.required': 'Выберите значение.',
+  'coffeeOnboarding.validation.maxLength': 'Значение слишком длинное.',
+  'coffeeOnboarding.successEyebrow': 'Coffee Project создан',
+  'coffeeOnboarding.successTitle': 'Ваш код бизнес-среды готов',
+  'coffeeOnboarding.successDescription':
+    'Сохраните этот код. Он неизменяем и открывает только созданный Coffee Project в локальном прототипе.',
+  'coffeeOnboarding.copyCode': 'Скопировать код',
+  'coffeeOnboarding.copied': 'Код скопирован',
+  'coffeeOnboarding.backToProjects': 'К моим проектам',
+  'coffeeOnboarding.enterWithCode': 'Войти по коду',
   'dashboard.notFound': 'Проект не найден',
   'dashboard.notFoundDescription':
     'Возможно, проект удалён или ваши права доступа изменились.',
@@ -314,17 +366,29 @@ export const ru = {
   'universal.codeLabel': 'Код бизнес-среды',
   'universal.codePlaceholder': '0000 0000 0000 0000',
   'universal.codePrivacy':
-    'Код остаётся только на этом экране и пока никуда не отправляется.',
+    'Код проверяется только в локальном хранилище этого браузера и никуда не отправляется.',
   'universal.codeIncomplete': 'Введите все 16 цифр кода.',
   'universal.statusWaiting': 'Ожидание полного кода',
   'universal.statusReady': 'Формат кода заполнен',
   'universal.statusLocalOnly':
-    'На этом этапе проверяется только формат — подключение к серверу отключено.',
+    'Доступен только локальный прототип — подключение к серверу отключено.',
+  'universal.statusLocalReady':
+    'Код будет разрешён локально. Сервер и авторитетный каталог не используются.',
   'universal.continue': 'Продолжить',
+  'universal.resolving': 'Проверяем код…',
+  'universal.invalidCode':
+    'Такой код не найден в этом браузере. Проверьте 16 цифр и попробуйте снова.',
+  'universal.resolveError':
+    'Не удалось прочитать локальные данные. Проверьте доступ к хранилищу браузера.',
   'universal.notImplemented':
     'Разрешение бизнес-среды будет подключено на следующем этапе. Код не сохранён и не отправлен.',
   'universal.whereCode':
-    'Код будет доступен владельцу проекта в Manager Platform после подключения соответствующего этапа.',
+    'Код показан владельцу сразу после создания Coffee Project и может использоваться повторно в этом браузере.',
+  'universal.checkingLocal': 'Проверяем локальные Coffee Projects',
+  'universal.noCoffeeTitle': 'Создайте первый Coffee Project',
+  'universal.noCoffeeDescription':
+    'В этом браузере пока нет кофейни. Заполните данные заведения, получите код бизнес-среды и войдите в административное пространство.',
+  'universal.createCoffee': 'Создать Coffee',
   'universal.starting': 'Запуск приложения',
   'universal.startingDescription': 'Проверяем локальное состояние приложения.',
   'universal.redirecting': 'Переходим к подключению бизнес-среды.',

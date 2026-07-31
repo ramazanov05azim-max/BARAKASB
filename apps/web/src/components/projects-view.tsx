@@ -40,8 +40,8 @@ export function ProjectsView() {
         title={t('projects.title')}
         description={t('projects.description')}
         action={
-          <Link href="/projects/new" className={buttonVariants({ size: 'lg' })}>
-            <Plus className="size-4" /> {t('projects.create')}
+          <Link href="/projects/new/coffee" className={buttonVariants({ size: 'lg' })}>
+            <Plus className="size-4" /> {t('projects.createCoffee')}
           </Link>
         }
       />
@@ -82,8 +82,8 @@ export function ProjectsView() {
                 {t('projects.clearSearch')}
               </button>
             ) : (
-              <Link href="/projects/new" className={`${buttonVariants()} mt-6`}>
-                {t('projects.create')}
+              <Link href="/projects/new/coffee" className={`${buttonVariants()} mt-6`}>
+                {t('projects.createCoffee')}
               </Link>
             )}
           </CardContent>

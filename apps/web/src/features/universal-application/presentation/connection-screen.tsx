@@ -1,24 +1,56 @@
 'use client';
 
-import { ArrowRight, Check, CircleDashed, Info, KeyRound } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, Check, CircleDashed, Coffee, KeyRound } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/i18n-provider';
+import {
+  localCoffeeOnboardingRepository,
+  type LocalCoffeeOnboardingRepository,
+} from '@/features/coffee-onboarding/local-coffee-onboarding-repository';
 import {
   isBusinessEnvironmentCodeComplete,
   normalizeBusinessEnvironmentCode,
 } from '../domain/business-environment-code';
 import { BusinessEnvironmentCodeInput } from './business-environment-code-input';
 
-type SubmissionState = 'idle' | 'not-implemented';
+type SubmissionState = 'idle' | 'resolving' | 'invalid' | 'error';
 
-export function ConnectionScreen() {
+export function ConnectionScreen({
+  initialCode = '',
+  repository = localCoffeeOnboardingRepository,
+}: {
+  initialCode?: string;
+  repository?: LocalCoffeeOnboardingRepository;
+}) {
   const { t } = useTranslation();
-  const [code, setCode] = useState('');
+  const router = useRouter();
+  const [code, setCode] = useState(() => normalizeBusinessEnvironmentCode(initialCode));
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [hasProjects, setHasProjects] = useState<boolean | null>(null);
   const [submissionState, setSubmissionState] = useState<SubmissionState>('idle');
   const isComplete = isBusinessEnvironmentCodeComplete(code);
   const isInvalid = hasInteracted && code.length > 0 && !isComplete;
+
+  useEffect(() => {
+    let active = true;
+    void repository
+      .hasProjects()
+      .then((available) => {
+        if (active) setHasProjects(available);
+      })
+      .catch(() => {
+        if (active) {
+          setHasProjects(true);
+          setSubmissionState('error');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [repository]);
 
   function handleCodeChange(value: string): void {
     setCode(normalizeBusinessEnvironmentCode(value));
@@ -26,11 +58,62 @@ export function ConnectionScreen() {
     setSubmissionState('idle');
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setHasInteracted(true);
     if (!isComplete) return;
-    setSubmissionState('not-implemented');
+    setSubmissionState('resolving');
+    try {
+      const environment = await repository.resolve(code);
+      if (!environment) {
+        setSubmissionState('invalid');
+        return;
+      }
+      router.push(`/projects/${environment.project.id}/coffee`);
+    } catch {
+      setSubmissionState('error');
+    }
+  }
+
+  if (hasProjects === null) {
+    return (
+      <section className="w-full max-w-xl text-center" aria-live="polite">
+        <CircleDashed
+          className="mx-auto size-7 animate-spin text-[var(--action)] motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+        <h1 className="mt-5 text-xl font-semibold">{t('universal.checkingLocal')}</h1>
+      </section>
+    );
+  }
+
+  if (!hasProjects) {
+    return (
+      <section className="w-full max-w-xl text-center" aria-labelledby="empty-title">
+        <span className="soft-icon-tile mx-auto grid size-16 place-items-center rounded-[20px]">
+          <Coffee className="size-7" aria-hidden="true" />
+        </span>
+        <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-[var(--action)]">
+          {t('universal.eyebrow')}
+        </p>
+        <h1
+          id="empty-title"
+          className="mt-3 text-balance text-3xl font-semibold tracking-[-0.045em] sm:text-4xl"
+        >
+          {t('universal.noCoffeeTitle')}
+        </h1>
+        <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-[var(--text-secondary)] sm:text-[15px]">
+          {t('universal.noCoffeeDescription')}
+        </p>
+        <Link
+          href="/projects/new/coffee"
+          className={`${buttonVariants({ size: 'lg' })} mt-7`}
+        >
+          {t('universal.createCoffee')}
+          <ArrowRight className="size-4" />
+        </Link>
+      </section>
+    );
   }
 
   return (
@@ -54,7 +137,7 @@ export function ConnectionScreen() {
       </div>
 
       <form
-        onSubmit={handleSubmit}
+        onSubmit={(event) => void handleSubmit(event)}
         className="glass-panel rounded-[28px] p-5 sm:p-7"
         noValidate
       >
@@ -78,24 +161,36 @@ export function ConnectionScreen() {
               {t(isComplete ? 'universal.statusReady' : 'universal.statusWaiting')}
             </p>
             <p className="mt-0.5 text-xs leading-5 text-[var(--muted)]">
-              {t('universal.statusLocalOnly')}
+              {t('universal.statusLocalReady')}
             </p>
           </div>
         </div>
 
-        <Button type="submit" size="lg" className="mt-5 w-full" disabled={!isComplete}>
-          {t('universal.continue')}
+        <Button
+          type="submit"
+          size="lg"
+          className="mt-5 w-full"
+          disabled={!isComplete || submissionState === 'resolving'}
+        >
+          {t(
+            submissionState === 'resolving'
+              ? 'universal.resolving'
+              : 'universal.continue',
+          )}
           <ArrowRight className="size-4" aria-hidden="true" />
         </Button>
 
-        {submissionState === 'not-implemented' && (
-          <div
-            role="status"
-            className="mt-4 flex items-start gap-2 rounded-[14px] border border-blue-400/20 bg-[var(--action-soft)] px-3.5 py-3 text-sm leading-5"
+        {(submissionState === 'invalid' || submissionState === 'error') && (
+          <p
+            role="alert"
+            className="mt-4 rounded-[14px] border border-red-400/20 bg-red-50/70 px-3.5 py-3 text-sm leading-5 text-[var(--danger)]"
           >
-            <Info className="mt-0.5 size-4 shrink-0 text-[var(--action)]" />
-            <span>{t('universal.notImplemented')}</span>
-          </div>
+            {t(
+              submissionState === 'invalid'
+                ? 'universal.invalidCode'
+                : 'universal.resolveError',
+            )}
+          </p>
         )}
       </form>
 

@@ -101,6 +101,10 @@ export function ProjectWizard({ directCoffee = false }: { directCoffee?: boolean
       setError(t('wizard.errorSolution'));
       return;
     }
+    if (solution === 'coffee') {
+      router.push(`/projects/new/coffee?name=${encodeURIComponent(name.trim())}`);
+      return;
+    }
     setCreating(true);
     setError('');
     try {
@@ -109,11 +113,7 @@ export function ProjectWizard({ directCoffee = false }: { directCoffee?: boolean
         categoryId: selectedCategory?.id ?? 'food',
         solutionId: solution,
       });
-      router.push(
-        project.solutionId === 'coffee'
-          ? `/projects/${project.id}/coffee`
-          : `/projects/${project.id}`,
-      );
+      router.push(`/projects/${project.id}`);
     } catch {
       setError(t('wizard.errorCreate'));
       setCreating(false);

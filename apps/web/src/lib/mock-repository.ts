@@ -55,17 +55,7 @@ export class MockRepositoryError extends Error {
 
 const storageKey = 'barakasb.mock.projects.v2';
 
-const seedProjects: ProjectSummary[] = [
-  {
-    id: 'north-star',
-    name: 'North Star',
-    solutionId: 'coffee',
-    categoryId: 'food',
-    status: 'active',
-    role: 'owner',
-    createdAt: '2026-07-30T09:00:00.000Z',
-  },
-];
+const seedProjects: ProjectSummary[] = [];
 
 const solutions: SolutionSummary[] = [
   {
@@ -123,11 +113,16 @@ export const mockRepository: MockRepository = {
   },
   async createProject(input) {
     await wait(700);
-    const id = `${input.name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')}-${Date.now().toString(36).slice(-4)}`;
+    const projectSlug =
+      input.name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') || 'project';
+    const uniqueSuffix =
+      globalThis.crypto?.randomUUID?.().slice(0, 8) ??
+      Date.now().toString(36).slice(-8);
+    const id = `${projectSlug}-${uniqueSuffix}`;
     const project: ProjectSummary = {
       id,
       name: input.name.trim(),
