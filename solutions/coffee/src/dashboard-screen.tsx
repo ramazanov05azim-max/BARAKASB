@@ -95,11 +95,11 @@ export function CoffeeDashboardScreen() {
 
       <div className="grid gap-5 xl:grid-cols-[1.4fr_.8fr]">
         <Panel className="overflow-hidden">
-          <div className="border-b border-black/8 p-6 dark:border-white/10 sm:p-7">
+          <div className="border-b border-[var(--border)] p-6 dark:border-white/10 sm:p-7">
             <div className="flex items-start justify-between gap-5">
               <div>
                 <h2 className="text-xl font-semibold">{t('dashboard.setupTitle')}</h2>
-                <p className="mt-1 text-sm text-[#766b61] dark:text-[#aaa096]">
+                <p className="mt-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {t('dashboard.setupDescription')}
                 </p>
               </div>
@@ -107,9 +107,9 @@ export function CoffeeDashboardScreen() {
                 {progress}%
               </span>
             </div>
-            <div className="mt-6 h-2 overflow-hidden rounded-full bg-black/6 dark:bg-white/10">
+            <div className="mt-6 h-2 overflow-hidden rounded-full bg-blue-100/60 dark:bg-white/10">
               <div
-                className="h-full rounded-full bg-[#8a5c3d] transition-[width]"
+                className="h-full rounded-full bg-[linear-gradient(90deg,var(--action),#7ca4ff)] transition-[width]"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -117,15 +117,15 @@ export function CoffeeDashboardScreen() {
           <div className="p-6 sm:p-7">
             {incomplete ? (
               <>
-                <p className="text-xs font-semibold tracking-[0.1em] text-[#8a5c3d] uppercase dark:text-[#d6a77f]">
+                <p className="text-xs font-semibold tracking-[0.1em] text-[var(--action)] uppercase dark:text-[var(--action)]">
                   {t('dashboard.nextAction')}
                 </p>
                 <Link
                   href={`${base}${incomplete.hrefSuffix}`}
-                  className="mt-3 flex items-center gap-4 rounded-2xl bg-[#f3efe9] p-4 transition hover:bg-[#ebe4dc] dark:bg-white/6 dark:hover:bg-white/10"
+                  className="mt-3 flex items-center gap-4 rounded-2xl bg-[var(--subtle)] p-4 transition hover:bg-[var(--canvas-strong)] dark:bg-white/6 dark:hover:bg-white/10"
                 >
                   <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white dark:bg-white/10">
-                    <ArrowRight className="size-4 text-[#8a5c3d] dark:text-[#d6a77f]" />
+                    <ArrowRight className="size-4 text-[var(--action)] dark:text-[var(--action)]" />
                   </span>
                   <span className="font-semibold">
                     {t(incomplete.labelKey as CoffeeTranslationKey)}
@@ -146,11 +146,11 @@ export function CoffeeDashboardScreen() {
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-xl font-semibold">{t('dashboard.todayTitle')}</h2>
-              <p className="mt-1 text-xs leading-5 text-[#766b61] dark:text-[#aaa096]">
+              <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {t('dashboard.todayPreview')}
               </p>
             </div>
-            <span className="rounded-full bg-[#f3efe9] px-2.5 py-1 text-[11px] font-semibold text-[#766b61] dark:bg-white/8 dark:text-[#aaa096]">
+            <span className="rounded-full bg-[var(--subtle)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)] dark:bg-white/8 dark:text-[var(--text-secondary)]">
               {t('common.preview')}
             </span>
           </div>
@@ -161,7 +161,7 @@ export function CoffeeDashboardScreen() {
                   key={key}
                   className="rounded-xl bg-black/[0.025] p-3 dark:bg-white/5"
                 >
-                  <p className="text-xs text-[#766b61] dark:text-[#aaa096]">
+                  <p className="text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                     {t(key as CoffeeTranslationKey)}
                   </p>
                   <p className="mt-2 text-xl font-semibold">—</p>
@@ -169,7 +169,7 @@ export function CoffeeDashboardScreen() {
               ),
             )}
           </div>
-          <p className="mt-5 flex items-center gap-2 text-xs text-[#766b61] dark:text-[#aaa096]">
+          <p className="mt-5 flex items-center gap-2 text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
             <CircleAlert className="size-3.5" />
             {t('dashboard.noOperationalData')}
           </p>
@@ -203,18 +203,18 @@ export function CoffeeDashboardScreen() {
 
         <Panel className="p-6 sm:p-7">
           <h2 className="text-lg font-semibold">{t('dashboard.activity')}</h2>
-          <p className="mt-1 text-xs text-[#766b61] dark:text-[#aaa096]">
+          <p className="mt-1 text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
             {t('dashboard.activityDescription')}
           </p>
-          <div className="mt-5 divide-y divide-black/7 dark:divide-white/8">
+          <div className="mt-5 divide-y divide-[var(--border)] dark:divide-white/8">
             {snapshot.activities.slice(0, 4).map((activity) => (
               <div key={activity.id} className="flex items-start gap-3 py-3 first:pt-0">
-                <span className="mt-1.5 size-2 rounded-full bg-[#8a5c3d]" />
+                <span className="mt-1.5 size-2 rounded-full bg-[var(--action)]" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
                     {t(activity.actionKey as CoffeeTranslationKey)}
                   </p>
-                  <p className="mt-0.5 truncate text-xs text-[#766b61] dark:text-[#aaa096]">
+                  <p className="mt-0.5 truncate text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                     {activity.target} ·{' '}
                     {new Intl.DateTimeFormat(locale, {
                       day: '2-digit',
@@ -238,11 +238,11 @@ export function CoffeeDashboardScreen() {
             return (
               <Link key={module.key} href={module.href}>
                 <Panel className="h-full p-5 transition hover:-translate-y-0.5 hover:border-black/18 dark:hover:border-white/20">
-                  <span className="grid size-10 place-items-center rounded-xl bg-[#f1e7de] text-[#6f442d] dark:bg-[#4a3023] dark:text-[#ecc7a8]">
+                  <span className="grid size-10 place-items-center rounded-xl bg-[var(--action-soft)] text-[var(--action)] dark:bg-[var(--action-soft)] dark:text-[var(--action)]">
                     <Icon className="size-4" />
                   </span>
                   <h3 className="mt-5 font-semibold">{t(module.key)}</h3>
-                  <p className="mt-1 text-xs leading-5 text-[#766b61] dark:text-[#aaa096]">
+                  <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                     {t(module.textKey)}
                   </p>
                 </Panel>

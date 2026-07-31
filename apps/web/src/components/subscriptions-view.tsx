@@ -36,16 +36,16 @@ export function SubscriptionsView({
             : t('subscriptions.descriptionMany')
         }
       />
-      <div className="mb-7 inline-flex rounded-[10px] bg-[var(--subtle)] p-1">
+      <div className="glass-panel mb-8 inline-flex rounded-[14px] p-1">
         <button
           onClick={() => setAnnual(false)}
-          className={`rounded-lg px-3 py-2 text-sm font-semibold ${!annual ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)]'}`}
+          className={`rounded-[10px] px-4 py-2 text-sm font-semibold transition ${!annual ? 'bg-[var(--surface-solid)] text-[var(--action)] shadow-[var(--shadow-control)]' : 'text-[var(--muted)]'}`}
         >
           {t('subscriptions.monthly')}
         </button>
         <button
           onClick={() => setAnnual(true)}
-          className={`rounded-lg px-3 py-2 text-sm font-semibold ${annual ? 'bg-[var(--surface)] shadow-sm' : 'text-[var(--muted)]'}`}
+          className={`rounded-[10px] px-4 py-2 text-sm font-semibold transition ${annual ? 'bg-[var(--surface-solid)] text-[var(--action)] shadow-[var(--shadow-control)]' : 'text-[var(--muted)]'}`}
         >
           {t('subscriptions.annual')}
         </button>
@@ -128,7 +128,9 @@ function Plan({
   return (
     <Card
       className={
-        featured ? 'border-[var(--action)] ring-2 ring-[var(--focus-soft)]' : ''
+        featured
+          ? 'border-[var(--action)] bg-blue-50/55 ring-4 ring-[var(--focus-soft)]'
+          : ''
       }
     >
       <CardContent className="p-7">

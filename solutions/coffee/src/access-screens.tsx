@@ -46,30 +46,30 @@ export function CoffeeRolesScreen() {
         {snapshot.roles.map((role) => (
           <Panel key={role.id} className="p-5">
             <div className="flex items-start justify-between gap-4">
-              <span className="grid size-10 place-items-center rounded-xl bg-[#f1e7de] text-[#6f442d] dark:bg-[#4a3023] dark:text-[#ecc7a8]">
+              <span className="grid size-10 place-items-center rounded-xl bg-[var(--action-soft)] text-[var(--action)] dark:bg-[var(--action-soft)] dark:text-[var(--action)]">
                 <ShieldCheck className="size-4" />
               </span>
-              <span className="rounded-full bg-black/5 px-2.5 py-1 text-xs font-semibold dark:bg-white/8">
+              <span className="rounded-full bg-[var(--subtle)] px-2.5 py-1 text-xs font-semibold dark:bg-white/8">
                 {role.assignmentCount} · {t('roles.assignmentCount')}
               </span>
             </div>
             <h2 className="mt-5 font-semibold">
               {t(role.nameKey as CoffeeTranslationKey)}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
               {t(role.descriptionKey as CoffeeTranslationKey)}
             </p>
             <div className="mt-4 flex flex-wrap gap-1.5">
               {role.capabilities.slice(0, 4).map((capability) => (
                 <code
                   key={capability}
-                  className="rounded-md bg-black/5 px-2 py-1 text-[11px] dark:bg-white/8"
+                  className="rounded-md bg-[var(--subtle)] px-2 py-1 text-[11px] dark:bg-white/8"
                 >
                   {capability}
                 </code>
               ))}
               {role.capabilities.length > 4 ? (
-                <span className="px-1 py-1 text-xs text-[#766b61] dark:text-[#aaa096]">
+                <span className="px-1 py-1 text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   +{role.capabilities.length - 4}
                 </span>
               ) : null}
@@ -81,12 +81,12 @@ export function CoffeeRolesScreen() {
       {canAssign ? (
         <Panel className="mt-6 max-w-3xl p-6">
           <div className="flex items-start gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-[#f1e7de] text-[#6f442d] dark:bg-[#4a3023] dark:text-[#ecc7a8]">
+            <span className="grid size-10 place-items-center rounded-xl bg-[var(--action-soft)] text-[var(--action)] dark:bg-[var(--action-soft)] dark:text-[var(--action)]">
               <UserRoundPlus className="size-4" />
             </span>
             <div>
               <h2 className="font-semibold">{t('roles.assign')}</h2>
-              <p className="mt-1 text-sm text-[#766b61] dark:text-[#aaa096]">
+              <p className="mt-1 text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {snapshot.employees.length
                   ? t('roles.description')
                   : t('roles.noEmployees')}
@@ -168,9 +168,9 @@ export function CoffeePermissionsScreen() {
       <Panel className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-[1080px] w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-black/8 text-xs text-[#766b61] dark:border-white/10 dark:text-[#aaa096]">
-                <th className="sticky left-0 bg-[#fffefa] px-5 py-4 font-semibold dark:bg-[#1c1916]">
+            <thead className="sticky top-0 z-10 bg-[var(--surface-raised)] backdrop-blur-xl">
+              <tr className="border-b border-[var(--border)] text-xs text-[var(--text-secondary)] dark:border-white/10 dark:text-[var(--text-secondary)]">
+                <th className="sticky left-0 bg-[var(--surface-raised)] px-5 py-4 font-semibold dark:bg-[var(--surface-solid)]">
                   {t('common.details')}
                 </th>
                 {snapshot.roles.map((role) => (
@@ -180,14 +180,17 @@ export function CoffeePermissionsScreen() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/7 dark:divide-white/8">
+            <tbody className="divide-y divide-[var(--border)] dark:divide-white/8">
               {snapshot.permissions.map((permission) => (
-                <tr key={`${permission.moduleKey}-${permission.capabilityKey}`}>
-                  <td className="sticky left-0 bg-[#fffefa] px-5 py-4 dark:bg-[#1c1916]">
+                <tr
+                  key={`${permission.moduleKey}-${permission.capabilityKey}`}
+                  className="transition hover:bg-blue-50/45"
+                >
+                  <td className="sticky left-0 bg-[var(--surface-raised)] px-5 py-4 dark:bg-[var(--surface-solid)]">
                     <p className="text-sm font-semibold">
                       {t(permission.moduleKey as CoffeeTranslationKey)}
                     </p>
-                    <code className="mt-1 block text-[11px] text-[#766b61] dark:text-[#aaa096]">
+                    <code className="mt-1 block text-[11px] text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {permission.capabilityKey}
                     </code>
                   </td>
@@ -201,7 +204,7 @@ export function CoffeePermissionsScreen() {
                               ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                               : grant === 'limited'
                                 ? 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                                : 'bg-black/5 text-[#766b61] dark:bg-white/8 dark:text-[#aaa096]'
+                                : 'bg-[var(--subtle)] text-[var(--text-secondary)] dark:bg-white/8 dark:text-[var(--text-secondary)]'
                           }`}
                         >
                           {t(

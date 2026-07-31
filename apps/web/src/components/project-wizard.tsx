@@ -121,12 +121,12 @@ export function ProjectWizard({ directCoffee = false }: { directCoffee?: boolean
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-4xl">
       <div className="mb-10">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--action)]">
           {t('wizard.eyebrow')}
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+        <h1 className="mt-3 text-4xl font-semibold leading-[1.04] tracking-[-0.05em] sm:text-5xl">
           {step === 0 && t('wizard.titleCategory')}
           {step === 1 && t('wizard.titleSolution')}
           {step === 2 && t('wizard.titleName')}
@@ -174,14 +174,16 @@ export function ProjectWizard({ directCoffee = false }: { directCoffee?: boolean
               disabled={!item.available}
               onClick={() => setCategory(item.id)}
               className={cn(
-                'min-h-48 rounded-[16px] border bg-[var(--surface)] p-5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--focus)]',
+                'glass-panel min-h-52 rounded-[var(--radius-card)] p-6 text-left outline-none transition duration-300 focus-visible:ring-2 focus-visible:ring-[var(--focus)]',
                 category === item.id
-                  ? 'border-[var(--action)] ring-2 ring-[var(--focus-soft)]'
-                  : 'border-[var(--border)] hover:border-[var(--border-strong)]',
+                  ? 'border-[var(--action)] bg-blue-50/80 ring-4 ring-[var(--focus-soft)]'
+                  : 'hover:-translate-y-1 hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-float)]',
                 !item.available && 'cursor-not-allowed opacity-55',
               )}
             >
-              <item.icon className="size-6" />
+              <span className="soft-icon-tile grid size-12 place-items-center rounded-[16px]">
+                <item.icon className="size-5" />
+              </span>
               <h2 className="mt-10 font-semibold">{t(item.nameKey)}</h2>
               <p className="mt-2 text-sm leading-5 text-[var(--text-secondary)]">
                 {t(item.descriptionKey)}
@@ -198,14 +200,14 @@ export function ProjectWizard({ directCoffee = false }: { directCoffee?: boolean
         <button
           onClick={() => setSolution('coffee')}
           className={cn(
-            'w-full rounded-[18px] border bg-[var(--surface)] p-6 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--focus)]',
+            'glass-panel w-full rounded-[var(--radius-card)] p-7 text-left outline-none transition duration-300 focus-visible:ring-2 focus-visible:ring-[var(--focus)]',
             solution === 'coffee'
               ? 'border-[var(--action)] ring-2 ring-[var(--focus-soft)]'
               : 'border-[var(--border)]',
           )}
         >
           <div className="flex items-start gap-5">
-            <span className="grid size-14 shrink-0 place-items-center rounded-[16px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <span className="soft-icon-tile grid size-14 shrink-0 place-items-center rounded-[18px]">
               <Coffee className="size-6" />
             </span>
             <div>
@@ -247,7 +249,7 @@ export function ProjectWizard({ directCoffee = false }: { directCoffee?: boolean
       {step === 3 && (
         <Card>
           <CardContent className="p-7">
-            <span className="grid size-12 place-items-center rounded-[14px] bg-blue-50 text-[var(--action)] dark:bg-blue-950">
+            <span className="soft-icon-tile grid size-12 place-items-center rounded-[16px]">
               <Sparkles className="size-5" />
             </span>
             <dl className="mt-8 divide-y divide-[var(--border)]">

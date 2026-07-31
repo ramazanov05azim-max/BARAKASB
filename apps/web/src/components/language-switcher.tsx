@@ -17,7 +17,7 @@ export function LanguageSwitcher({
   return (
     <label
       className={cn(
-        'inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-2.5 text-xs font-semibold',
+        'inline-flex h-10 items-center gap-1.5 rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 text-xs font-semibold shadow-[var(--shadow-control)] backdrop-blur-xl',
         className,
       )}
     >

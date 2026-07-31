@@ -25,7 +25,7 @@ export function PlatformSettingsView() {
           </Badge>
         }
       />
-      <div className="mb-5 rounded-[12px] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+      <div className="mb-6 rounded-[16px] border border-amber-200/80 bg-amber-50/85 p-4 text-sm leading-6 text-amber-900 shadow-[inset_0_1px_0_rgb(255_255_255_/_65%)] dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
         {t('settings.notice')}
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
@@ -52,7 +52,7 @@ export function PlatformSettingsView() {
               <Globe2 className="size-5 text-[var(--action)]" />
               <h2 className="font-semibold">{t('settings.operatorPreferences')}</h2>
             </div>
-            <label className="mt-6 flex items-start justify-between gap-6 rounded-[12px] bg-[var(--subtle)] p-4">
+            <label className="mt-6 flex items-start justify-between gap-6 rounded-[16px] border border-[var(--border)] bg-[var(--subtle)] p-4">
               <span>
                 <span className="block text-sm font-semibold">
                   {t('settings.operationalNotices')}

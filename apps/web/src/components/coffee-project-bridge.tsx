@@ -32,7 +32,7 @@ export function CoffeeProjectBridge({
 
   if (project === undefined) {
     return (
-      <div className="min-h-dvh bg-[var(--canvas)] p-5 sm:p-8">
+      <div className="min-h-dvh bg-transparent p-5 sm:p-8">
         <div className="skeleton mx-auto h-96 max-w-5xl rounded-[16px]" />
       </div>
     );
@@ -40,7 +40,7 @@ export function CoffeeProjectBridge({
 
   if (!project || project.solutionId !== 'coffee') {
     return (
-      <div className="grid min-h-dvh place-items-center bg-[var(--canvas)] p-5">
+      <div className="grid min-h-dvh place-items-center bg-transparent p-5">
         <Card className="max-w-lg">
           <CardContent className="py-14 text-center">
             <h1 className="text-2xl font-semibold">{t('dashboard.notFound')}</h1>

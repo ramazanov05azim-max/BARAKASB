@@ -286,7 +286,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
               </div>
             ) : null}
 
-            <div className="mt-7 flex flex-wrap justify-end gap-3 border-t border-black/8 pt-6 dark:border-white/10">
+            <div className="mt-7 flex flex-wrap justify-end gap-3 border-t border-[var(--border)] pt-6 dark:border-white/10">
               <button
                 type="button"
                 onClick={() => (dirty ? setDiscardPrompt(true) : closeForm())}
@@ -308,9 +308,9 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
       ) : null}
 
       <Panel className="overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-black/8 p-4 dark:border-white/10 md:flex-row">
+        <div className="flex flex-col gap-3 border-b border-[var(--border)] p-4 dark:border-white/10 md:flex-row">
           <label className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8f847a]" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[var(--muted)]" />
             <span className="sr-only">{t('common.search')}</span>
             <input
               value={query}
@@ -320,7 +320,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
             />
           </label>
           <label className="relative">
-            <SlidersHorizontal className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#8f847a]" />
+            <SlidersHorizontal className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[var(--muted)]" />
             <span className="sr-only">{t('common.filter')}</span>
             <select
               value={statusFilter}
@@ -349,11 +349,11 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
 
         {records.length === 0 ? (
           <div className="px-6 py-16 text-center">
-            <MoreHorizontal className="mx-auto size-7 text-[#8a5c3d] dark:text-[#d6a77f]" />
+            <MoreHorizontal className="mx-auto size-7 text-[var(--action)] dark:text-[var(--action)]" />
             <h2 className="mt-5 text-xl font-semibold">
               {t(filtered ? 'resource.noResults' : 'resource.noItems')}
             </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
               {t(filtered ? 'resource.noResultsText' : 'resource.noItemsText')}
             </p>
             {filtered ? (
@@ -382,8 +382,8 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
           <>
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-black/8 text-xs text-[#766b61] dark:border-white/10 dark:text-[#aaa096]">
+                <thead className="sticky top-0 z-10 bg-[var(--surface-raised)] backdrop-blur-xl">
+                  <tr className="border-b border-[var(--border)] text-xs text-[var(--text-secondary)] dark:border-white/10 dark:text-[var(--text-secondary)]">
                     <th className="px-5 py-3 font-semibold">{t('common.name')}</th>
                     {definition.summaryFields.slice(0, 2).map((fieldName) => {
                       const field = definition.fields.find(
@@ -401,7 +401,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-black/7 dark:divide-white/8">
+                <tbody className="divide-y divide-[var(--border)] dark:divide-white/8">
                   {records.map((record) => (
                     <ResourceTableRow
                       key={record.id}
@@ -423,7 +423,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
                 </tbody>
               </table>
             </div>
-            <div className="divide-y divide-black/7 md:hidden dark:divide-white/8">
+            <div className="divide-y divide-[var(--border)] md:hidden dark:divide-white/8">
               {records.map((record) => (
                 <ResourceMobileCard
                   key={record.id}
@@ -450,11 +450,11 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
       >
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-[90] bg-black/35 backdrop-blur-sm" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[100] w-[min(92vw,460px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-black/8 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#211d19]">
+          <Dialog.Content className="floating-chrome fixed left-1/2 top-1/2 z-[100] w-[min(92vw,460px)] -translate-x-1/2 -translate-y-1/2 rounded-[24px] p-6">
             <Dialog.Title className="text-xl font-semibold">
               {t('resource.deactivateConfirm')}
             </Dialog.Title>
-            <Dialog.Description className="mt-2 text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+            <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
               {t('resource.deactivateText')}
             </Dialog.Description>
             <div className="mt-6 flex justify-end gap-3">
@@ -572,11 +572,11 @@ function ResourceTableRow({
   const { t } = useCoffeeTranslation();
   const values = entityToValues(record);
   return (
-    <tr>
+    <tr className="transition hover:bg-blue-50/45">
       <td className="px-5 py-4">
         <p className="text-sm font-semibold">{record.name}</p>
         {isDefault ? (
-          <span className="mt-1 inline-flex text-xs font-medium text-[#8a5c3d] dark:text-[#d6a77f]">
+          <span className="mt-1 inline-flex text-xs font-medium text-[var(--action)] dark:text-[var(--action)]">
             {t('common.default')}
           </span>
         ) : null}
@@ -584,7 +584,7 @@ function ResourceTableRow({
       {definition.summaryFields.slice(0, 2).map((fieldName) => (
         <td
           key={fieldName}
-          className="max-w-56 truncate px-5 py-4 text-sm text-[#766b61] dark:text-[#aaa096]"
+          className="max-w-56 truncate px-5 py-4 text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)]"
         >
           {values[fieldName] || '—'}
         </td>
@@ -657,7 +657,7 @@ function ResourceMobileCard({
         <div>
           <h2 className="font-semibold">{record.name}</h2>
           {isDefault ? (
-            <p className="mt-1 text-xs font-medium text-[#8a5c3d] dark:text-[#d6a77f]">
+            <p className="mt-1 text-xs font-medium text-[var(--action)] dark:text-[var(--action)]">
               {t('common.default')}
             </p>
           ) : null}
@@ -671,7 +671,7 @@ function ResourceMobileCard({
           );
           return (
             <div key={fieldName} className="flex justify-between gap-4">
-              <dt className="text-[#766b61] dark:text-[#aaa096]">
+              <dt className="text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                 {field ? t(field.labelKey) : fieldName}
               </dt>
               <dd className="max-w-[55%] truncate text-right font-medium">
@@ -682,7 +682,7 @@ function ResourceMobileCard({
         })}
       </dl>
       {canManage ? (
-        <div className="mt-5 flex flex-wrap gap-2 border-t border-black/7 pt-4 dark:border-white/8">
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
           {!isDefault && definition.kind === 'locations' ? (
             <button type="button" onClick={onDefault} className={secondaryButtonClass}>
               {t('locations.setDefault')}

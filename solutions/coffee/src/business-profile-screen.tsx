@@ -199,7 +199,7 @@ export function BusinessProfileScreen() {
                     />
                   )}
                   {field.name === 'logoPlaceholder' ? (
-                    <span className="mt-1.5 block text-xs text-[#766b61] dark:text-[#aaa096]">
+                    <span className="mt-1.5 block text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {t('profile.logoHelp')}
                     </span>
                   ) : null}
@@ -239,7 +239,7 @@ export function BusinessProfileScreen() {
             </div>
           ) : null}
 
-          <div className="mt-7 flex flex-wrap justify-end gap-3 border-t border-black/8 pt-6 dark:border-white/10">
+          <div className="mt-7 flex flex-wrap justify-end gap-3 border-t border-[var(--border)] pt-6 dark:border-white/10">
             <button
               type="button"
               disabled={!dirty}

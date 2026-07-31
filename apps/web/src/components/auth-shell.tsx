@@ -20,17 +20,24 @@ export function AuthShell({
   const { t } = useTranslation();
 
   return (
-    <main className="min-h-dvh bg-[var(--canvas)]">
-      <div className="mx-auto flex min-h-dvh max-w-7xl flex-col px-5 py-6 sm:px-8">
+    <main className="relative min-h-dvh overflow-hidden bg-transparent">
+      <div className="network-atmosphere pointer-events-none absolute inset-0 opacity-70" />
+      <div className="pointer-events-none absolute -right-24 top-24 size-[420px] rounded-full bg-blue-300/16 blur-3xl" />
+      <div className="relative mx-auto flex min-h-dvh max-w-7xl flex-col px-5 py-6 sm:px-8">
         <div className="flex items-center justify-between">
           <Brand />
           <LanguageSwitcher />
         </div>
         <div className="flex flex-1 items-center justify-center py-12">
-          <div className="w-full max-w-[420px]">
+          <div className="glass-panel w-full max-w-[460px] rounded-[28px] p-6 sm:p-9">
             <div className="mb-8">
-              <h1 className="text-3xl font-semibold tracking-[-0.035em]">{title}</h1>
-              <p className="mt-3 leading-6 text-[var(--text-secondary)]">
+              <span className="soft-icon-tile mb-7 grid size-12 place-items-center rounded-[16px] text-sm font-bold">
+                {t('common.brandMark')}
+              </span>
+              <h1 className="text-3xl font-semibold leading-tight tracking-[-0.045em] sm:text-[36px]">
+                {title}
+              </h1>
+              <p className="mt-3 leading-7 text-[var(--text-secondary)]">
                 {description}
               </p>
             </div>

@@ -12,17 +12,17 @@ export function PageHeading({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-      <div className="max-w-2xl">
+    <div className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between lg:mb-12">
+      <div className="max-w-3xl">
         {eyebrow && (
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-[var(--action)]">
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--action)]">
             {eyebrow}
           </p>
         )}
-        <h1 className="text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
+        <h1 className="text-4xl font-semibold leading-[1.04] tracking-[-0.048em] sm:text-5xl">
           {title}
         </h1>
-        <p className="mt-3 text-[15px] leading-6 text-[var(--text-secondary)]">
+        <p className="mt-4 max-w-2xl text-[15px] leading-7 text-[var(--text-secondary)]">
           {description}
         </p>
       </div>

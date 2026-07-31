@@ -110,7 +110,7 @@ function HubGrid({
           <Link key={item.href} href={item.href}>
             <Panel className="h-full p-6 transition hover:-translate-y-0.5 hover:border-black/18 dark:hover:border-white/20">
               <div className="flex items-start justify-between">
-                <span className="grid size-11 place-items-center rounded-xl bg-[#f1e7de] text-[#6f442d] dark:bg-[#4a3023] dark:text-[#ecc7a8]">
+                <span className="grid size-11 place-items-center rounded-xl bg-[var(--action-soft)] text-[var(--action)] dark:bg-[var(--action-soft)] dark:text-[var(--action)]">
                   <Icon className="size-5" />
                 </span>
                 <span className="text-2xl font-semibold tracking-[-0.03em]">
@@ -118,7 +118,7 @@ function HubGrid({
                 </span>
               </div>
               <h2 className="mt-7 text-lg font-semibold">{t(item.key)}</h2>
-              <p className="mt-4 flex items-center text-sm font-semibold text-[#8a5c3d] dark:text-[#d6a77f]">
+              <p className="mt-4 flex items-center text-sm font-semibold text-[var(--action)] dark:text-[var(--action)]">
                 {t('common.open')}
                 <ArrowRight className="ml-auto size-4" />
               </p>
@@ -136,12 +136,12 @@ export function ReportsPlaceholderScreen() {
     <>
       <PageHeader title={t('reports.title')} description={t('reports.description')} />
       <Panel className="px-6 py-16 text-center">
-        <FileBarChart className="mx-auto size-8 text-[#8a5c3d] dark:text-[#d6a77f]" />
+        <FileBarChart className="mx-auto size-8 text-[var(--action)] dark:text-[var(--action)]" />
         <h2 className="mt-5 text-xl font-semibold">{t('reports.emptyTitle')}</h2>
-        <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+        <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
           {t('reports.emptyText')}
         </p>
-        <span className="mt-5 inline-flex rounded-full bg-[#f3efe9] px-3 py-1.5 text-xs font-semibold text-[#766b61] dark:bg-white/8 dark:text-[#aaa096]">
+        <span className="mt-5 inline-flex rounded-full bg-[var(--subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] dark:bg-white/8 dark:text-[var(--text-secondary)]">
           {t('common.configurationOnly')}
         </span>
       </Panel>

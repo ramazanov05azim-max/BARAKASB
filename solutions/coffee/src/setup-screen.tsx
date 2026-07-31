@@ -37,24 +37,24 @@ export function CoffeeSetupScreen() {
       />
       <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
         <Panel className="overflow-hidden">
-          <div className="border-b border-black/8 p-6 dark:border-white/10 sm:p-7">
+          <div className="border-b border-[var(--border)] p-6 dark:border-white/10 sm:p-7">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold">{t('setup.progress')}</p>
-                <p className="mt-1 text-xs text-[#766b61] dark:text-[#aaa096]">
+                <p className="mt-1 text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {complete} / {snapshot.setupSteps.length}
                 </p>
               </div>
               <p className="text-3xl font-semibold tracking-[-0.04em]">{progress}%</p>
             </div>
-            <div className="mt-5 h-2 overflow-hidden rounded-full bg-black/6 dark:bg-white/10">
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-blue-100/60 dark:bg-white/10">
               <div
-                className="h-full rounded-full bg-[#8a5c3d] transition-[width]"
+                className="h-full rounded-full bg-[linear-gradient(90deg,var(--action),#7ca4ff)] transition-[width]"
                 style={{ width: `${progress}%` }}
               />
             </div>
           </div>
-          <ol className="divide-y divide-black/7 dark:divide-white/8">
+          <ol className="divide-y divide-[var(--border)] dark:divide-white/8">
             {snapshot.setupSteps.map((step, index) => {
               const label = t(step.labelKey as CoffeeTranslationKey);
               const isReview = step.id === 'review';
@@ -66,8 +66,8 @@ export function CoffeeSetupScreen() {
                       step.status === 'complete'
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                         : step.status === 'incomplete'
-                          ? 'bg-[#efe2d6] text-[#6f442d] dark:bg-[#4a3023] dark:text-[#ecc7a8]'
-                          : 'bg-black/5 text-[#9a9087] dark:bg-white/7'
+                          ? 'bg-[var(--action-soft)] text-[var(--action)]'
+                          : 'bg-[var(--subtle)] text-[var(--muted)] dark:bg-white/7'
                     }`}
                   >
                     {step.status === 'complete' ? (
@@ -80,7 +80,7 @@ export function CoffeeSetupScreen() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold">{label}</p>
-                    <p className="mt-0.5 text-xs text-[#766b61] dark:text-[#aaa096]">
+                    <p className="mt-0.5 text-xs text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                       {step.status === 'complete'
                         ? t('setup.completed')
                         : step.status === 'incomplete'
@@ -88,7 +88,7 @@ export function CoffeeSetupScreen() {
                           : t('setup.blocked')}
                     </p>
                   </div>
-                  <span className="ml-auto hidden text-xs text-[#9a9087] sm:block">
+                  <span className="ml-auto hidden text-xs text-[var(--muted)] sm:block">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   {step.status === 'incomplete' && !isReview && !isReady ? (
@@ -128,7 +128,7 @@ export function CoffeeSetupScreen() {
 
         <div className="space-y-5">
           <Panel className="p-6">
-            <p className="text-xs font-semibold tracking-[0.1em] text-[#8a5c3d] uppercase dark:text-[#d6a77f]">
+            <p className="text-xs font-semibold tracking-[0.1em] text-[var(--action)] uppercase dark:text-[var(--action)]">
               {t('setup.recommended')}
             </p>
             <h2 className="mt-3 text-lg font-semibold">
@@ -148,7 +148,7 @@ export function CoffeeSetupScreen() {
           </Panel>
           <Panel className="p-6">
             <h2 className="font-semibold">{t('header.readyForOperations')}</h2>
-            <p className="mt-2 text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
               {snapshot.project.ready
                 ? t('setup.readySuccess')
                 : t('setup.readyBlocked')}

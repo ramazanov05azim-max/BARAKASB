@@ -51,14 +51,24 @@ export function SolutionCatalog() {
       {!solutions ? (
         <div className="grid gap-5 md:grid-cols-3">
           {[0, 1, 2].map((item) => (
-            <div key={item} className="skeleton h-80 rounded-[18px]" />
+            <div key={item} className="skeleton h-80 rounded-[var(--radius-card)]" />
           ))}
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((solution) => (
-            <Card key={solution.id} className="overflow-hidden">
-              <div className={cn('h-28 bg-gradient-to-br', solution.accent)} />
+            <Card
+              key={solution.id}
+              className="group overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-float)]"
+            >
+              <div
+                className={cn(
+                  'relative h-32 bg-gradient-to-br opacity-75',
+                  solution.accent,
+                )}
+              >
+                <div className="network-atmosphere absolute inset-0 opacity-45" />
+              </div>
               <CardContent>
                 <div className="flex items-start justify-between gap-4">
                   <div>

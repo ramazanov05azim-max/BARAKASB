@@ -20,14 +20,14 @@ export function PageHeader({
     <header className="mb-7 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
       <div className="max-w-3xl">
         {eyebrow ? (
-          <p className="mb-2 text-xs font-semibold tracking-[0.12em] text-[#8a5c3d] uppercase dark:text-[#d6a77f]">
+          <p className="mb-3 text-[11px] font-bold tracking-[0.18em] text-[var(--action)] uppercase">
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="text-3xl font-semibold tracking-[-0.035em] sm:text-[34px]">
+        <h1 className="text-4xl font-semibold leading-[1.04] tracking-[-0.048em] sm:text-5xl">
           {title}
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+        <p className="mt-4 max-w-2xl text-[15px] leading-7 text-[var(--text-secondary)]">
           {description}
         </p>
       </div>
@@ -44,9 +44,7 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section
-      className={`rounded-2xl border border-black/8 bg-[#fffefa] dark:border-white/10 dark:bg-[#1c1916] ${className}`}
-    >
+    <section className={`glass-panel rounded-[var(--radius-card)] ${className}`}>
       {children}
     </section>
   );
@@ -86,7 +84,7 @@ export function StatusBadge({
 export function PreviewBanner() {
   const { t } = useCoffeeTranslation();
   return (
-    <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-200">
+    <div className="mb-6 flex items-start gap-3 rounded-[16px] border border-blue-200/70 bg-blue-50/75 px-4 py-3 text-sm text-blue-900 shadow-[inset_0_1px_0_rgb(255_255_255_/_70%)]">
       <CircleAlert className="mt-0.5 size-4 shrink-0" />
       <span>{t('resource.previewNotice')}</span>
     </div>
@@ -97,9 +95,9 @@ export function PermissionDenied() {
   const { t } = useCoffeeTranslation();
   return (
     <Panel className="px-6 py-14 text-center">
-      <LockKeyhole className="mx-auto size-7 text-[#8a5c3d] dark:text-[#d6a77f]" />
+      <LockKeyhole className="mx-auto size-7 text-[var(--action)]" />
       <h1 className="mt-5 text-xl font-semibold">{t('resource.permissionDenied')}</h1>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)]">
         {t('resource.permissionDeniedText')}
       </p>
     </Panel>
@@ -113,7 +111,7 @@ export function RepositoryErrorState() {
     <Panel className="px-6 py-14 text-center">
       <CircleAlert className="mx-auto size-7 text-red-600" />
       <h1 className="mt-5 text-xl font-semibold">{t('resource.repositoryError')}</h1>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)]">
         {t('resource.repositoryErrorText')}
       </p>
       <button
@@ -129,16 +127,16 @@ export function RepositoryErrorState() {
 }
 
 export const primaryButtonClass =
-  'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#4c2f22] px-4 text-sm font-semibold text-white transition hover:bg-[#3c251b] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b47b55] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45';
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-blue-500/30 bg-[linear-gradient(180deg,#2b78ff_0%,var(--action)_100%)] px-4 text-sm font-semibold text-white shadow-[0_10px_24px_rgb(23_105_255_/_24%),inset_0_1px_0_rgb(255_255_255_/_30%)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgb(23_105_255_/_30%)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45';
 
 export const secondaryButtonClass =
-  'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-4 text-sm font-semibold text-[#211d18] transition hover:bg-[#f3efe9] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b47b55] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45 dark:border-white/12 dark:bg-[#211d19] dark:text-[#f7f2eb] dark:hover:bg-white/8';
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-raised)] px-4 text-sm font-semibold text-[var(--text)] shadow-[var(--shadow-control)] backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--surface-solid)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-45';
 
 export const quietButtonClass =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b47b55] disabled:pointer-events-none disabled:opacity-45 dark:hover:bg-white/8';
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-[12px] border border-transparent px-3 text-sm font-semibold transition duration-200 hover:border-[var(--border)] hover:bg-[var(--surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:pointer-events-none disabled:opacity-45';
 
 export const inputClass =
-  'h-11 w-full rounded-xl border border-black/10 bg-white px-3.5 text-[15px] outline-none transition placeholder:text-[#9a9087] focus:border-[#8a5c3d] focus:ring-2 focus:ring-[#8a5c3d]/15 disabled:opacity-50 dark:border-white/12 dark:bg-[#211d19]';
+  'h-12 w-full rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-raised)] px-4 text-[15px] text-[var(--text)] shadow-[inset_0_1px_0_rgb(255_255_255_/_70%)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:bg-[var(--surface-solid)] focus:ring-4 focus:ring-[var(--focus-soft)] disabled:opacity-50';
 
 export const textareaClass =
-  'min-h-28 w-full resize-y rounded-xl border border-black/10 bg-white px-3.5 py-3 text-[15px] outline-none transition placeholder:text-[#9a9087] focus:border-[#8a5c3d] focus:ring-2 focus:ring-[#8a5c3d]/15 disabled:opacity-50 dark:border-white/12 dark:bg-[#211d19]';
+  'min-h-28 w-full resize-y rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-3 text-[15px] text-[var(--text)] shadow-[inset_0_1px_0_rgb(255_255_255_/_70%)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:bg-[var(--surface-solid)] focus:ring-4 focus:ring-[var(--focus-soft)] disabled:opacity-50';

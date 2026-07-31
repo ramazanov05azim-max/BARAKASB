@@ -66,7 +66,7 @@ export function ProfileView() {
                 <Label htmlFor="theme">{t('profile.appearance')}</Label>
                 <select
                   id="theme"
-                  className="mt-2 h-11 w-full rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-sm"
+                  className="mt-2 h-12 w-full rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-raised)] px-4 text-sm shadow-[var(--shadow-control)] outline-none focus:border-[var(--action)] focus:ring-4 focus:ring-[var(--focus-soft)]"
                 >
                   <option>{t('profile.systemTheme')}</option>
                   <option>{t('profile.lightTheme')}</option>
@@ -75,7 +75,7 @@ export function ProfileView() {
               </div>
               <div>
                 <Label>{t('profile.language')}</Label>
-                <div className="mt-2 flex items-center justify-between gap-4 rounded-[12px] bg-[var(--subtle)] p-3">
+                <div className="mt-2 flex items-center justify-between gap-4 rounded-[16px] border border-[var(--border)] bg-[var(--subtle)] p-4">
                   <p className="text-xs leading-5 text-[var(--muted)]">
                     {t('profile.languageHint')}
                   </p>

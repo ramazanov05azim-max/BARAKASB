@@ -2,7 +2,7 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Bell,
   Boxes,
@@ -225,6 +225,7 @@ function CoffeeShell({
   } = useCoffeeWorkspace();
   const pathname = usePathname();
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -275,32 +276,32 @@ function CoffeeShell({
   }, []);
 
   return (
-    <div className="min-h-dvh bg-[#f6f4f0] text-[#211d18] dark:bg-[#12100e] dark:text-[#f7f2eb]">
-      <header className="sticky top-0 z-40 border-b border-black/8 bg-[#fbfaf8]/92 backdrop-blur-xl dark:border-white/10 dark:bg-[#191613]/92">
-        <div className="flex h-16 items-center gap-2 px-3 sm:px-5 lg:pl-[272px]">
+    <div className="relative min-h-dvh bg-transparent text-[var(--text)]">
+      <header className="sticky top-0 z-40 px-3 pt-3 sm:px-4 sm:pt-4">
+        <div className="floating-chrome flex h-16 items-center gap-2 rounded-[20px] px-3 sm:px-5 lg:pl-[272px]">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="grid size-11 place-items-center rounded-xl hover:bg-black/5 lg:hidden dark:hover:bg-white/8"
+            className="grid size-11 place-items-center rounded-xl transition hover:bg-[var(--action-soft)] lg:hidden"
             aria-label={t('nav.openNavigation')}
           >
             <Menu className="size-5" />
           </button>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-              <button className="flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-2 text-left hover:bg-black/5 dark:hover:bg-white/8">
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#4c2f22] text-white">
+              <button className="flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-2 text-left transition hover:bg-[var(--action-soft)]">
+                <span className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-[linear-gradient(145deg,#3b82ff,var(--action))] text-white shadow-[0_8px_18px_rgb(23_105_255_/_22%)]">
                   <Coffee className="size-4" />
                 </span>
                 <span className="hidden min-w-0 sm:block">
                   <span className="block truncate text-sm font-semibold">
                     {snapshot?.project.name ?? projectId}
                   </span>
-                  <span className="block text-[11px] text-[#766b61] dark:text-[#aaa096]">
+                  <span className="block text-[11px] text-[var(--text-secondary)]">
                     {t('common.coffeeAdministration')}
                   </span>
                 </span>
-                <ChevronDown className="size-4 text-[#766b61]" />
+                <ChevronDown className="size-4 text-[var(--muted)]" />
               </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
@@ -312,7 +313,7 @@ function CoffeeShell({
                     {t('nav.allProjects')}
                   </Link>
                 </DropdownMenu.Item>
-                <DropdownMenu.Separator className="my-1 h-px bg-black/8 dark:bg-white/10" />
+                <DropdownMenu.Separator className="my-1 h-px bg-[var(--border)]" />
                 {projects.map((project) => (
                   <DropdownMenu.Item key={project.id} asChild>
                     <Link
@@ -332,16 +333,16 @@ function CoffeeShell({
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
 
-          <div className="hidden h-7 w-px bg-black/8 md:block dark:bg-white/10" />
+          <div className="hidden h-7 w-px bg-[var(--border)] md:block" />
 
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-              <button className="hidden items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium hover:bg-black/5 md:flex dark:hover:bg-white/8">
-                <Store className="size-4 text-[#766b61]" />
+              <button className="hidden items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-[var(--action-soft)] md:flex">
+                <Store className="size-4 text-[var(--muted)]" />
                 <span className="max-w-36 truncate">
                   {selectedLocation?.name ?? t('nav.noLocations')}
                 </span>
-                <ChevronDown className="size-4 text-[#766b61]" />
+                <ChevronDown className="size-4 text-[var(--muted)]" />
               </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
@@ -378,18 +379,18 @@ function CoffeeShell({
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="hidden min-h-10 min-w-64 items-center gap-2 rounded-xl border border-black/8 bg-white px-3 text-sm text-[#766b61] shadow-sm lg:flex dark:border-white/10 dark:bg-[#211d19] dark:text-[#aaa096]"
+              className="hidden min-h-10 min-w-64 items-center gap-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-raised)] px-3 text-sm text-[var(--muted)] shadow-[var(--shadow-control)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-solid)] lg:flex"
             >
               <Search className="size-4" />
               <span>{t('nav.globalSearch')}</span>
-              <kbd className="ml-auto rounded border border-black/10 px-1.5 py-0.5 text-[11px] dark:border-white/15">
+              <kbd className="ml-auto rounded border border-[var(--border)] px-1.5 py-0.5 text-[11px]">
                 {t('common.commandShortcut')}
               </kbd>
             </button>
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="grid size-11 place-items-center rounded-xl hover:bg-black/5 lg:hidden dark:hover:bg-white/8"
+              className="grid size-11 place-items-center rounded-xl transition hover:bg-[var(--action-soft)] lg:hidden"
               aria-label={t('nav.globalSearch')}
             >
               <Search className="size-5" />
@@ -404,7 +405,7 @@ function CoffeeShell({
               <DropdownMenu.Trigger asChild>
                 <button
                   type="button"
-                  className="ml-1 grid size-9 place-items-center rounded-full bg-[#35251d] text-xs font-bold text-white"
+                  className="ml-1 grid size-10 place-items-center rounded-full bg-[linear-gradient(145deg,#3b82ff,var(--action))] text-xs font-bold text-white shadow-[0_8px_20px_rgb(23_105_255_/_22%)]"
                   aria-label={t('nav.userMenu')}
                 >
                   {t('common.userInitials')}
@@ -413,7 +414,7 @@ function CoffeeShell({
               <DropdownMenu.Portal>
                 <MenuSurface align="end" className="w-72">
                   <MenuLabel>{t('nav.mockRole')}</MenuLabel>
-                  <p className="px-2.5 pb-2 text-xs leading-5 text-[#766b61] dark:text-[#aaa096]">
+                  <p className="px-2.5 pb-2 text-xs leading-5 text-[var(--text-secondary)]">
                     {t('nav.mockRoleHelp')}
                   </p>
                   {snapshot?.roles.map((role) => (
@@ -430,7 +431,7 @@ function CoffeeShell({
                       {t(role.nameKey as CoffeeTranslationKey)}
                     </DropdownMenu.Item>
                   ))}
-                  <DropdownMenu.Separator className="my-1 h-px bg-black/8 dark:bg-white/10" />
+                  <DropdownMenu.Separator className="my-1 h-px bg-[var(--border)]" />
                   <DropdownMenu.Item asChild>
                     <Link href="/profile" className={menuItemClass}>
                       {t('nav.platformProfile')}
@@ -459,16 +460,16 @@ function CoffeeShell({
       <Dialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm" />
-          <Dialog.Content className="fixed inset-y-0 left-0 z-[60] w-[min(88vw,340px)] overflow-y-auto bg-[#2b201a] p-5 text-[#f8f3ec] shadow-2xl">
+          <Dialog.Content className="floating-chrome fixed inset-y-3 left-3 z-[60] w-[min(88vw,340px)] overflow-y-auto rounded-[24px] p-5 text-[var(--text)]">
             <Dialog.Title className="sr-only">{t('nav.openNavigation')}</Dialog.Title>
             <div className="mb-7 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="grid size-9 place-items-center rounded-xl bg-white/10">
+                <span className="soft-icon-tile grid size-9 place-items-center rounded-xl">
                   <Coffee className="size-5" />
                 </span>
                 <div>
                   <p className="text-sm font-semibold">{snapshot?.project.name}</p>
-                  <p className="text-xs text-white/55">
+                  <p className="text-xs text-[var(--text-secondary)]">
                     {t('common.coffeeAdministration')}
                   </p>
                 </div>
@@ -476,7 +477,7 @@ function CoffeeShell({
               <Dialog.Close asChild>
                 <button
                   type="button"
-                  className="grid size-11 place-items-center rounded-xl hover:bg-white/10"
+                  className="grid size-11 place-items-center rounded-xl hover:bg-[var(--action-soft)]"
                   aria-label={t('nav.closeNavigation')}
                 >
                   <X className="size-5" />
@@ -493,26 +494,38 @@ function CoffeeShell({
         </Dialog.Portal>
       </Dialog.Root>
 
-      <main className="min-w-0 px-4 py-6 sm:px-7 lg:ml-64 lg:px-10 lg:py-8">
+      <main className="min-w-0 px-4 py-9 sm:px-7 lg:ml-64 lg:px-12 lg:py-12">
         <div className="mx-auto max-w-[1440px]">
           <nav
             aria-label={t('nav.breadcrumb')}
-            className="mb-5 flex items-center gap-1.5 text-xs font-medium text-[#766b61] dark:text-[#aaa096]"
+            className="mb-7 flex items-center gap-1.5 text-xs font-medium text-[var(--muted)]"
           >
-            <Link href={base} className="hover:text-[#211d18] dark:hover:text-white">
+            <Link href={base} className="hover:text-[var(--action)]">
               {t('nav.coffeeHome')}
             </Link>
             {currentItem?.suffix ? (
               <>
                 <ChevronRight className="size-3.5" />
-                <span className="text-[#3c332d] dark:text-[#e9e0d7]">
-                  {t(currentItem.key)}
-                </span>
+                <span className="text-[var(--text)]">{t(currentItem.key)}</span>
               </>
             ) : null}
           </nav>
 
-          {loading && !snapshot ? <CoffeeLoadingState /> : children}
+          {loading && !snapshot ? (
+            <CoffeeLoadingState />
+          ) : (
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={pathname}
+                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          )}
         </div>
       </main>
 
@@ -522,7 +535,7 @@ function CoffeeShell({
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
-            className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-center gap-3 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-800 shadow-xl dark:border-emerald-900 dark:bg-[#211d19] dark:text-emerald-300"
+            className="floating-chrome fixed bottom-5 right-5 z-[80] flex max-w-sm items-center gap-3 rounded-[18px] border-emerald-200/80 px-4 py-3 text-sm font-semibold text-emerald-800"
             role="status"
           >
             <Check className="size-4" />
@@ -530,7 +543,7 @@ function CoffeeShell({
             <button
               type="button"
               onClick={clearFeedback}
-              className="ml-2 grid size-8 place-items-center rounded-lg hover:bg-black/5 dark:hover:bg-white/8"
+              className="ml-2 grid size-8 place-items-center rounded-lg hover:bg-[var(--action-soft)]"
               aria-label={t('common.close')}
             >
               <X className="size-4" />
@@ -542,18 +555,18 @@ function CoffeeShell({
       <Dialog.Root open={searchOpen} onOpenChange={setSearchOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-[70] bg-black/35 backdrop-blur-sm" />
-          <Dialog.Content className="fixed left-1/2 top-[12vh] z-[80] w-[min(92vw,640px)] -translate-x-1/2 overflow-hidden rounded-2xl border border-black/8 bg-white shadow-2xl dark:border-white/10 dark:bg-[#211d19]">
+          <Dialog.Content className="floating-chrome fixed left-1/2 top-[12vh] z-[80] w-[min(92vw,640px)] -translate-x-1/2 overflow-hidden rounded-[24px]">
             <Dialog.Title className="sr-only">{t('nav.globalSearch')}</Dialog.Title>
-            <div className="flex items-center gap-3 border-b border-black/8 px-5 dark:border-white/10">
-              <Search className="size-5 text-[#766b61]" />
+            <div className="flex items-center gap-3 border-b border-[var(--border)] px-5">
+              <Search className="size-5 text-[var(--muted)]" />
               <input
                 autoFocus
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder={t('nav.searchPlaceholder')}
-                className="h-14 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-[#9a9087]"
+                className="h-14 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--muted)]"
               />
-              <Command className="size-4 text-[#9a9087]" />
+              <Command className="size-4 text-[var(--muted)]" />
             </div>
             <div className="max-h-[55vh] overflow-y-auto p-2">
               {searchItems.length ? (
@@ -568,16 +581,16 @@ function CoffeeShell({
                         setSearchOpen(false);
                         setSearchQuery('');
                       }}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-[#f3efe9] dark:hover:bg-white/8"
+                      className="flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-sm font-medium hover:bg-[var(--action-soft)]"
                     >
-                      <Icon className="size-4 text-[#766b61]" />
+                      <Icon className="size-4 text-[var(--muted)]" />
                       {t(item.key)}
-                      <ChevronRight className="ml-auto size-4 text-[#9a9087]" />
+                      <ChevronRight className="ml-auto size-4 text-[var(--muted)]" />
                     </button>
                   );
                 })
               ) : (
-                <p className="px-4 py-10 text-center text-sm text-[#766b61]">
+                <p className="px-4 py-10 text-center text-sm text-[var(--text-secondary)]">
                   {t('nav.noSearchResults')}
                 </p>
               )}
@@ -604,35 +617,35 @@ function DesktopSidebar({
 }) {
   const { t } = useCoffeeTranslation();
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 overflow-y-auto bg-[#2b201a] px-4 pb-5 pt-4 text-[#f8f3ec] lg:block">
+    <aside className="floating-chrome fixed inset-y-3 left-3 z-50 hidden w-[244px] overflow-y-auto rounded-[24px] px-4 pb-5 pt-4 text-[var(--text)] lg:block">
       <Link href={base} className="mb-8 flex items-center gap-3 px-2">
-        <span className="grid size-10 place-items-center rounded-xl bg-white/10">
+        <span className="soft-icon-tile grid size-10 place-items-center rounded-xl">
           <Coffee className="size-5" />
         </span>
         <div>
           <span className="block text-sm font-semibold">{t('common.brandName')}</span>
-          <span className="block text-xs text-white/50">
+          <span className="block text-xs text-[var(--text-secondary)]">
             {t('common.coffeeAdministration')}
           </span>
         </div>
       </Link>
       <SidebarNavigation base={base} groups={groups} pathname={pathname} />
-      <div className="mt-7 rounded-2xl border border-white/10 bg-white/[0.055] p-4">
+      <div className="mt-7 rounded-[18px] border border-blue-100/80 bg-[linear-gradient(145deg,rgb(239_245_255_/_92%),rgb(255_255_255_/_72%))] p-4 shadow-[inset_0_1px_0_rgb(255_255_255_/_80%)]">
         <div className="flex items-center justify-between text-xs font-semibold">
           <span>{t('header.setupProgress')}</span>
           <span>{progress}%</span>
         </div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-blue-100">
           <div
-            className="h-full rounded-full bg-[#e5b481] transition-[width]"
+            className="h-full rounded-full bg-[linear-gradient(90deg,var(--action),#7ca4ff)] transition-[width]"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <p className="mt-3 flex items-center gap-2 text-xs text-white/58">
+        <p className="mt-3 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
           {ready ? (
-            <Check className="size-3.5 text-emerald-300" />
+            <Check className="size-3.5 text-emerald-600" />
           ) : (
-            <CircleAlert className="size-3.5 text-amber-300" />
+            <CircleAlert className="size-3.5 text-amber-600" />
           )}
           {t(ready ? 'header.readyForOperations' : 'header.notReady')}
         </p>
@@ -658,7 +671,7 @@ function SidebarNavigation({
       {groups.map((group, groupIndex) => (
         <div key={group.key ?? `group-${groupIndex}`}>
           {group.key ? (
-            <p className="mb-1.5 px-3 text-[10px] font-semibold tracking-[0.12em] text-white/38 uppercase">
+            <p className="mb-1.5 px-3 text-[10px] font-semibold tracking-[0.15em] text-[var(--muted)] uppercase">
               {t(group.key)}
             </p>
           ) : null}
@@ -674,10 +687,10 @@ function SidebarNavigation({
                   key={item.suffix}
                   href={href}
                   {...(onNavigate ? { onClick: onNavigate } : {})}
-                  className={`flex min-h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
+                  className={`flex min-h-10 items-center gap-3 rounded-[13px] border px-3 text-[13px] font-medium transition ${
                     active
-                      ? 'bg-white/12 text-white'
-                      : 'text-white/65 hover:bg-white/7 hover:text-white'
+                      ? 'border-blue-200/70 bg-[var(--action-soft)] text-[var(--action)] shadow-[inset_0_1px_0_rgb(255_255_255_/_75%)]'
+                      : 'border-transparent text-[var(--text-secondary)] hover:border-[var(--border)] hover:bg-[var(--surface)] hover:text-[var(--text)]'
                   }`}
                 >
                   <Icon className="size-4" />
@@ -705,18 +718,18 @@ function NotificationsMenu({
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          className="relative grid size-11 place-items-center rounded-xl hover:bg-black/5 dark:hover:bg-white/8"
+          className="relative grid size-11 place-items-center rounded-xl hover:bg-[var(--action-soft)]"
           aria-label={t('nav.notifications')}
         >
           <Bell className="size-5" />
-          <span className="absolute right-2.5 top-2.5 size-2 rounded-full border-2 border-[#fbfaf8] bg-amber-500 dark:border-[#191613]" />
+          <span className="absolute right-2.5 top-2.5 size-2 rounded-full border-2 border-white bg-[var(--action)]" />
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <MenuSurface align="end" className="w-[min(92vw,380px)]">
           <div className="px-3 pb-2 pt-1">
             <p className="font-semibold">{t('notifications.title')}</p>
-            <p className="mt-1 text-xs text-[#766b61] dark:text-[#aaa096]">
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
               {t('notifications.previewLabel')}
             </p>
           </div>
@@ -752,13 +765,11 @@ function NotificationItem({
   text: string;
 }) {
   const content = (
-    <div className="flex gap-3 rounded-xl px-3 py-3 hover:bg-[#f3efe9] dark:hover:bg-white/7">
+    <div className="flex gap-3 rounded-[14px] px-3 py-3 hover:bg-[var(--action-soft)]">
       <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
       <div>
         <p className="text-sm font-semibold">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-[#766b61] dark:text-[#aaa096]">
-          {text}
-        </p>
+        <p className="mt-1 text-xs leading-5 text-[var(--text-secondary)]">{text}</p>
       </div>
     </div>
   );
@@ -780,7 +791,7 @@ function QuickActionsMenu({ base }: { base: string }) {
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          className="grid size-11 place-items-center rounded-xl hover:bg-black/5 dark:hover:bg-white/8"
+          className="grid size-11 place-items-center rounded-xl hover:bg-[var(--action-soft)]"
           aria-label={t('nav.quickActions')}
         >
           <Plus className="size-5" />
@@ -809,10 +820,10 @@ function QuickActionsMenu({ base }: { base: string }) {
 function CoffeeLoadingState() {
   return (
     <div className="space-y-5">
-      <div className="h-28 animate-pulse rounded-2xl bg-black/5 dark:bg-white/8" />
+      <div className="skeleton h-28 rounded-[var(--radius-card)]" />
       <div className="grid gap-5 lg:grid-cols-3">
-        <div className="h-64 animate-pulse rounded-2xl bg-black/5 lg:col-span-2 dark:bg-white/8" />
-        <div className="h-64 animate-pulse rounded-2xl bg-black/5 dark:bg-white/8" />
+        <div className="skeleton h-64 rounded-[var(--radius-card)] lg:col-span-2" />
+        <div className="skeleton h-64 rounded-[var(--radius-card)]" />
       </div>
     </div>
   );
@@ -831,7 +842,7 @@ function MenuSurface({
     <DropdownMenu.Content
       align={align}
       sideOffset={8}
-      className={`z-[90] min-w-60 rounded-2xl border border-black/8 bg-white p-1.5 text-[#211d18] shadow-xl outline-none dark:border-white/10 dark:bg-[#211d19] dark:text-[#f7f2eb] ${className}`}
+      className={`floating-chrome z-[90] min-w-60 rounded-[18px] p-1.5 text-[var(--text)] outline-none ${className}`}
     >
       {children}
     </DropdownMenu.Content>
@@ -840,11 +851,11 @@ function MenuSurface({
 
 function MenuLabel({ children }: { children: ReactNode }) {
   return (
-    <DropdownMenu.Label className="px-2.5 py-2 text-xs font-semibold text-[#766b61] dark:text-[#aaa096]">
+    <DropdownMenu.Label className="px-2.5 py-2 text-xs font-semibold text-[var(--text-secondary)]">
       {children}
     </DropdownMenu.Label>
   );
 }
 
 const menuItemClass =
-  'flex min-h-10 cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm outline-none hover:bg-[#f3efe9] focus:bg-[#f3efe9] dark:hover:bg-white/8 dark:focus:bg-white/8';
+  'flex min-h-10 cursor-pointer items-center gap-2.5 rounded-[13px] px-2.5 py-2 text-sm outline-none hover:bg-[var(--action-soft)] focus:bg-[var(--action-soft)]';

@@ -11,9 +11,9 @@ export function CoffeeNotFoundScreen() {
   const { projectId } = useCoffeeWorkspace();
   return (
     <Panel className="px-6 py-16 text-center">
-      <Coffee className="mx-auto size-8 text-[#8a5c3d] dark:text-[#d6a77f]" />
+      <Coffee className="mx-auto size-8 text-[var(--action)] dark:text-[var(--action)]" />
       <h1 className="mt-5 text-2xl font-semibold">{t('notFound.title')}</h1>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
         {t('notFound.description')}
       </p>
       <Link

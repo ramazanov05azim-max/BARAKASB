@@ -220,7 +220,7 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <div className="rounded-[16px] border border-[var(--border)] bg-[var(--surface)] p-6">
+      <div className="glass-panel rounded-[20px] p-6">
         <CheckCircle2 className="size-7 text-emerald-600" />
         <h2 className="mt-5 text-lg font-semibold">{t('auth.checkInbox')}</h2>
         <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
@@ -287,7 +287,7 @@ function FormError({ children }: { children: React.ReactNode }) {
   return (
     <div
       role="alert"
-      className="rounded-[10px] bg-red-50 px-3.5 py-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200"
+      className="rounded-[14px] border border-red-200/80 bg-red-50/85 px-4 py-3.5 text-sm text-red-800 shadow-[inset_0_1px_0_rgb(255_255_255_/_65%)] dark:bg-red-950 dark:text-red-200"
     >
       {children}
     </div>

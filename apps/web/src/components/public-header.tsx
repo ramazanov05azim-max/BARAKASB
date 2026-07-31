@@ -11,25 +11,28 @@ export function PublicHeader() {
   const { t } = useTranslation();
 
   return (
-    <header className="absolute inset-x-0 top-0 z-20">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8">
+    <header className="absolute inset-x-0 top-0 z-20 px-4 pt-4 sm:px-6 sm:pt-5">
+      <div className="floating-chrome mx-auto flex h-16 max-w-7xl items-center justify-between rounded-[20px] px-4 sm:px-6">
         <Brand />
-        <nav aria-label={t('nav.public')} className="hidden items-center gap-7 md:flex">
+        <nav
+          aria-label={t('nav.public')}
+          className="hidden items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1 md:flex"
+        >
           <Link
             href="/#platform"
-            className="text-sm text-[var(--text-secondary)] hover:text-[var(--text)]"
+            className="rounded-full px-4 py-2 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--surface-solid)] hover:text-[var(--text)]"
           >
             {t('nav.platform')}
           </Link>
           <Link
             href="/solutions"
-            className="text-sm text-[var(--text-secondary)] hover:text-[var(--text)]"
+            className="rounded-full px-4 py-2 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--surface-solid)] hover:text-[var(--text)]"
           >
             {t('nav.solutions')}
           </Link>
           <Link
             href="/subscriptions"
-            className="text-sm text-[var(--text-secondary)] hover:text-[var(--text)]"
+            className="rounded-full px-4 py-2 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--surface-solid)] hover:text-[var(--text)]"
           >
             {t('nav.pricing')}
           </Link>

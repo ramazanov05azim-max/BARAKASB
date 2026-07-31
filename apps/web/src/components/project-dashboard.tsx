@@ -59,7 +59,7 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
       <div className="grid gap-5 lg:grid-cols-[1.35fr_.65fr]">
         <Card>
           <CardContent className="p-7 sm:p-8">
-            <span className="grid size-12 place-items-center rounded-[14px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <span className="soft-icon-tile grid size-12 place-items-center rounded-[16px]">
               <Coffee className="size-5" />
             </span>
             <h2 className="mt-8 text-2xl font-semibold tracking-[-0.03em]">

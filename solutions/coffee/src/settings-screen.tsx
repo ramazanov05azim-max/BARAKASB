@@ -201,8 +201,8 @@ export function CoffeeSettingsScreen() {
                 }}
                 className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium ${
                   selected === item.key
-                    ? 'bg-[#f1e7de] text-[#6f442d] dark:bg-[#4a3023] dark:text-[#ecc7a8]'
-                    : 'hover:bg-black/4 dark:hover:bg-white/7'
+                    ? 'bg-[var(--action-soft)] text-[var(--action)] dark:bg-[var(--action-soft)] dark:text-[var(--action)]'
+                    : 'hover:bg-[var(--action-soft)] dark:hover:bg-white/7'
                 }`}
               >
                 <Icon className="size-4" />
@@ -214,7 +214,7 @@ export function CoffeeSettingsScreen() {
         <div className="space-y-5">
           <Panel className="p-6 sm:p-7">
             <h2 className="text-xl font-semibold">{t(selected)}</h2>
-            <p className="mt-2 text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
               {t('settings.sectionHelp')}
             </p>
             <form
@@ -281,7 +281,7 @@ export function CoffeeSettingsScreen() {
                   ].map((key) => (
                     <div
                       key={key}
-                      className="flex items-center gap-3 rounded-xl border border-black/8 p-4 text-sm font-medium dark:border-white/10"
+                      className="flex items-center gap-3 rounded-xl border border-[var(--border)] p-4 text-sm font-medium dark:border-white/10"
                     >
                       <ShieldAlert className="size-4 text-amber-600" />
                       {t(key as CoffeeTranslationKey)}
@@ -290,7 +290,7 @@ export function CoffeeSettingsScreen() {
                 </div>
               ) : null}
 
-              <div className="mt-7 flex justify-end border-t border-black/8 pt-6 dark:border-white/10">
+              <div className="mt-7 flex justify-end border-t border-[var(--border)] pt-6 dark:border-white/10">
                 <button
                   type="submit"
                   disabled={submitting}
@@ -308,7 +308,7 @@ export function CoffeeSettingsScreen() {
               <ShieldAlert className="mt-0.5 size-5 text-red-600" />
               <div>
                 <h2 className="text-lg font-semibold">{t('settings.dangerZone')}</h2>
-                <p className="mt-1 text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+                <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
                   {t('settings.dangerText')}
                 </p>
               </div>
@@ -342,11 +342,11 @@ export function CoffeeSettingsScreen() {
       <Dialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-[90] bg-black/35 backdrop-blur-sm" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 z-[100] w-[min(92vw,460px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-black/8 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#211d19]">
+          <Dialog.Content className="floating-chrome fixed left-1/2 top-1/2 z-[100] w-[min(92vw,460px)] -translate-x-1/2 -translate-y-1/2 rounded-[24px] p-6">
             <Dialog.Title className="text-xl font-semibold">
               {t('settings.confirmTitle')}
             </Dialog.Title>
-            <Dialog.Description className="mt-2 text-sm leading-6 text-[#766b61] dark:text-[#aaa096]">
+            <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--text-secondary)] dark:text-[var(--text-secondary)]">
               {t('settings.confirmText')}
             </Dialog.Description>
             <div className="mt-6 flex justify-end gap-3">

@@ -4,15 +4,12 @@ import { cn } from '@/lib/utils';
 export function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      className={cn(
-        'rounded-[16px] border border-[var(--border)] bg-[var(--surface)]',
-        className,
-      )}
+      className={cn('glass-panel rounded-[var(--radius-card)]', className)}
       {...props}
     />
   );
 }
 
 export function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div className={cn('p-6', className)} {...props} />;
+  return <div className={cn('p-6 sm:p-7', className)} {...props} />;
 }

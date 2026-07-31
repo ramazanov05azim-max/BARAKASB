@@ -59,7 +59,7 @@ export function ProjectsView() {
       {!projects ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {[0, 1, 2].map((item) => (
-            <div key={item} className="skeleton h-52 rounded-[16px]" />
+            <div key={item} className="skeleton h-56 rounded-[var(--radius-card)]" />
           ))}
         </div>
       ) : visible.length === 0 ? (
@@ -98,12 +98,12 @@ export function ProjectsView() {
                   ? `/projects/${project.id}/coffee`
                   : `/projects/${project.id}`
               }
-              className="group rounded-[16px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
+              className="group rounded-[var(--radius-card)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
-              <Card className="h-full transition duration-200 group-hover:-translate-y-0.5 group-hover:border-[var(--border-strong)]">
+              <Card className="h-full transition duration-300 group-hover:-translate-y-1 group-hover:border-[var(--border-strong)] group-hover:shadow-[var(--shadow-float)]">
                 <CardContent>
                   <div className="flex items-start justify-between">
-                    <span className="grid size-11 place-items-center rounded-[13px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                    <span className="soft-icon-tile grid size-12 place-items-center rounded-[16px]">
                       <Coffee className="size-5" />
                     </span>
                     <Badge tone={project.status === 'active' ? 'success' : 'warning'}>

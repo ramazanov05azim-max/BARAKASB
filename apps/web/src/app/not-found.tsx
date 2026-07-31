@@ -16,7 +16,7 @@ export default function NotFound() {
         <Brand />
         <LanguageSwitcher />
       </div>
-      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center text-center">
+      <div className="glass-panel mx-auto my-12 flex w-full max-w-xl flex-1 flex-col items-center justify-center rounded-[32px] px-8 text-center">
         <p className="text-sm font-bold text-[var(--action)]">{t('notFound.code')}</p>
         <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em]">
           {t('notFound.title')}
