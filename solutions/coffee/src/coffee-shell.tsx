@@ -619,8 +619,8 @@ function DesktopSidebar({
   return (
     <aside className="floating-chrome fixed inset-y-3 left-3 z-50 hidden w-[244px] overflow-y-auto rounded-[24px] px-4 pb-5 pt-4 text-[var(--text)] xl:block">
       <Link href={base} className="mb-8 flex items-center gap-3 px-2">
-        <span className="soft-icon-tile grid size-10 place-items-center rounded-xl">
-          <Coffee className="size-5" />
+        <span className="grid size-10 place-items-center rounded-xl border border-blue-400/20 bg-[linear-gradient(145deg,#3b82ff,var(--action))] text-[10px] font-extrabold tracking-[-0.08em] text-white shadow-[0_10px_24px_rgb(23_105_255_/_24%)]">
+          {t('common.brandMark')}
         </span>
         <div>
           <span className="block text-sm font-semibold">{t('common.brandName')}</span>

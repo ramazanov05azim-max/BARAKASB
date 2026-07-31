@@ -5,6 +5,7 @@ import type { CoffeeLocale } from './domain';
 
 const ru = {
   'common.brandName': 'BARAKASB',
+  'common.brandMark': 'BK',
   'common.userInitials': 'АР',
   'common.commandShortcut': '⌘K',
   'common.coffeeAdministration': 'Управление кофейней',
@@ -484,6 +485,7 @@ const en: Record<CoffeeTranslationKey, string> = Object.fromEntries(
 
 Object.assign(en, {
   'common.brandName': 'BARAKASB',
+  'common.brandMark': 'BK',
   'common.userInitials': 'AR',
   'common.commandShortcut': '⌘K',
   'common.coffeeAdministration': 'Coffee administration',

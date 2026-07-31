@@ -160,6 +160,12 @@ a {
   text-wrap: balance;
 }
 
+.brand-display {
+  font-family: 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  font-stretch: condensed;
+  letter-spacing: -0.075em;
+}
+
 .surface-grid {
   background-image:
     linear-gradient(

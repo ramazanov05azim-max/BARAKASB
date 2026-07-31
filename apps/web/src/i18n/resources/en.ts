@@ -1,15 +1,17 @@
 import type { TranslationKey } from './ru';
 
 export const en = {
-  'meta.title': 'BARAKASB — Your business, clearly',
+  'meta.title': 'BARAKASB — the system that multiplies net earnings',
   'meta.description':
-    'A calm operating system for every business you run. Create isolated projects, choose a solution, and stay in control.',
-  'meta.openGraphTitle': 'BARAKASB — Your business, beautifully clear',
-  'meta.openGraphDescription': 'A calm operating system for every business you run.',
-  'meta.openGraphAlt': 'BARAKASB — Your business, beautifully clear.',
+    'The system that multiplies net earnings. Run independent business Projects in one operating space.',
+  'meta.openGraphTitle': 'BARAKASB — the system that multiplies net earnings',
+  'meta.openGraphDescription':
+    'One operating system for independent business Projects.',
+  'meta.openGraphAlt': 'BARAKASB — the system that multiplies net earnings.',
   'common.brandHome': 'BARAKASB home',
   'common.brandName': 'BARAKASB',
-  'common.brandMark': 'B',
+  'common.brandMark': 'BK',
+  'common.tagline': 'The system that multiplies net earnings.',
   'common.copyright': '© 2026 BARAKASB',
   'common.account': 'Account',
   'common.project': 'Project',

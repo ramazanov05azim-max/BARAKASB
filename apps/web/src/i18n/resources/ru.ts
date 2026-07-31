@@ -1,14 +1,15 @@
 export const ru = {
-  'meta.title': 'BARAKASB — бизнес под контролем',
+  'meta.title': 'BARAKASB — система, приумножающая чистый заработок',
   'meta.description':
-    'Спокойная операционная система для каждого вашего бизнеса. Создавайте изолированные проекты, выбирайте решение и сохраняйте контроль.',
-  'meta.openGraphTitle': 'BARAKASB — ясность в каждом бизнесе',
+    'Система, приумножающая чистый заработок. Управляйте независимыми бизнес-проектами в едином пространстве.',
+  'meta.openGraphTitle': 'BARAKASB — система, приумножающая чистый заработок',
   'meta.openGraphDescription':
-    'Спокойная операционная система для каждого вашего бизнеса.',
-  'meta.openGraphAlt': 'BARAKASB — ясность в каждом бизнесе.',
+    'Единая операционная система для управления независимыми бизнес-проектами.',
+  'meta.openGraphAlt': 'BARAKASB — система, приумножающая чистый заработок.',
   'common.brandHome': 'BARAKASB — на главную',
   'common.brandName': 'BARAKASB',
-  'common.brandMark': 'B',
+  'common.brandMark': 'BK',
+  'common.tagline': 'Система, приумножающая чистый заработок!',
   'common.copyright': '© 2026 BARAKASB',
   'common.account': 'Аккаунт',
   'common.project': 'Проект',

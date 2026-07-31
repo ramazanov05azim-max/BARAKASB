@@ -22,10 +22,12 @@ export function Brand({
         className,
       )}
     >
-      <span className="grid size-9 place-items-center rounded-[12px] border border-blue-400/20 bg-[linear-gradient(145deg,#3b82ff,var(--action))] text-[12px] font-bold text-white shadow-[0_10px_24px_rgb(23_105_255_/_24%),inset_0_1px_0_rgb(255_255_255_/_32%)]">
+      <span className="grid size-9 place-items-center rounded-[12px] border border-blue-400/20 bg-[linear-gradient(145deg,#3b82ff,var(--action))] text-[10px] font-extrabold tracking-[-0.08em] text-white shadow-[0_10px_24px_rgb(23_105_255_/_24%),inset_0_1px_0_rgb(255_255_255_/_32%)]">
         {t('common.brandMark')}
       </span>
-      {!compact && <span>{t('common.brandName')}</span>}
+      {!compact && (
+        <span className="hidden min-[370px]:inline">{t('common.brandName')}</span>
+      )}
     </Link>
   );
 }
