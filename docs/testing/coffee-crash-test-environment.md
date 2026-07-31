@@ -127,34 +127,48 @@ business test data and is intentionally preserved.
 7. Open `/app/connect`, enter `6728 0175 1693`, and continue.
 8. Select Иван Беляев as the current employee. The access code identifies the workspace,
    while the explicit selection establishes the current local employee context.
-9. In Manager Platform open the floor-plan editor. Verify `Основной зал` and `Улица`,
-   drag `Стол 1`, change its dimensions, save, and reload. The position and size must
-   persist. Verify that an active-order table cannot be disabled or deleted.
-10. Return to `/app/connect`, enter `6728 0175 1693`, select Иван Беляев, and verify the
+9. In Coffee Administration open the business profile. Verify Monday–Friday default to
+   `08:00–22:00`, Saturday–Sunday default to `09:00–21:00`, and the time zone plus
+   operating-day boundaries can be saved.
+10. Open the Manager floor-plan editor. Standard zone types must receive their Russian
+    name automatically. Only `Другая зона` reveals the required `Название зоны` field.
+    Zone dimensions must be displayed in metres and table dimensions in centimetres.
+    Drag `Стол 1`, change its dimensions, save, and reload. The position and size must
+    persist. Verify that an active-order table cannot be disabled or deleted.
+11. Return to `/app/connect`, enter `6728 0175 1693`, select Иван Беляев, and verify the
     Bar opens with the Manager-owned read-only floor plan and Russian catalog.
-11. Select free `Стол 1`, enter two guests and a seating note, and open the table.
-12. Add `Капучино`, choose `Овсяное +70 ₽`, enter variant `Большой`, add a comment, and
+12. Verify the top navigation contains only `Зал`, `Меню`, and `Заказы`. In `Зал`, each
+    table must appear exactly once and no order list may be duplicated under the plan.
+13. Select free `Стол 1`. A one-guest draft order must open immediately and the
+    workspace must switch directly to `Меню`, without a seating dialog.
+14. Add `Капучино`, choose `Овсяное +70 ₽`, enter variant `Большой`, add a comment, and
     set quantity to two. Verify the modifier snapshot and total.
-13. Send the first batch. Add `Вода без газа` to the same table and verify it appears
+15. Send the first batch. Add `Вода без газа` to the same table and verify it appears
     under `Новые позиции` while the cappuccino remains immutable under `Уже отправлено`.
     Send only the additional batch.
-14. Advance the Bar item through `Принят`, `Готовится`, and `Готов`. Verify a
+16. Advance the Bar item through `Принят`, `Готовится`, and `Готов`. Verify a
     Kitchen-routed item cannot be completed from Bar.
-15. Mark `Карта`. Verify payment does not change preparation state and cannot be
+17. Mark `Карта`. Verify payment does not change preparation state and cannot be
     recorded twice.
-16. When all positions are ready and the order is paid, choose
+18. When all positions are ready and the order is paid, choose
     `Выдать, завершить и освободить стол`. Verify status `Завершён`, immutable history,
     completion metadata, and the table returning to `Свободен`.
-17. Create a takeaway order with `Вода без газа`; verify it becomes ready immediately,
-    but cannot be completed until a local payment method is selected.
-18. Open another table, send an item, and cancel it. Verify a reason is required and
+19. Choose `Новый заказ`, add `Вода без газа` before assigning a table, then use
+    `Прикрепить заказ` to choose a free table or `Оформить навынос`. After assignment
+    the action must become `Перенести заказ`.
+20. Transfer an active order to another free table. Verify the old table becomes free,
+    the new table becomes occupied, and the transfer audit keeps both table identifiers.
+21. In `Заказы`, verify filters for all, active, takeaway, delivery, ready, completed,
+    and cancelled orders. Search by order number and reopen an active order in the same
+    order editor used by the floor plan.
+22. Open another table, send an item, and cancel it. Verify a reason is required and
     retained in history. Verify an empty unsent table can be released.
-19. Verify identity, active location, catalog, recipe, stock, supplier, and employee
+23. Verify identity, active location, catalog, recipe, stock, supplier, and employee
     summaries appear while unfinished transactional modules stay disabled.
-20. Reload the page and verify the selected workspace, orders, and completed history
+24. Reload the page and verify the selected workspace, orders, and completed history
     remain readable.
-21. Repeat at 1024 × 768 and 1280 × 800. The three POS columns must use internal
-    scrolling and the document must not overflow horizontally.
+25. Repeat at 1024 × 768 and 1280 × 800. Each operational screen must use internal
+    scrolling where needed and the document must not overflow horizontally.
 
 ## Current prototype limitations
 

@@ -53,6 +53,22 @@ const floorPlanErrors: Record<CoffeeFloorPlanError['code'], string> = {
   ACTIVE_ORDER: 'Действие запрещено: со столом связан активный заказ.',
   DUPLICATE_CODE: 'Код стола уже используется в этой локации.',
 };
+const standardZoneNames: Record<Exclude<CoffeeServiceZoneType, 'OTHER'>, string> = {
+  MAIN_HALL: 'Основной зал',
+  TERRACE: 'Терраса',
+  STREET: 'Улица',
+  BAR_COUNTER: 'Барная стойка',
+};
+
+function meters(value: number): string {
+  return `${(value / 100).toFixed(1)} м`;
+}
+
+function tableDimensionLabels(shape: CoffeeTableShape): [string, string] {
+  if (shape === 'ROUND') return ['Диаметр (см)', 'Диаметр (см)'];
+  if (shape === 'BAR_SEAT') return ['Длина (см)', 'Глубина (см)'];
+  return ['Ширина (см)', 'Глубина (см)'];
+}
 
 export function CoffeeFloorPlanScreen({
   service = defaultService,
@@ -260,7 +276,7 @@ export function CoffeeFloorPlanScreen({
                 <div>
                   <h2 className="font-semibold">{zone.name}</h2>
                   <p className="text-xs text-slate-500">
-                    {zone.canvasWidth} × {zone.canvasHeight}
+                    {meters(zone.canvasWidth)} × {meters(zone.canvasHeight)}
                   </p>
                 </div>
                 {canEdit && (
@@ -370,20 +386,17 @@ function ZoneForm({
       className="mt-4"
       onSubmit={(event) => {
         event.preventDefault();
-        if (name.trim()) {
-          void onCreate(name.trim(), zoneType);
+        const resolvedName =
+          zoneType === 'OTHER' ? name.trim() : standardZoneNames[zoneType];
+        if (resolvedName) {
+          void onCreate(resolvedName, zoneType);
           setName('');
         }
       }}
     >
-      <input
-        className={input}
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        placeholder="Название зоны"
-      />
       <select
-        className={`${input} mt-2`}
+        aria-label="Тип зоны"
+        className={input}
         value={zoneType}
         onChange={(event) => setZoneType(event.target.value as CoffeeServiceZoneType)}
       >
@@ -393,7 +406,22 @@ function ZoneForm({
         <option value="BAR_COUNTER">Барная стойка</option>
         <option value="OTHER">Другая зона</option>
       </select>
-      <button className={`${secondary} mt-2 w-full`} disabled={busy || !name.trim()}>
+      {zoneType === 'OTHER' && (
+        <label className="mt-2 block text-xs font-semibold text-slate-600">
+          Название зоны
+          <input
+            required
+            className={`${input} mt-1`}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Например: Летняя веранда"
+          />
+        </label>
+      )}
+      <button
+        className={`${secondary} mt-2 w-full`}
+        disabled={busy || (zoneType === 'OTHER' && !name.trim())}
+      >
         <Plus className="size-4" /> Добавить зону
       </button>
     </form>
@@ -412,43 +440,59 @@ function ZoneEditor({
   ) => Promise<void>;
 }) {
   const [name, setName] = useState(zone.name);
-  const [width, setWidth] = useState(zone.canvasWidth);
-  const [height, setHeight] = useState(zone.canvasHeight);
+  const [width, setWidth] = useState(zone.canvasWidth / 100);
+  const [height, setHeight] = useState(zone.canvasHeight / 100);
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        void onSave({ name, canvasWidth: width, canvasHeight: height });
+        void onSave({
+          name,
+          canvasWidth: Math.round(width * 100),
+          canvasHeight: Math.round(height * 100),
+        });
       }}
     >
       <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
         Настройки зоны
       </p>
-      <input
-        className={`${input} mt-2`}
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        aria-label="Название зоны"
-      />
+      {zone.zoneType === 'OTHER' ? (
+        <label className="mt-2 block text-xs font-semibold text-slate-600">
+          Название зоны
+          <input
+            className={`${input} mt-1`}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </label>
+      ) : (
+        <p className="mt-2 rounded-xl bg-slate-50 px-3 py-3 text-sm font-semibold">
+          {zone.name}
+        </p>
+      )}
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <input
-          type="number"
-          min={320}
-          max={3000}
-          className={input}
-          value={width}
-          onChange={(event) => setWidth(Number(event.target.value))}
-          aria-label="Ширина зоны"
-        />
-        <input
-          type="number"
-          min={240}
-          max={2000}
-          className={input}
-          value={height}
-          onChange={(event) => setHeight(Number(event.target.value))}
-          aria-label="Высота зоны"
-        />
+        <Field label="Ширина (м)">
+          <input
+            type="number"
+            min={3.2}
+            max={30}
+            step={0.1}
+            className={input}
+            value={width}
+            onChange={(event) => setWidth(Number(event.target.value))}
+          />
+        </Field>
+        <Field label="Высота (м)">
+          <input
+            type="number"
+            min={2.4}
+            max={20}
+            step={0.1}
+            className={input}
+            value={height}
+            onChange={(event) => setHeight(Number(event.target.value))}
+          />
+        </Field>
       </div>
       <button className={`${secondary} mt-2 w-full`} disabled={busy || !name.trim()}>
         Сохранить зону
@@ -474,6 +518,9 @@ function TableForm({
   const [code, setCode] = useState(`T-${String(sequence).padStart(2, '0')}`);
   const [shape, setShape] = useState<CoffeeTableShape>('ROUND');
   const [seatCount, setSeatCount] = useState(2);
+  const [width, setWidth] = useState(90);
+  const [height, setHeight] = useState(90);
+  const dimensionLabels = tableDimensionLabels(shape);
   function submit(event: FormEvent): void {
     event.preventDefault();
     void onSubmit({
@@ -484,8 +531,8 @@ function TableForm({
       shape,
       positionX: 40,
       positionY: 40,
-      width: shape === 'RECTANGLE' ? 140 : 90,
-      height: 90,
+      width,
+      height: shape === 'ROUND' ? width : height,
       rotation: 0,
       seatCount,
       status: 'active',
@@ -512,7 +559,20 @@ function TableForm({
         <select
           className={input}
           value={shape}
-          onChange={(event) => setShape(event.target.value as CoffeeTableShape)}
+          onChange={(event) => {
+            const nextShape = event.target.value as CoffeeTableShape;
+            setShape(nextShape);
+            if (nextShape === 'ROUND' || nextShape === 'SQUARE') {
+              setWidth(90);
+              setHeight(90);
+            } else if (nextShape === 'RECTANGLE') {
+              setWidth(160);
+              setHeight(80);
+            } else {
+              setWidth(240);
+              setHeight(60);
+            }
+          }}
         >
           <option value="ROUND">Круглый</option>
           <option value="SQUARE">Квадратный</option>
@@ -520,6 +580,30 @@ function TableForm({
           <option value="BAR_SEAT">Место у бара</option>
         </select>
       </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label={dimensionLabels[0]}>
+          <input
+            type="number"
+            min={40}
+            max={500}
+            className={input}
+            value={width}
+            onChange={(event) => setWidth(Number(event.target.value))}
+          />
+        </Field>
+        {shape !== 'ROUND' && (
+          <Field label={dimensionLabels[1]}>
+            <input
+              type="number"
+              min={40}
+              max={500}
+              className={input}
+              value={height}
+              onChange={(event) => setHeight(Number(event.target.value))}
+            />
+          </Field>
+        )}
+      </div>
       <Field label="Количество мест">
         <input
           type="number"
@@ -556,6 +640,7 @@ function TableEditor({
   onDelete: () => void;
 }) {
   const [draft, setDraft] = useState(table);
+  const dimensionLabels = tableDimensionLabels(draft.shape);
   return (
     <form
       onSubmit={(event) => {
@@ -581,7 +666,7 @@ function TableEditor({
         />
       </Field>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Ширина">
+        <Field label={dimensionLabels[0]}>
           <input
             type="number"
             min={40}
@@ -590,23 +675,31 @@ function TableEditor({
             className={input}
             value={draft.width}
             onChange={(event) =>
-              setDraft({ ...draft, width: Number(event.target.value) })
+              setDraft({
+                ...draft,
+                width: Number(event.target.value),
+                ...(draft.shape === 'ROUND'
+                  ? { height: Number(event.target.value) }
+                  : {}),
+              })
             }
           />
         </Field>
-        <Field label="Высота">
-          <input
-            type="number"
-            min={40}
-            max={zone.canvasHeight}
-            disabled={!canEdit}
-            className={input}
-            value={draft.height}
-            onChange={(event) =>
-              setDraft({ ...draft, height: Number(event.target.value) })
-            }
-          />
-        </Field>
+        {draft.shape !== 'ROUND' && (
+          <Field label={dimensionLabels[1]}>
+            <input
+              type="number"
+              min={40}
+              max={zone.canvasHeight}
+              disabled={!canEdit}
+              className={input}
+              value={draft.height}
+              onChange={(event) =>
+                setDraft({ ...draft, height: Number(event.target.value) })
+              }
+            />
+          </Field>
+        )}
         <Field label="Поворот">
           <input
             type="number"

@@ -110,7 +110,12 @@ function normalizeOrder(value: unknown): CoffeeOrder {
     businessEnvironmentId: String(order.businessEnvironmentId ?? ''),
     workspaceId: String(order.workspaceId ?? ''),
     locationId: String(order.locationId ?? ''),
-    orderType: order.orderType === 'TABLE' ? 'TABLE' : 'TAKEAWAY',
+    orderType:
+      order.orderType === 'TABLE' ||
+      order.orderType === 'UNASSIGNED' ||
+      order.orderType === 'DELIVERY'
+        ? order.orderType
+        : 'TAKEAWAY',
     tableId: typeof order.tableId === 'string' ? order.tableId : null,
     orderNumber: String(order.orderNumber ?? ''),
     status,
@@ -179,6 +184,7 @@ function normalizeAudit(value: unknown): CoffeeBarAuditEntry | null {
         : entry.operation;
   const supported: ReadonlyArray<CoffeeBarAuditEntry['operation']> = [
     'ORDER_CREATED',
+    'ORDER_ASSIGNED',
     'GUEST_COUNT_CHANGED',
     'ORDER_TRANSFERRED',
     'ORDER_RELEASED',

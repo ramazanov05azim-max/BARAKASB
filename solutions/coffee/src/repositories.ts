@@ -14,7 +14,7 @@ import type {
   SetupStep,
   SetupStepStatus,
 } from './domain';
-import { coffeeSolutionModuleIds } from './domain';
+import { coffeeSolutionModuleIds, createDefaultCoffeeOperatingHours } from './domain';
 import {
   CoffeeRepositoryError,
   type CoffeeManagerRepositories,
@@ -239,6 +239,9 @@ function initialSnapshot(projectId: string, projectName: string): CoffeeSnapshot
       registrationIdentifier: '',
       operatingStatus: 'active',
       businessHours: '',
+      operatingHours: createDefaultCoffeeOperatingHours(),
+      operatingDayStart: '04:00',
+      operatingDayEnd: '03:59',
       defaultWarehouseId: '',
       updatedAt: timestamp,
     },
@@ -372,6 +375,14 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
     const parsed = JSON.parse(stored) as CoffeeSnapshot;
     if (!parsed.settings) {
       parsed.settings = initialSnapshot(projectId, parsed.project.name).settings;
+      writeSnapshot(projectId, parsed);
+    }
+    if (!parsed.businessProfile.operatingHours) {
+      parsed.businessProfile.operatingHours = createDefaultCoffeeOperatingHours();
+      parsed.businessProfile.operatingDayStart =
+        parsed.businessProfile.operatingDayStart ?? '04:00';
+      parsed.businessProfile.operatingDayEnd =
+        parsed.businessProfile.operatingDayEnd ?? '03:59';
       writeSnapshot(projectId, parsed);
     }
     if (!parsed.openingStockBalances) {

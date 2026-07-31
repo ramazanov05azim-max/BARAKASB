@@ -73,8 +73,33 @@ export interface BusinessProfile {
   registrationIdentifier?: string;
   operatingStatus?: 'active' | 'inactive';
   businessHours?: string;
+  operatingHours?: CoffeeOperatingHours;
+  operatingDayStart?: string;
+  operatingDayEnd?: string;
   defaultWarehouseId?: string;
   updatedAt: string;
+}
+
+export type CoffeeWeekday =
+  'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+export interface CoffeeOperatingHoursEntry {
+  open: string;
+  close: string;
+}
+
+export type CoffeeOperatingHours = Record<CoffeeWeekday, CoffeeOperatingHoursEntry>;
+
+export function createDefaultCoffeeOperatingHours(): CoffeeOperatingHours {
+  return {
+    monday: { open: '08:00', close: '22:00' },
+    tuesday: { open: '08:00', close: '22:00' },
+    wednesday: { open: '08:00', close: '22:00' },
+    thursday: { open: '08:00', close: '22:00' },
+    friday: { open: '08:00', close: '22:00' },
+    saturday: { open: '09:00', close: '21:00' },
+    sunday: { open: '09:00', close: '21:00' },
+  };
 }
 
 export interface CoffeeSettings {

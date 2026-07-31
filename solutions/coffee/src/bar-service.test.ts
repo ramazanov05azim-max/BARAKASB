@@ -175,6 +175,56 @@ describe('Coffee Bar application service', () => {
     });
   });
 
+  it('creates an order before destination assignment', async () => {
+    const order = await service.createUnassignedOrder(context);
+    expect(order).toMatchObject({
+      orderType: 'UNASSIGNED',
+      tableId: null,
+      status: 'DRAFT',
+    });
+    await expect(
+      service.addItem(context, order.orderId, {
+        productId: 'crash-item-bottled-water',
+      }),
+    ).resolves.toMatchObject({ total: 140 });
+  });
+
+  it('attaches an unassigned order to a free table', async () => {
+    const order = await service.createUnassignedOrder(context);
+    const attached = await service.assignOrder(context, order.orderId, {
+      type: 'TABLE',
+      tableId: 'crash-table-02',
+      seating: { guestCount: 2, note: 'После выбора меню' },
+    });
+    expect(attached).toMatchObject({
+      orderType: 'TABLE',
+      tableId: 'crash-table-02',
+      guestCount: 2,
+      seatingNote: 'После выбора меню',
+    });
+    expect(repository.value.audit[0]).toMatchObject({
+      operation: 'ORDER_ASSIGNED',
+      detail: 'crash-table-02',
+    });
+  });
+
+  it('attaches an unassigned order as takeaway', async () => {
+    const order = await service.createUnassignedOrder(context);
+    await expect(
+      service.assignOrder(context, order.orderId, { type: 'TAKEAWAY' }),
+    ).resolves.toMatchObject({ orderType: 'TAKEAWAY', tableId: null });
+  });
+
+  it('does not send an order before it is attached', async () => {
+    let order = await service.createUnassignedOrder(context);
+    order = await service.addItem(context, order.orderId, {
+      productId: 'crash-item-bottled-water',
+    });
+    await expect(service.sendOrder(context, order.orderId)).rejects.toMatchObject({
+      code: 'INVALID_OPERATION',
+    });
+  });
+
   it('rejects capacity overflow unless explicitly overridden', async () => {
     await expect(
       service.createTableOrder(context, 'crash-table-01', { guestCount: 20 }),
@@ -217,6 +267,10 @@ describe('Coffee Bar application service', () => {
     const order = await tableOrder(service);
     const moved = await service.transferOrder(context, order.orderId, 'crash-table-02');
     expect(moved.tableId).toBe('crash-table-02');
+    expect(repository.value.audit[0]).toMatchObject({
+      operation: 'ORDER_TRANSFERRED',
+      detail: 'crash-table-01->crash-table-02',
+    });
   });
 
   it('stores modifier, variant and comment snapshots', async () => {

@@ -2,7 +2,11 @@
 
 import { Save } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import type { BusinessProfile } from './domain';
+import {
+  createDefaultCoffeeOperatingHours,
+  type BusinessProfile,
+  type CoffeeWeekday,
+} from './domain';
 import { useCoffeeTranslation, type CoffeeTranslationKey } from './i18n';
 import { useCoffeeWorkspace } from './workspace-store';
 import {
@@ -90,6 +94,16 @@ const fields: ProfileField[] = [
   },
 ];
 
+const weekdays: ReadonlyArray<{ id: CoffeeWeekday; label: string }> = [
+  { id: 'monday', label: 'Понедельник' },
+  { id: 'tuesday', label: 'Вторник' },
+  { id: 'wednesday', label: 'Среда' },
+  { id: 'thursday', label: 'Четверг' },
+  { id: 'friday', label: 'Пятница' },
+  { id: 'saturday', label: 'Суббота' },
+  { id: 'sunday', label: 'Воскресенье' },
+];
+
 export function BusinessProfileScreen() {
   const { t } = useCoffeeTranslation();
   const { snapshot, error, can, saveBusinessProfile } = useCoffeeWorkspace();
@@ -115,6 +129,14 @@ export function BusinessProfileScreen() {
       if (field.required && !String(form[field.name]).trim()) {
         nextErrors[field.name] = 'validation.required';
       }
+    }
+    const operatingHours = form.operatingHours ?? createDefaultCoffeeOperatingHours();
+    if (
+      !form.operatingDayStart ||
+      !form.operatingDayEnd ||
+      weekdays.some(({ id }) => !operatingHours[id].open || !operatingHours[id].close)
+    ) {
+      nextErrors.operatingHours = 'validation.required';
     }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -212,6 +234,97 @@ export function BusinessProfileScreen() {
               );
             })}
           </div>
+
+          <section className="mt-8 border-t border-[var(--border)] pt-7">
+            <div>
+              <h2 className="text-xl font-semibold">Часы работы заведения</h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                Расписание и границы операционного дня будут использоваться для смен и
+                отчётности.
+              </p>
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <label>
+                <span className="mb-2 block text-sm font-semibold">
+                  Начало операционного дня
+                </span>
+                <input
+                  type="time"
+                  disabled={!canManage}
+                  className={inputClass}
+                  value={form.operatingDayStart ?? '04:00'}
+                  onChange={(event) => {
+                    setForm({ ...form, operatingDayStart: event.target.value });
+                    setDirty(true);
+                  }}
+                />
+              </label>
+              <label>
+                <span className="mb-2 block text-sm font-semibold">
+                  Конец операционного дня
+                </span>
+                <input
+                  type="time"
+                  disabled={!canManage}
+                  className={inputClass}
+                  value={form.operatingDayEnd ?? '03:59'}
+                  onChange={(event) => {
+                    setForm({ ...form, operatingDayEnd: event.target.value });
+                    setDirty(true);
+                  }}
+                />
+              </label>
+            </div>
+            <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--border)]">
+              {weekdays.map(({ id, label }) => {
+                const operatingHours =
+                  form.operatingHours ?? createDefaultCoffeeOperatingHours();
+                const hours = operatingHours[id];
+                const updateHours = (key: 'open' | 'close', value: string) => {
+                  setForm({
+                    ...form,
+                    operatingHours: {
+                      ...operatingHours,
+                      [id]: { ...hours, [key]: value },
+                    },
+                  });
+                  setDirty(true);
+                };
+                return (
+                  <div
+                    key={id}
+                    className="grid gap-3 border-b border-[var(--border)] p-4 last:border-b-0 sm:grid-cols-[1fr_150px_20px_150px] sm:items-center"
+                  >
+                    <span className="text-sm font-semibold">{label}</span>
+                    <input
+                      type="time"
+                      aria-label={`${label}: начало`}
+                      disabled={!canManage}
+                      className={inputClass}
+                      value={hours.open}
+                      onChange={(event) => updateHours('open', event.target.value)}
+                    />
+                    <span className="hidden text-center text-slate-400 sm:block">
+                      –
+                    </span>
+                    <input
+                      type="time"
+                      aria-label={`${label}: конец`}
+                      disabled={!canManage}
+                      className={inputClass}
+                      value={hours.close}
+                      onChange={(event) => updateHours('close', event.target.value)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            {errors.operatingHours ? (
+              <p className="mt-2 text-xs font-medium text-red-600">
+                Заполните часы работы для каждого дня.
+              </p>
+            ) : null}
+          </section>
 
           {discardPrompt ? (
             <div className="mt-6 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm sm:flex-row sm:items-center dark:border-amber-900 dark:bg-amber-950/30">

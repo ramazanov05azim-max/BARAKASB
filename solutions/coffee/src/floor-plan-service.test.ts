@@ -101,6 +101,18 @@ describe('Coffee floor-plan application service', () => {
     });
   });
 
+  it('uses the canonical Russian name for every standard zone type', async () => {
+    const plan = await subject.service.createZone(projectId, {
+      locationId: 'crash-location-main',
+      name: 'Это имя не должно сохраниться',
+      zoneType: 'BAR_COUNTER',
+      canvasWidth: 1200,
+      canvasHeight: 800,
+      active: true,
+    });
+    expect(plan.zones.at(-1)?.name).toBe('Барная стойка');
+  });
+
   it('rejects invalid canvas dimensions', async () => {
     await expect(
       subject.service.createZone(projectId, {

@@ -1,6 +1,6 @@
 import type { CoffeeTableShape } from './domain';
 
-export type CoffeeOrderType = 'TABLE' | 'TAKEAWAY';
+export type CoffeeOrderType = 'UNASSIGNED' | 'TABLE' | 'TAKEAWAY' | 'DELIVERY';
 export type CoffeeOrderStatus =
   'DRAFT' | 'SENT' | 'IN_PREPARATION' | 'READY' | 'COMPLETED' | 'CANCELLED';
 export type CoffeePaymentStatus = 'UNPAID' | 'PAID';
@@ -89,6 +89,7 @@ export interface CoffeeBarAuditEntry {
   readonly employeeId: string;
   readonly operation:
     | 'ORDER_CREATED'
+    | 'ORDER_ASSIGNED'
     | 'GUEST_COUNT_CHANGED'
     | 'ORDER_TRANSFERRED'
     | 'ORDER_RELEASED'

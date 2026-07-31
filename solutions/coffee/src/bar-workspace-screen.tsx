@@ -4,11 +4,9 @@ import {
   Check,
   ChevronRight,
   Coffee,
-  History,
   Minus,
   Plus,
   Search,
-  ShoppingBag,
   Trash2,
   UsersRound,
   X,
@@ -58,6 +56,15 @@ const secondary =
 
 const terminal = (order: CoffeeOrder): boolean =>
   order.status === 'COMPLETED' || order.status === 'CANCELLED';
+type OrderJournalFilter =
+  'ALL' | 'ACTIVE' | 'TAKEAWAY' | 'DELIVERY' | 'READY' | 'COMPLETED' | 'CANCELLED';
+type OrderAssignment =
+  | {
+      readonly type: 'TABLE';
+      readonly tableId: string;
+      readonly seating: CoffeeSeatingInput;
+    }
+  | { readonly type: 'TAKEAWAY' };
 const currency = (value: number): string =>
   new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -85,19 +92,19 @@ export function CoffeeBarWorkspaceScreen({
 }) {
   const [state, setState] = useState<CoffeeBarState | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [view, setView] = useState<'hall' | 'menu' | 'orders'>('hall');
+  const [orderOpen, setOrderOpen] = useState(false);
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState('all');
   const [query, setQuery] = useState('');
+  const [orderQuery, setOrderQuery] = useState('');
+  const [orderFilter, setOrderFilter] = useState<OrderJournalFilter>('ACTIVE');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [seatingTable, setSeatingTable] = useState<
-    CoffeeBarState['tables'][number] | null
-  >(null);
   const [product, setProduct] = useState<CoffeeBarState['products'][number] | null>(
     null,
   );
   const [editingItem, setEditingItem] = useState<CoffeeOrderItem | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -157,6 +164,7 @@ export function CoffeeBarWorkspaceScreen({
     try {
       await operation();
       setSelectedOrderId(null);
+      setOrderOpen(false);
       await reload();
     } catch (error) {
       setMessage(
@@ -193,7 +201,22 @@ export function CoffeeBarWorkspaceScreen({
         .toLocaleLowerCase('ru')
         .includes(query.trim().toLocaleLowerCase('ru')),
   );
-  const history = state.orders.filter(terminal).slice().reverse();
+
+  async function openFreeTable(table: CoffeeBarState['tables'][number]): Promise<void> {
+    setOrderOpen(false);
+    await run(() =>
+      service.createTableOrder(context, table.id, {
+        guestCount: 1,
+      }),
+    );
+    setView('menu');
+  }
+
+  async function createOrder(): Promise<void> {
+    setOrderOpen(false);
+    await run(() => service.createUnassignedOrder(context));
+    setView('menu');
+  }
 
   return (
     <section className="flex w-full flex-col lg:h-[calc(100dvh-10.5rem)] lg:min-h-[560px] lg:overflow-hidden">
@@ -211,18 +234,38 @@ export function CoffeeBarWorkspaceScreen({
             {state.establishmentName} · {state.employeeName}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button className={secondary} onClick={() => setHistoryOpen(true)}>
-            <History className="size-4" />
-            <span className="hidden sm:inline">{coffeeBarRu.history}</span>
-          </button>
+        <nav className="order-3 flex w-full rounded-xl bg-slate-100 p-1 sm:order-none sm:w-auto">
+          {(
+            [
+              ['hall', coffeeBarRu.hall],
+              ['menu', coffeeBarRu.menu],
+              ['orders', coffeeBarRu.orders],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              className={`min-h-9 flex-1 rounded-lg px-5 text-sm font-semibold transition sm:flex-none ${
+                view === id ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600'
+              }`}
+              onClick={() => setView(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+        <div className="flex items-center gap-2">
+          {selectedOrder && !terminal(selectedOrder) && (
+            <button className={secondary} onClick={() => setOrderOpen(true)}>
+              {selectedOrder.orderNumber} · {currency(selectedOrder.total)}
+            </button>
+          )}
           <button
             className={primary}
             disabled={busy}
-            onClick={() => void run(() => service.createTakeawayOrder(context))}
+            onClick={() => void createOrder()}
           >
-            <ShoppingBag className="size-4" />
-            {coffeeBarRu.newTakeaway}
+            <Plus className="size-4" />
+            {coffeeBarRu.newOrder}
           </button>
         </div>
       </header>
@@ -236,158 +279,167 @@ export function CoffeeBarWorkspaceScreen({
         </div>
       )}
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(230px,.72fr)_minmax(330px,1.05fr)_minmax(310px,.9fr)]">
-        <Panel title={coffeeBarRu.floorPlan}>
-          <div className="flex gap-2 overflow-x-auto p-3 pb-2">
-            {state.zones.map((zone) => (
-              <button
-                key={zone.id}
-                className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold ${
-                  zone.id === zoneId
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-700'
-                }`}
-                onClick={() => setZoneId(zone.id)}
-              >
-                {zone.name}
-              </button>
-            ))}
-          </div>
-          <div className="min-h-0 flex-1 overflow-auto p-3 pt-1">
-            {currentZone ? (
-              <div
-                className="relative min-h-[300px] w-full overflow-hidden rounded-2xl border border-blue-100 bg-[radial-gradient(circle_at_20%_20%,#eff6ff,white_55%)]"
-                style={{
-                  aspectRatio: `${currentZone.canvasWidth}/${currentZone.canvasHeight}`,
-                }}
-              >
-                {visibleTables.map((table) => {
-                  const style: CSSProperties = {
-                    left: `${(table.positionX / currentZone.canvasWidth) * 100}%`,
-                    top: `${(table.positionY / currentZone.canvasHeight) * 100}%`,
-                    width: `${Math.max(14, (table.width / currentZone.canvasWidth) * 100)}%`,
-                    height: `${Math.max(12, (table.height / currentZone.canvasHeight) * 100)}%`,
-                    transform: `rotate(${table.rotation}deg)`,
-                    borderRadius:
-                      table.shape === 'ROUND' || table.shape === 'BAR_SEAT'
-                        ? '999px'
-                        : table.shape === 'SQUARE'
-                          ? '14px'
-                          : '12px',
-                  };
-                  return (
-                    <button
-                      key={table.id}
-                      aria-label={`${table.name}: ${coffeeTableStatusRu[table.status]}`}
-                      title={`${table.name} · ${coffeeTableStatusRu[table.status]}`}
-                      style={style}
-                      className={`absolute grid min-h-12 place-items-center border p-1 text-[10px] font-bold shadow-sm transition ${
-                        table.activeOrderId === selectedOrderId
-                          ? 'z-10 border-blue-600 bg-blue-600 text-white ring-4 ring-blue-100'
-                          : table.status === 'FREE'
-                            ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
-                            : table.status === 'READY' ||
-                                table.status === 'AWAITING_COMPLETION'
-                              ? 'border-amber-300 bg-amber-50 text-amber-900'
-                              : 'border-blue-300 bg-blue-50 text-blue-900'
-                      }`}
-                      onClick={() => {
-                        if (table.activeOrderId)
-                          setSelectedOrderId(table.activeOrderId);
-                        else setSeatingTable(table);
-                      }}
-                    >
-                      <span>{table.name}</span>
-                      <span className="font-medium">{table.seatCount} мест</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <Empty>{coffeeBarRu.noTables}</Empty>
-            )}
-          </div>
-          <div className="border-t border-slate-100 p-3">
-            <p className="text-[11px] text-slate-500">{coffeeBarRu.tableHint}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {state.orders
-                .filter((order) => !terminal(order))
-                .map((order) => (
-                  <button
-                    key={order.orderId}
-                    className={`rounded-lg border px-2 py-1 text-[11px] font-semibold ${
-                      order.orderId === selectedOrderId
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-slate-200'
-                    }`}
-                    onClick={() => setSelectedOrderId(order.orderId)}
-                  >
-                    {order.orderNumber}
-                  </button>
-                ))}
-            </div>
-          </div>
-        </Panel>
-
-        <Panel title="Меню">
-          <div className="p-3 pb-2">
-            <label className="relative block">
-              <Search className="absolute left-3 top-3 size-4 text-slate-400" />
-              <input
-                className={`${control} w-full pl-9`}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={coffeeBarRu.searchProducts}
-              />
-            </label>
-            <div className="mt-2 flex gap-2 overflow-x-auto">
-              <Category
-                active={categoryId === 'all'}
-                onClick={() => setCategoryId('all')}
-              >
-                {coffeeBarRu.allCategories}
-              </Category>
-              {state.categories.map((category) => (
-                <Category
-                  key={category.id}
-                  active={categoryId === category.id}
-                  onClick={() => setCategoryId(category.id)}
+      <div className="min-h-0 flex-1">
+        {view === 'hall' && (
+          <Panel title={coffeeBarRu.floorPlan}>
+            <div className="flex gap-2 overflow-x-auto p-3 pb-2">
+              {state.zones.map((zone) => (
+                <button
+                  key={zone.id}
+                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold ${
+                    zone.id === zoneId
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-700'
+                  }`}
+                  onClick={() => setZoneId(zone.id)}
                 >
-                  {category.name}
-                </Category>
+                  {zone.name}
+                </button>
               ))}
             </div>
-          </div>
-          <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2 overflow-y-auto p-3 pt-1 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-            {products.map((candidate) => (
-              <button
-                key={candidate.id}
-                disabled={
-                  !selectedOrder ||
-                  terminal(selectedOrder) ||
-                  selectedOrder.paymentStatus === 'PAID'
-                }
-                className="min-h-24 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-40"
-                onClick={() => setProduct(candidate)}
-              >
-                <span className="block text-sm font-semibold">{candidate.name}</span>
-                <span className="mt-3 block text-xs font-bold text-blue-600">
-                  {currency(candidate.price)}
-                </span>
-              </button>
-            ))}
-            {!products.length && <Empty>{coffeeBarRu.noProducts}</Empty>}
-          </div>
-        </Panel>
+            <div className="min-h-0 flex-1 overflow-auto p-3 pt-1">
+              {currentZone ? (
+                <div
+                  className="relative mx-auto min-h-[380px] w-full max-w-5xl overflow-hidden rounded-2xl border border-blue-100 bg-[radial-gradient(circle_at_20%_20%,#eff6ff,white_55%)]"
+                  style={{
+                    aspectRatio: `${currentZone.canvasWidth}/${currentZone.canvasHeight}`,
+                  }}
+                >
+                  {visibleTables.map((table) => {
+                    const style: CSSProperties = {
+                      left: `${(table.positionX / currentZone.canvasWidth) * 100}%`,
+                      top: `${(table.positionY / currentZone.canvasHeight) * 100}%`,
+                      width: `${Math.max(14, (table.width / currentZone.canvasWidth) * 100)}%`,
+                      height: `${Math.max(12, (table.height / currentZone.canvasHeight) * 100)}%`,
+                      transform: `rotate(${table.rotation}deg)`,
+                      borderRadius:
+                        table.shape === 'ROUND' || table.shape === 'BAR_SEAT'
+                          ? '999px'
+                          : table.shape === 'SQUARE'
+                            ? '14px'
+                            : '12px',
+                    };
+                    return (
+                      <button
+                        key={table.id}
+                        aria-label={`${table.name}: ${coffeeTableStatusRu[table.status]}`}
+                        title={`${table.name} · ${coffeeTableStatusRu[table.status]}`}
+                        style={style}
+                        className={`absolute grid min-h-12 place-items-center border p-1 text-[10px] font-bold shadow-sm transition ${
+                          table.activeOrderId === selectedOrderId
+                            ? 'z-10 border-blue-600 bg-blue-600 text-white ring-4 ring-blue-100'
+                            : table.status === 'FREE'
+                              ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                              : table.status === 'READY' ||
+                                  table.status === 'AWAITING_COMPLETION'
+                                ? 'border-amber-300 bg-amber-50 text-amber-900'
+                                : 'border-blue-300 bg-blue-50 text-blue-900'
+                        }`}
+                        onClick={() => {
+                          if (table.activeOrderId) {
+                            setSelectedOrderId(table.activeOrderId);
+                            setOrderOpen(true);
+                          } else {
+                            void openFreeTable(table);
+                          }
+                        }}
+                      >
+                        <span>{table.name}</span>
+                        <span className="font-medium">{table.seatCount} мест</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Empty>{coffeeBarRu.noTables}</Empty>
+              )}
+            </div>
+            <div className="border-t border-slate-100 p-3 text-center">
+              <p className="text-[11px] text-slate-500">{coffeeBarRu.tableHint}</p>
+            </div>
+          </Panel>
+        )}
 
-        <Panel
-          title={
-            selectedOrder
-              ? `${coffeeBarRu.order} ${selectedOrder.orderNumber}`
-              : coffeeBarRu.composition
-          }
+        {view === 'menu' && (
+          <Panel title="Меню">
+            <div className="p-3 pb-2">
+              <label className="relative block">
+                <Search className="absolute left-3 top-3 size-4 text-slate-400" />
+                <input
+                  className={`${control} w-full pl-9`}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={coffeeBarRu.searchProducts}
+                />
+              </label>
+              <div className="mt-2 flex gap-2 overflow-x-auto">
+                <Category
+                  active={categoryId === 'all'}
+                  onClick={() => setCategoryId('all')}
+                >
+                  {coffeeBarRu.allCategories}
+                </Category>
+                {state.categories.map((category) => (
+                  <Category
+                    key={category.id}
+                    active={categoryId === category.id}
+                    onClick={() => setCategoryId(category.id)}
+                  >
+                    {category.name}
+                  </Category>
+                ))}
+              </div>
+            </div>
+            {!selectedOrder || terminal(selectedOrder) ? (
+              <div className="mx-3 mb-2 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                Сначала откройте стол в разделе «Зал» или создайте новый заказ.
+              </div>
+            ) : null}
+            <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2 overflow-y-auto p-3 pt-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {products.map((candidate) => (
+                <button
+                  key={candidate.id}
+                  disabled={
+                    !selectedOrder ||
+                    terminal(selectedOrder) ||
+                    selectedOrder.paymentStatus === 'PAID'
+                  }
+                  className="min-h-24 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-40"
+                  onClick={() => setProduct(candidate)}
+                >
+                  <span className="block text-sm font-semibold">{candidate.name}</span>
+                  <span className="mt-3 block text-xs font-bold text-blue-600">
+                    {currency(candidate.price)}
+                  </span>
+                </button>
+              ))}
+              {!products.length && <Empty>{coffeeBarRu.noProducts}</Empty>}
+            </div>
+          </Panel>
+        )}
+
+        {view === 'orders' && (
+          <OrderJournal
+            orders={state.orders}
+            tables={state.tables}
+            filter={orderFilter}
+            query={orderQuery}
+            onFilter={setOrderFilter}
+            onQuery={setOrderQuery}
+            onSelect={(orderId) => {
+              setSelectedOrderId(orderId);
+              setOrderOpen(true);
+            }}
+          />
+        )}
+      </div>
+
+      {orderOpen && selectedOrder && (
+        <Modal
+          title={`${coffeeBarRu.order} ${selectedOrder.orderNumber}`}
+          onClose={() => setOrderOpen(false)}
         >
-          {selectedOrder ? (
+          <div className="-mx-5 -mb-5 flex max-h-[78vh] min-h-[420px] flex-col border-t border-slate-100">
             <Receipt
               order={selectedOrder}
               state={state}
@@ -446,28 +498,17 @@ export function CoffeeBarWorkspaceScreen({
               onRelease={() =>
                 runVoid(() => service.releaseTable(context, selectedOrder.orderId))
               }
+              onAssign={(destination) =>
+                run(() =>
+                  service.assignOrder(context, selectedOrder.orderId, destination),
+                )
+              }
             />
-          ) : (
-            <div className="grid flex-1 place-items-center p-6">
-              <Empty>{coffeeBarRu.selectOrder}</Empty>
-            </div>
-          )}
-          <p className="border-t border-slate-100 px-3 py-2 text-center font-mono text-[10px] tracking-wider text-slate-400">
-            {accessCode}
-          </p>
-        </Panel>
-      </div>
-
-      {seatingTable && (
-        <SeatingDialog
-          title={seatingTable.name}
-          capacity={seatingTable.seatCount}
-          onClose={() => setSeatingTable(null)}
-          onSubmit={(input) => {
-            setSeatingTable(null);
-            void run(() => service.createTableOrder(context, seatingTable.id, input));
-          }}
-        />
+            <p className="border-t border-slate-100 px-3 py-2 text-center font-mono text-[10px] tracking-wider text-slate-400">
+              {accessCode}
+            </p>
+          </div>
+        </Modal>
       )}
       {(product || editingItem) && selectedOrder && (
         <ProductDialog
@@ -498,29 +539,107 @@ export function CoffeeBarWorkspaceScreen({
           }}
         />
       )}
-      {historyOpen && (
-        <Modal title={coffeeBarRu.history} onClose={() => setHistoryOpen(false)}>
-          <div className="max-h-[65vh] space-y-2 overflow-y-auto">
-            {history.map((order) => (
-              <div
-                key={order.orderId}
-                className="rounded-xl border border-slate-200 p-3"
-              >
-                <div className="flex justify-between gap-3">
-                  <strong>{order.orderNumber}</strong>
-                  <span className="text-xs">{coffeeOrderStatusRu[order.status]}</span>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  {currency(order.total)}
-                  {order.cancellationReason ? ` · ${order.cancellationReason}` : ''}
-                </p>
-              </div>
-            ))}
-            {!history.length && <Empty>История пока пуста.</Empty>}
-          </div>
-        </Modal>
-      )}
     </section>
+  );
+}
+
+function OrderJournal({
+  orders,
+  tables,
+  filter,
+  query,
+  onFilter,
+  onQuery,
+  onSelect,
+}: {
+  orders: CoffeeBarState['orders'];
+  tables: CoffeeBarState['tables'];
+  filter: OrderJournalFilter;
+  query: string;
+  onFilter: (filter: OrderJournalFilter) => void;
+  onQuery: (query: string) => void;
+  onSelect: (orderId: string) => void;
+}) {
+  const filters: ReadonlyArray<[OrderJournalFilter, string]> = [
+    ['ALL', coffeeBarRu.filterAll],
+    ['ACTIVE', coffeeBarRu.filterActive],
+    ['TAKEAWAY', coffeeBarRu.filterTakeaway],
+    ['DELIVERY', coffeeBarRu.filterDelivery],
+    ['READY', coffeeBarRu.filterReady],
+    ['COMPLETED', coffeeBarRu.filterCompleted],
+    ['CANCELLED', coffeeBarRu.filterCancelled],
+  ];
+  const normalizedQuery = query.trim().toLocaleLowerCase('ru');
+  const filtered = orders
+    .filter((order) => {
+      if (filter === 'ACTIVE') return !terminal(order);
+      if (filter === 'TAKEAWAY') return order.orderType === 'TAKEAWAY';
+      if (filter === 'DELIVERY') return order.orderType === 'DELIVERY';
+      if (filter === 'READY') return order.status === 'READY';
+      if (filter === 'COMPLETED') return order.status === 'COMPLETED';
+      if (filter === 'CANCELLED') return order.status === 'CANCELLED';
+      return true;
+    })
+    .filter((order) =>
+      order.orderNumber.toLocaleLowerCase('ru').includes(normalizedQuery),
+    )
+    .slice()
+    .reverse();
+  return (
+    <Panel title={coffeeBarRu.journal}>
+      <div className="p-4">
+        <label className="relative block max-w-lg">
+          <Search className="absolute left-3 top-3 size-4 text-slate-400" />
+          <input
+            className={`${control} w-full pl-9`}
+            value={query}
+            onChange={(event) => onQuery(event.target.value)}
+            placeholder={coffeeBarRu.searchOrders}
+          />
+        </label>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {filters.map(([id, label]) => (
+            <Category key={id} active={filter === id} onClick={() => onFilter(id)}>
+              {label}
+            </Category>
+          ))}
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto border-t border-slate-100 p-4">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((order) => {
+            const table = tables.find((candidate) => candidate.id === order.tableId);
+            const destination =
+              order.orderType === 'TABLE'
+                ? (table?.name ?? coffeeBarRu.table)
+                : order.orderType === 'TAKEAWAY'
+                  ? coffeeBarRu.takeaway
+                  : order.orderType === 'DELIVERY'
+                    ? coffeeBarRu.filterDelivery
+                    : 'Не прикреплён';
+            return (
+              <button
+                key={order.orderId}
+                className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50"
+                onClick={() => onSelect(order.orderId)}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <strong>{order.orderNumber}</strong>
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold">
+                    {coffeeOrderStatusRu[order.status]}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {destination} · {order.guestCount} гост.
+                </p>
+                <p className="mt-3 text-sm font-semibold">{currency(order.total)}</p>
+              </button>
+            );
+          })}
+        </div>
+        {!filtered.length && <Empty>{coffeeBarRu.noOrders}</Empty>}
+      </div>
+    </Panel>
   );
 }
 
@@ -539,6 +658,7 @@ function Receipt({
   onGuests,
   onTransfer,
   onRelease,
+  onAssign,
 }: {
   order: CoffeeOrder;
   state: CoffeeBarState;
@@ -557,10 +677,12 @@ function Receipt({
   onGuests: (input: CoffeeSeatingInput) => Promise<void>;
   onTransfer: (tableId: string, override: boolean) => Promise<void>;
   onRelease: () => Promise<void>;
+  onAssign: (destination: OrderAssignment) => Promise<void>;
 }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [guestOpen, setGuestOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [attachOpen, setAttachOpen] = useState(false);
   const submitted = order.items.filter((item) => item.submittedBatchId);
   const drafts = order.items.filter((item) => !item.submittedBatchId);
   const canComplete =
@@ -604,6 +726,7 @@ function Receipt({
           title={coffeeBarRu.newItems}
           items={drafts}
           busy={busy}
+          immutable={terminal(order)}
           onEdit={onEdit}
           onQuantity={onQuantity}
           onRemove={onRemove}
@@ -615,7 +738,16 @@ function Receipt({
           <span className="text-xs text-slate-500">{coffeeBarRu.total}</span>
           <strong className="text-xl">{currency(order.total)}</strong>
         </div>
-        {drafts.length > 0 && (
+        {order.orderType === 'UNASSIGNED' && !terminal(order) && (
+          <button
+            className={`${primary} w-full`}
+            disabled={busy}
+            onClick={() => setAttachOpen(true)}
+          >
+            {coffeeBarRu.attach}
+          </button>
+        )}
+        {drafts.length > 0 && order.orderType !== 'UNASSIGNED' && (
           <button
             className={`${primary} w-full`}
             disabled={busy}
@@ -627,6 +759,7 @@ function Receipt({
         )}
         {order.items.length > 0 &&
           drafts.length === 0 &&
+          !terminal(order) &&
           order.paymentStatus === 'UNPAID' && (
             <div className="grid grid-cols-2 gap-2">
               {(['CASH', 'CARD'] as const).map((method) => (
@@ -641,7 +774,7 @@ function Receipt({
               ))}
             </div>
           )}
-        {canComplete && (
+        {canComplete && !terminal(order) && (
           <button
             className={`${primary} mt-2 w-full`}
             disabled={busy}
@@ -655,7 +788,7 @@ function Receipt({
         )}
         {!terminal(order) && (
           <div className="mt-2 grid grid-cols-2 gap-2">
-            {order.orderType === 'TABLE' && (
+            {order.orderType !== 'UNASSIGNED' && (
               <button
                 className={secondary}
                 disabled={busy || freeTables.length === 0}
@@ -708,6 +841,16 @@ function Receipt({
           onSubmit={(tableId, override) => {
             setTransferOpen(false);
             void onTransfer(tableId, override);
+          }}
+        />
+      )}
+      {attachOpen && (
+        <AttachDialog
+          tables={freeTables}
+          onClose={() => setAttachOpen(false)}
+          onSubmit={(destination) => {
+            setAttachOpen(false);
+            void onAssign(destination);
           }}
         />
       )}
@@ -1015,6 +1158,102 @@ function SeatingDialog({
         }
       >
         {coffeeBarRu.seatGuests}
+      </button>
+    </Modal>
+  );
+}
+
+function AttachDialog({
+  tables,
+  onClose,
+  onSubmit,
+}: {
+  tables: CoffeeBarState['tables'];
+  onClose: () => void;
+  onSubmit: (destination: OrderAssignment) => void;
+}) {
+  const [tableId, setTableId] = useState(tables[0]?.id ?? '');
+  const [guestCount, setGuestCount] = useState(1);
+  const [note, setNote] = useState('');
+  const table = tables.find((candidate) => candidate.id === tableId);
+  const [override, setOverride] = useState(false);
+  const over = Boolean(table && guestCount > table.seatCount);
+  return (
+    <Modal title={coffeeBarRu.attach} onClose={onClose}>
+      <button
+        className={`${secondary} w-full`}
+        onClick={() => onSubmit({ type: 'TAKEAWAY' })}
+      >
+        {coffeeBarRu.attachAsTakeaway}
+      </button>
+      <div className="my-4 flex items-center gap-3 text-xs text-slate-400">
+        <span className="h-px flex-1 bg-slate-200" />
+        или
+        <span className="h-px flex-1 bg-slate-200" />
+      </div>
+      <label className="block text-sm font-medium">
+        Стол
+        <select
+          className={`${control} mt-1 w-full`}
+          value={tableId}
+          onChange={(event) => setTableId(event.target.value)}
+        >
+          {tables.map((candidate) => (
+            <option key={candidate.id} value={candidate.id}>
+              {candidate.name} · {candidate.seatCount} мест
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="mt-3 block text-sm font-medium">
+        {coffeeBarRu.guestCount}
+        <input
+          type="number"
+          min={1}
+          className={`${control} mt-1 w-full`}
+          value={guestCount}
+          onChange={(event) => setGuestCount(Number(event.target.value))}
+        />
+      </label>
+      <label className="mt-3 block text-sm font-medium">
+        {coffeeBarRu.seatingNote}
+        <input
+          className={`${control} mt-1 w-full`}
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+        />
+      </label>
+      {over && (
+        <label className="mt-3 flex items-center gap-2 text-sm text-amber-800">
+          <input
+            type="checkbox"
+            checked={override}
+            onChange={(event) => setOverride(event.target.checked)}
+          />
+          {coffeeBarRu.capacityOverride}
+        </label>
+      )}
+      <button
+        className={`${primary} mt-4 w-full`}
+        disabled={
+          !tableId ||
+          !Number.isInteger(guestCount) ||
+          guestCount < 1 ||
+          (over && !override)
+        }
+        onClick={() =>
+          onSubmit({
+            type: 'TABLE',
+            tableId,
+            seating: {
+              guestCount,
+              note,
+              allowCapacityOverride: override,
+            },
+          })
+        }
+      >
+        {coffeeBarRu.attachToTable}
       </button>
     </Modal>
   );

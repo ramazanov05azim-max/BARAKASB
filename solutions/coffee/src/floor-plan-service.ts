@@ -53,6 +53,19 @@ interface Dependencies {
 }
 
 const terminalOrderStatuses = new Set(['COMPLETED', 'CANCELLED']);
+const standardZoneNames = {
+  MAIN_HALL: 'Основной зал',
+  TERRACE: 'Терраса',
+  STREET: 'Улица',
+  BAR_COUNTER: 'Барная стойка',
+} as const;
+
+function zoneName(
+  zoneType: CoffeeFloorPlanZone['zoneType'],
+  customName: string,
+): string {
+  return zoneType === 'OTHER' ? customName.trim() : standardZoneNames[zoneType];
+}
 
 function validateZone(zone: CoffeeFloorPlanZone): void {
   if (
@@ -131,7 +144,7 @@ export function createCoffeeFloorPlanService({
       const zone: CoffeeFloorPlanZone = {
         ...input,
         id: createId(),
-        name: input.name.trim(),
+        name: zoneName(input.zoneType, input.name),
         sortOrder: floorPlan.zones.length,
         updatedAt: now(),
       };
@@ -146,7 +159,7 @@ export function createCoffeeFloorPlanService({
       const updated = {
         ...current,
         ...input,
-        name: input.name?.trim() ?? current.name,
+        name: zoneName(input.zoneType ?? current.zoneType, input.name ?? current.name),
         updatedAt: now(),
       };
       validateZone(updated);

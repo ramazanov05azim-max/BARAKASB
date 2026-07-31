@@ -83,6 +83,26 @@ describe('local Coffee repository adapter', () => {
     expect(second.roles.length).toBeGreaterThan(0);
   });
 
+  it('creates a complete operating-hours profile for a new establishment', async () => {
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
+      'project-hours',
+      'Coffee Hours',
+    );
+
+    const snapshot = await localCoffeeManagerRepositories.loadSnapshot('project-hours');
+
+    expect(snapshot.businessProfile.operatingDayStart).toBe('04:00');
+    expect(snapshot.businessProfile.operatingDayEnd).toBe('03:59');
+    expect(snapshot.businessProfile.operatingHours?.monday).toEqual({
+      open: '08:00',
+      close: '22:00',
+    });
+    expect(snapshot.businessProfile.operatingHours?.sunday).toEqual({
+      open: '09:00',
+      close: '21:00',
+    });
+  });
+
   it('rejects readiness while required setup steps are incomplete', async () => {
     await localCoffeeManagerRepositories.coffeeProject.initialize(
       'project-incomplete',

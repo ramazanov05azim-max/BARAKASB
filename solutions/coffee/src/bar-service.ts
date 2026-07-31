@@ -26,7 +26,19 @@ export interface CoffeeBarService {
     tableId: string,
     seating: CoffeeSeatingInput,
   ): Promise<CoffeeOrder>;
+  createUnassignedOrder(context: CoffeeBarRuntimeContext): Promise<CoffeeOrder>;
   createTakeawayOrder(context: CoffeeBarRuntimeContext): Promise<CoffeeOrder>;
+  assignOrder(
+    context: CoffeeBarRuntimeContext,
+    orderId: string,
+    destination:
+      | {
+          readonly type: 'TABLE';
+          readonly tableId: string;
+          readonly seating: CoffeeSeatingInput;
+        }
+      | { readonly type: 'TAKEAWAY' },
+  ): Promise<CoffeeOrder>;
   changeGuestCount(
     context: CoffeeBarRuntimeContext,
     orderId: string,
@@ -330,6 +342,7 @@ export function createCoffeeBarService({
 
   async function createOrder(
     context: CoffeeBarRuntimeContext,
+    orderType: CoffeeOrder['orderType'],
     tableId: string | null,
     seating: CoffeeSeatingInput,
   ): Promise<CoffeeOrder> {
@@ -377,7 +390,7 @@ export function createCoffeeBarService({
       businessEnvironmentId: context.businessEnvironmentId,
       workspaceId: context.workspaceId,
       locationId: location.id,
-      orderType: tableId ? 'TABLE' : 'TAKEAWAY',
+      orderType,
       tableId,
       orderNumber: nextOrderNumber(store.orders),
       status: 'DRAFT',
@@ -501,8 +514,71 @@ export function createCoffeeBarService({
       };
     },
     createTableOrder: (context, tableId, seating) =>
-      createOrder(context, tableId, seating),
-    createTakeawayOrder: (context) => createOrder(context, null, { guestCount: 1 }),
+      createOrder(context, 'TABLE', tableId, seating),
+    createUnassignedOrder: (context) =>
+      createOrder(context, 'UNASSIGNED', null, { guestCount: 1 }),
+    createTakeawayOrder: (context) =>
+      createOrder(context, 'TAKEAWAY', null, { guestCount: 1 }),
+    async assignOrder(context, orderId, destination) {
+      const snapshot = await snapshotFor(context);
+      const store = await orders.load(context.projectId);
+      const order = findOrder(store, orderId);
+      assertContext(context, order);
+      assertMutable(order);
+      if (order.orderType !== 'UNASSIGNED') {
+        throw new CoffeeBarOperationError('INVALID_OPERATION');
+      }
+      if (destination.type === 'TAKEAWAY') {
+        return persist(
+          context,
+          store,
+          { ...order, orderType: 'TAKEAWAY', updatedAt: now() },
+          'ORDER_ASSIGNED',
+          'TAKEAWAY',
+        );
+      }
+      const table = snapshot.tables.find(
+        (candidate) =>
+          candidate.id === destination.tableId &&
+          candidate.locationId === order.locationId &&
+          candidate.status === 'active',
+      );
+      if (!table) throw new CoffeeBarOperationError('NOT_FOUND');
+      if (
+        !Number.isInteger(destination.seating.guestCount) ||
+        destination.seating.guestCount < 1
+      ) {
+        throw new CoffeeBarOperationError('INVALID_OPERATION');
+      }
+      if (
+        store.orders.some(
+          (candidate) =>
+            candidate.tableId === table.id && !terminalStatuses.has(candidate.status),
+        )
+      ) {
+        throw new CoffeeBarOperationError('TABLE_NOT_FREE');
+      }
+      if (
+        destination.seating.guestCount > table.seatCount &&
+        !destination.seating.allowCapacityOverride
+      ) {
+        throw new CoffeeBarOperationError('CAPACITY_EXCEEDED');
+      }
+      return persist(
+        context,
+        store,
+        {
+          ...order,
+          orderType: 'TABLE',
+          tableId: table.id,
+          guestCount: destination.seating.guestCount,
+          seatingNote: destination.seating.note?.trim() ?? '',
+          updatedAt: now(),
+        },
+        'ORDER_ASSIGNED',
+        table.id,
+      );
+    },
     async changeGuestCount(context, orderId, seating) {
       const snapshot = await snapshotFor(context);
       const store = await orders.load(context.projectId);
@@ -544,7 +620,7 @@ export function createCoffeeBarService({
       const order = findOrder(store, orderId);
       assertContext(context, order);
       assertMutable(order);
-      if (order.orderType !== 'TABLE')
+      if (order.orderType === 'UNASSIGNED')
         throw new CoffeeBarOperationError('INVALID_OPERATION');
       const table = snapshot.tables.find(
         (candidate) =>
@@ -569,9 +645,9 @@ export function createCoffeeBarService({
       return persist(
         context,
         store,
-        { ...order, tableId, updatedAt: now() },
+        { ...order, orderType: 'TABLE', tableId, updatedAt: now() },
         'ORDER_TRANSFERRED',
-        tableId,
+        `${order.tableId ?? order.orderType}->${tableId}`,
       );
     },
     async releaseTable(context, orderId) {
@@ -705,6 +781,9 @@ export function createCoffeeBarService({
       const order = findOrder(store, orderId);
       assertContext(context, order);
       assertMutable(order);
+      if (order.orderType === 'UNASSIGNED') {
+        throw new CoffeeBarOperationError('INVALID_OPERATION');
+      }
       const draftItems = order.items.filter((item) => item.status === 'DRAFT');
       if (draftItems.length === 0) throw new CoffeeBarOperationError('ORDER_EMPTY');
       const timestamp = now();
