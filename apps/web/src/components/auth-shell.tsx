@@ -32,7 +32,7 @@ export function AuthShell({
         <div className="grid flex-1 items-center gap-12 py-10 xl:grid-cols-[1fr_460px] xl:py-8">
           <section className="relative hidden min-h-[690px] xl:block">
             <div className="absolute left-0 top-[12%] z-10">
-              <p className="brand-display text-[clamp(5rem,8vw,8.5rem)] font-bold leading-[0.82]">
+              <p className="brand-display text-[clamp(5rem,8vw,8.5rem)] leading-[0.82]">
                 {t('common.brandName')}
               </p>
               <p className="mt-7 max-w-2xl text-balance font-serif text-[clamp(1.8rem,2.7vw,2.8rem)] leading-[1.08] tracking-[-0.035em]">

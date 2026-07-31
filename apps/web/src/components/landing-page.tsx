@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, MotionConfig } from 'framer-motion';
-import { ArrowRight, Check, Layers3, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, Layers3, ShieldCheck, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { BrandNetwork } from './brand-network';
 import { PublicHeader } from './public-header';
@@ -33,43 +33,28 @@ export function LandingPage() {
     <MotionConfig reducedMotion="user">
       <main className="overflow-hidden bg-transparent">
         <PublicHeader />
-        <section className="relative min-h-[880px] pt-36 sm:pt-44">
+        <section className="relative min-h-[720px] pt-32 sm:pt-36">
           <div className="network-atmosphere pointer-events-none absolute inset-0 opacity-70" />
           <div className="pointer-events-none absolute left-[5%] top-[28%] size-[420px] rounded-full bg-white/80 blur-3xl" />
           <div className="pointer-events-none absolute right-[8%] top-[18%] size-[420px] rounded-full bg-blue-300/18 blur-3xl" />
-          <div className="relative mx-auto grid max-w-[1500px] items-center gap-12 px-5 pb-28 sm:px-8 md:gap-16 xl:grid-cols-[1.08fr_.92fr] xl:gap-8 xl:pb-36">
+          <div
+            className="pointer-events-none absolute left-0 top-[70%] hidden h-px w-[17vw] max-w-[290px] bg-[linear-gradient(90deg,var(--action),rgb(23_105_255_/_58%))] md:block"
+            aria-hidden="true"
+          >
+            <span className="absolute right-0 top-1/2 size-2.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-[var(--action)] shadow-[0_0_0_4px_rgb(23_105_255_/_8%)]" />
+          </div>
+          <div className="relative mx-auto grid max-w-[1600px] items-center gap-10 px-5 pb-24 sm:px-8 md:min-h-[590px] md:grid-cols-[1.04fr_.96fr] md:gap-2 md:px-10 md:pb-20 lg:min-h-[650px] lg:px-16 xl:px-20">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: 'easeOut' }}
+              className="relative z-10 md:-translate-y-3"
             >
-              <h1 className="brand-display text-[clamp(4.4rem,10vw,9.8rem)] font-bold leading-[0.82]">
+              <h1 className="brand-display whitespace-nowrap text-[clamp(4rem,10vw,10rem)] leading-[0.82]">
                 {t('common.brandName')}
               </h1>
-              <p className="mt-8 max-w-3xl text-balance font-serif text-[clamp(1.65rem,3.2vw,3rem)] leading-[1.08] tracking-[-0.035em] text-[var(--text)]">
+              <p className="mt-7 max-w-3xl font-serif text-[clamp(1.45rem,2.2vw,2.25rem)] leading-[1.08] tracking-[-0.035em] text-[var(--text)] md:mt-8 lg:whitespace-nowrap">
                 {t('common.tagline')}
-              </p>
-              <p className="mt-7 max-w-xl text-[15px] leading-7 text-[var(--text-secondary)]">
-                {t('landing.description')}
-              </p>
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/register"
-                  className={cn(buttonVariants({ size: 'lg' }), 'group')}
-                >
-                  {t('landing.createAccount')}
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-                <Link
-                  href="/login"
-                  className={buttonVariants({ variant: 'secondary', size: 'lg' })}
-                >
-                  {t('nav.signIn')}
-                </Link>
-              </div>
-              <p className="mt-5 flex items-center gap-2 text-sm text-[var(--muted)]">
-                <Check className="size-4 text-emerald-600" />
-                {t('landing.prototypeAccess')}
               </p>
             </motion.div>
 
@@ -77,7 +62,7 @@ export function LandingPage() {
               initial={{ opacity: 0, y: 24, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.55, delay: 0.08, ease: 'easeOut' }}
-              className="relative mx-auto w-full max-w-[760px] xl:max-w-none xl:translate-x-5"
+              className="relative mx-auto w-full max-w-[660px] md:w-[112%] md:max-w-[740px]"
             >
               <BrandNetwork />
             </motion.div>

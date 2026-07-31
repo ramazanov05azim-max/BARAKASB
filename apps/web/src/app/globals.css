@@ -161,9 +161,11 @@ a {
 }
 
 .brand-display {
-  font-family: 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-  font-stretch: condensed;
-  letter-spacing: -0.075em;
+  font-family:
+    'Avenir Next Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  font-stretch: 75%;
+  font-weight: 500;
+  letter-spacing: 0.025em;
 }
 
 .surface-grid {
@@ -195,6 +197,16 @@ a {
   background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
   box-shadow: var(--shadow-float);
   backdrop-filter: blur(28px) saturate(140%);
+}
+
+.brand-hub {
+  border: 1px solid rgb(140 174 245 / 48%);
+  background: linear-gradient(145deg, rgb(255 255 255 / 98%), rgb(247 250 255 / 94%));
+  box-shadow:
+    0 28px 58px rgb(48 87 170 / 19%),
+    0 0 38px rgb(62 117 255 / 12%),
+    inset 0 1px 0 rgb(255 255 255);
+  backdrop-filter: blur(10px) saturate(115%);
 }
 
 .soft-icon-tile {
