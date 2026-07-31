@@ -7,15 +7,17 @@ import { cn } from '@/lib/utils';
 export function Brand({
   compact = false,
   className,
+  href = '/',
 }: {
   compact?: boolean;
   className?: string;
+  href?: string;
 }) {
   const { t } = useTranslation();
 
   return (
     <Link
-      href="/"
+      href={href}
       aria-label={t('common.brandHome')}
       className={cn(
         'inline-flex items-center gap-2.5 font-semibold tracking-[-0.025em]',

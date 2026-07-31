@@ -305,6 +305,34 @@ export const ru = {
   'settings.operationalNoticesHint':
     'Показывать состояние платформы и уведомления о развёртываниях.',
   'settings.savePreferences': 'Сохранить настройки',
+  'universal.metaTitle': 'Универсальное приложение BARAKASB',
+  'universal.metaDescription': 'Подключение устройства к бизнес-среде BARAKASB.',
+  'universal.eyebrow': 'Универсальное приложение',
+  'universal.connectTitle': 'Подключение к бизнес-среде',
+  'universal.connectDescription':
+    'Введите 16-значный код, созданный для проекта в BARAKASB. Код определяет организацию и установленное решение, к которому будет подключено это устройство.',
+  'universal.codeLabel': 'Код бизнес-среды',
+  'universal.codePlaceholder': '0000 0000 0000 0000',
+  'universal.codePrivacy':
+    'Код остаётся только на этом экране и пока никуда не отправляется.',
+  'universal.codeIncomplete': 'Введите все 16 цифр кода.',
+  'universal.statusWaiting': 'Ожидание полного кода',
+  'universal.statusReady': 'Формат кода заполнен',
+  'universal.statusLocalOnly':
+    'На этом этапе проверяется только формат — подключение к серверу отключено.',
+  'universal.continue': 'Продолжить',
+  'universal.notImplemented':
+    'Разрешение бизнес-среды будет подключено на следующем этапе. Код не сохранён и не отправлен.',
+  'universal.whereCode':
+    'Код будет доступен владельцу проекта в Manager Platform после подключения соответствующего этапа.',
+  'universal.starting': 'Запуск приложения',
+  'universal.startingDescription': 'Проверяем локальное состояние приложения.',
+  'universal.redirecting': 'Переходим к подключению бизнес-среды.',
+  'universal.unavailableTitle': 'Приложение временно недоступно',
+  'universal.unavailableDescription':
+    'Не удалось продолжить безопасный запуск. Попробуйте вернуться к стартовому состоянию.',
+  'universal.tryAgain': 'Начать заново',
+  'universal.footerVersion': 'Версия',
   'notFound.title': 'Этой страницы нет',
   'notFound.code': '404',
   'notFound.description':

@@ -4,5 +4,16 @@
   "projectType": "library",
   "root": "packages/contracts/platform",
   "tags": ["type:contracts", "scope:shared", "runtime:universal"],
-  "targets": {}
+  "targets": {
+    "build": {
+      "command": "pnpm exec tsc -p packages/contracts/platform/tsconfig.build.json --incremental false",
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "lint": {
+      "command": "pnpm --dir packages/contracts/platform exec eslint ."
+    },
+    "typecheck": {
+      "command": "pnpm exec tsc -p packages/contracts/platform/tsconfig.json --noEmit --incremental false"
+    }
+  }
 }

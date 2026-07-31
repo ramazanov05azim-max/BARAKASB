@@ -6,15 +6,15 @@ point.
 
 ## Deployable applications
 
-| Module                      | Responsibility                                                |
-| --------------------------- | ------------------------------------------------------------- |
-| `apps/web`                  | Next.js shell, confidential BFF, and extension UI composition |
-| `apps/control-plane-api`    | Global identity, Project, placement, and catalog API          |
-| `apps/control-plane-worker` | Durable Project lifecycle and reconciliation workflows        |
-| `apps/data-plane-api`       | Project-scoped REST composition root in a cell                |
-| `apps/data-plane-worker`    | Cell-local outbox, events, schedules, and jobs                |
-| `apps/realtime-gateway`     | Project connections, notification fan-out, and backpressure   |
-| `apps/extension-runner`     | Isolated non-platform extension execution boundary            |
+| Module                      | Responsibility                                                               |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `apps/web`                  | Next.js shell, BFF, Universal Application mode, and extension UI composition |
+| `apps/control-plane-api`    | Global identity, Project, placement, and catalog API                         |
+| `apps/control-plane-worker` | Durable Project lifecycle and reconciliation workflows                       |
+| `apps/data-plane-api`       | Project-scoped REST composition root in a cell                               |
+| `apps/data-plane-worker`    | Cell-local outbox, events, schedules, and jobs                               |
+| `apps/realtime-gateway`     | Project connections, notification fan-out, and backpressure                  |
+| `apps/extension-runner`     | Isolated non-platform extension execution boundary                           |
 
 ## Core modules
 
@@ -32,9 +32,9 @@ point.
 
 ## Contract modules
 
-| Module               | Responsibility                                                 |
-| -------------------- | -------------------------------------------------------------- |
-| `contracts/platform` | Transport-neutral schema primitives and compatibility metadata |
+| Module               | Responsibility                                                           |
+| -------------------- | ------------------------------------------------------------------------ |
+| `contracts/platform` | Transport-neutral schemas, runtime manifests, and compatibility metadata |
 
 Contracts are side-effect free and cannot import Core, Infrastructure, Solutions, or
 Plugins.
@@ -54,13 +54,13 @@ domain/application public contracts.
 
 ## Frontend platform modules
 
-| Module            | Responsibility                                            |
-| ----------------- | --------------------------------------------------------- |
-| `ui`              | Accessible design-system primitives and tokens            |
-| `api-client`      | Generated REST client and error normalization             |
-| `auth`            | Browser session state and authenticated navigation guards |
-| `project-context` | Active-project selection and mismatch prevention          |
-| `extension-host`  | Validated Solution and Plugin UI registration             |
+| Module            | Responsibility                                                           |
+| ----------------- | ------------------------------------------------------------------------ |
+| `ui`              | Accessible design-system primitives and tokens                           |
+| `api-client`      | Generated REST client and error normalization                            |
+| `auth`            | Browser session state and authenticated navigation guards                |
+| `project-context` | Active-project selection and mismatch prevention                         |
+| `extension-host`  | Validated browser registration and composition of Solution and Plugin UI |
 
 ## Reserved extension zones
 

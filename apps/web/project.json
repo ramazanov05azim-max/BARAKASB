@@ -15,6 +15,9 @@
     "lint": {
       "command": "pnpm --dir apps/web lint"
     },
+    "test": {
+      "command": "pnpm --dir apps/web test"
+    },
     "typecheck": {
       "command": "pnpm --dir apps/web typecheck"
     }

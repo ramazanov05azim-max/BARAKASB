@@ -4,5 +4,19 @@
   "projectType": "library",
   "root": "packages/frontend/extension-host",
   "tags": ["type:frontend", "scope:platform", "runtime:browser"],
-  "targets": {}
+  "targets": {
+    "build": {
+      "command": "pnpm exec tsc -p packages/frontend/extension-host/tsconfig.build.json --incremental false",
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "lint": {
+      "command": "pnpm --dir packages/frontend/extension-host exec eslint ."
+    },
+    "test": {
+      "command": "pnpm exec vitest run packages/frontend/extension-host/src"
+    },
+    "typecheck": {
+      "command": "pnpm exec tsc -p packages/frontend/extension-host/tsconfig.json --noEmit --incremental false"
+    }
+  }
 }

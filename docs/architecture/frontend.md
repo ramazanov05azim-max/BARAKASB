@@ -12,6 +12,11 @@
 
 It contains no business-specific screens.
 
+The same composition root also hosts the Platform-owned Universal Application runtime
+mode under `/app`. This mode has its own route layout and minimal operational shell, but
+it is not a second deployable or browser composition root. It does not reuse the
+administrative navigation and it cannot import a Solution implementation directly.
+
 ## Route model
 
 All project-scoped routes begin with:
@@ -23,6 +28,18 @@ All project-scoped routes begin with:
 The route project ID is authoritative. Cached state from a previous project must be
 cleared or partitioned before rendering another project. A project switch is a
 security-context change, not a cosmetic dropdown update.
+
+Universal Application routes are namespaced separately:
+
+```text
+/app
+/app/connect
+/app/unavailable
+```
+
+The namespace prevents the operational bootstrap flow from competing with the public,
+authentication, or Project-administration routes. Unknown routes inside `/app/*` return
+to `/app`.
 
 ## Rendering boundaries
 
@@ -91,6 +108,12 @@ Every contribution has a route/slot namespace, error boundary, loading budget, b
 budget, and deterministic conflict priority. Manifest display text is untrusted and
 escaped. One failing extension cannot break the shell or Core administration.
 
+The transport-neutral Solution Runtime manifest is declared in `contracts-platform`. The
+browser-side in-memory registry is owned by `frontend-extension-host`; it is empty by
+default and rejects duplicate `solutionKey` registrations. It does not own the Solution
+catalog, Project installation state, compatibility policy, or lifecycle. Those
+responsibilities remain in `core-solutions-runtime`.
+
 ## Design system
 
 `@barakasb/frontend-ui` owns tokens and accessible primitives, not business components.
@@ -103,3 +126,4 @@ WCAG 2.2 AA.
 - [ADR 0014: Authenticated cache isolation](../adr/0014-authenticated-cache-isolation.md)
 - [ADR 0017: Confidential web BFF](../adr/0017-confidential-web-bff.md)
 - [ADR 0022: WebSocket notification semantics](../adr/0022-websocket-notification-semantics.md)
+- [Universal Application runtime mode](universal-application.md)

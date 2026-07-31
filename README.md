@@ -99,9 +99,20 @@ architecture boundaries for later platform implementation. Each package declares
 identity and tags as described in
 [Monorepo architecture](docs/architecture/monorepo.md).
 
+The Universal BARAKASB Application foundation is available as a Platform-owned runtime
+mode at `/app` inside the same `apps/web` deployable. This preserves the single browser
+shell required by ADR 0032 while giving the operational product a separate route layout,
+bootstrap flow, PWA manifest, and future Solution Runtime outlet. See
+[Universal Application runtime mode](docs/architecture/universal-application.md).
+
 ## Current status
 
 The platform frontend and Coffee Project administration environment are implemented
 against Project-scoped typed mock repositories. Backend services and live Coffee
 operations remain future work governed by [Roadmap](docs/roadmap.md) and
 [Coffee Implementation Roadmap](COFFEE_IMPLEMENTATION_ROADMAP.md).
+
+Stage 7.1 adds only the Universal Application foundation: local code formatting,
+bootstrap contracts, an empty browser runtime registry, and manifest-only PWA metadata.
+Environment resolution, device authorization, employee authentication, operational
+Solution runtimes, and offline operations are not implemented.

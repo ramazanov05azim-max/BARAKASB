@@ -1,0 +1,18 @@
+{
+  "name": "BARAKASB Universal Application",
+  "short_name": "BARAKASB",
+  "description": "Universal operational application for BARAKASB business environments.",
+  "start_url": "/app",
+  "scope": "/app",
+  "display": "standalone",
+  "background_color": "#f7f9fd",
+  "theme_color": "#1769ff",
+  "icons": [
+    {
+      "src": "/icons/barakasb-app.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

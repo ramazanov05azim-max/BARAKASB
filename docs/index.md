@@ -48,6 +48,7 @@ This is the canonical entry point for BARAKASB documentation.
 - [Dependency rules](architecture/dependency-rules.md)
 - [Backend architecture](architecture/backend.md)
 - [Frontend architecture](architecture/frontend.md)
+- [Universal Application runtime mode](architecture/universal-application.md)
 - [Project isolation](architecture/tenancy-and-isolation.md)
 - [Control plane and data plane](architecture/control-plane-and-data-plane.md)
 - [Data architecture](architecture/data-architecture.md)
@@ -108,6 +109,7 @@ This is the canonical entry point for BARAKASB documentation.
 ## Architecture reviews
 
 - [Enterprise architecture review — 2026-07-30](reviews/2026-07-30-enterprise-architecture-review.md)
+- [Stage 7.1 architecture alignment — 2026-07-31](reviews/2026-07-31-stage-7-1-architecture-alignment.md)
 - [Phase 2 ADR review](reviews/phase-2-adr-review.md)
 - [Phase 2 documentation audit](reviews/phase-2-documentation-audit.md)
 - [Architecture Validation Report](../ARCHITECTURE_VALIDATION_REPORT.md)

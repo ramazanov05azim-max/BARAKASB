@@ -302,6 +302,35 @@ export const en = {
   'settings.operationalNotices': 'Operational notices',
   'settings.operationalNoticesHint': 'Show platform health and rollout notices.',
   'settings.savePreferences': 'Save preferences',
+  'universal.metaTitle': 'BARAKASB Universal Application',
+  'universal.metaDescription':
+    'Connect this device to a BARAKASB business environment.',
+  'universal.eyebrow': 'Universal Application',
+  'universal.connectTitle': 'Connect to a business environment',
+  'universal.connectDescription':
+    'Enter the 16-digit code created for a Project in BARAKASB. The code identifies the organization and installed Solution this device will connect to.',
+  'universal.codeLabel': 'Business Environment Code',
+  'universal.codePlaceholder': '0000 0000 0000 0000',
+  'universal.codePrivacy':
+    'The code stays on this screen and is not sent anywhere yet.',
+  'universal.codeIncomplete': 'Enter all 16 digits of the code.',
+  'universal.statusWaiting': 'Waiting for the complete code',
+  'universal.statusReady': 'Code format is complete',
+  'universal.statusLocalOnly':
+    'Only the format is checked at this stage—the server connection is disabled.',
+  'universal.continue': 'Continue',
+  'universal.notImplemented':
+    'Business environment resolution arrives in the next stage. The code was not saved or sent.',
+  'universal.whereCode':
+    'The code will be available to the Project owner in Manager Platform after the corresponding stage is connected.',
+  'universal.starting': 'Starting the application',
+  'universal.startingDescription': 'Checking the local application state.',
+  'universal.redirecting': 'Opening business environment connection.',
+  'universal.unavailableTitle': 'Application temporarily unavailable',
+  'universal.unavailableDescription':
+    'The safe startup could not continue. Return to the initial state and try again.',
+  'universal.tryAgain': 'Start again',
+  'universal.footerVersion': 'Version',
   'notFound.title': 'This page isn’t here',
   'notFound.code': '404',
   'notFound.description':

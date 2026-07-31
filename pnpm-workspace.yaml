@@ -9,6 +9,7 @@ packages:
   - 'plugins/*'
 
 allowBuilds:
+  esbuild: true
   sharp: true
   unrs-resolver: true
 
