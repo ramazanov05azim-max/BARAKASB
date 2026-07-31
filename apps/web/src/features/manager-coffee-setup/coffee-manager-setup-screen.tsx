@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, Coffee, Copy } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -13,28 +13,29 @@ import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n/i18n-provider';
 import { formatBusinessEnvironmentCode } from '@/features/universal-application/domain/business-environment-code';
 import {
-  localCoffeeOnboardingRepository,
+  localCoffeeManagerSetupRepository,
   type CoffeeEstablishmentInput,
-  type LocalCoffeeOnboardingRepository,
-  type LocalCoffeeProjectRecord,
-} from './local-coffee-onboarding-repository';
+  type CoffeeManagerSetupRecord,
+  type CoffeeManagerSetupRepository,
+} from './coffee-manager-setup-repository';
 
 const selectClassName =
   'h-12 w-full rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-raised)] px-4 text-[15px] text-[var(--text)] shadow-[inset_0_1px_0_rgb(255_255_255_/_70%),0_8px_20px_rgb(39_70_120_/_4%)] outline-none transition focus:border-[var(--action)] focus:bg-[var(--surface-solid)] focus:ring-4 focus:ring-[var(--focus-soft)]';
 
 type FormValues = CoffeeEstablishmentInput;
 
-export function CoffeeOnboardingScreen({
-  defaultName = '',
-  repository = localCoffeeOnboardingRepository,
+export function CoffeeManagerSetupScreen({
+  projectId,
+  repository = localCoffeeManagerSetupRepository,
 }: {
-  defaultName?: string;
-  repository?: LocalCoffeeOnboardingRepository;
+  projectId: string;
+  repository?: CoffeeManagerSetupRepository;
 }) {
   const { t, locale } = useTranslation();
-  const [createdRecord, setCreatedRecord] = useState<LocalCoffeeProjectRecord | null>(
+  const [createdRecord, setCreatedRecord] = useState<CoffeeManagerSetupRecord | null>(
     null,
   );
+  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   const schema = useMemo(
@@ -85,10 +86,11 @@ export function CoffeeOnboardingScreen({
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
+    reset,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      establishmentName: defaultName,
+      establishmentName: '',
       legalName: '',
       ownerName: '',
       country: 'RU',
@@ -102,9 +104,37 @@ export function CoffeeOnboardingScreen({
     },
   });
 
+  useEffect(() => {
+    let active = true;
+    void repository
+      .get(projectId)
+      .then((record) => {
+        if (!active) return;
+        if (!record) {
+          setError('root', { message: t('coffeeOnboarding.notInstalled') });
+          return;
+        }
+        if (record.establishment) reset(record.establishment);
+        else
+          reset((current) => ({ ...current, establishmentName: record.project.name }));
+        if (record.businessEnvironmentCode) setCreatedRecord(record);
+      })
+      .catch(() => {
+        if (active) {
+          setError('root', { message: t('coffeeOnboarding.errorLoad') });
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId, repository, reset, setError, t]);
+
   async function submit(values: FormValues): Promise<void> {
     try {
-      const record = await repository.create(values);
+      const record = await repository.configure(projectId, values);
       setCreatedRecord(record);
     } catch {
       setError('root', { message: t('coffeeOnboarding.errorCreate') });
@@ -112,13 +142,12 @@ export function CoffeeOnboardingScreen({
   }
 
   async function copyCode(): Promise<void> {
-    if (!createdRecord) return;
+    if (!createdRecord?.businessEnvironmentCode) return;
     await navigator.clipboard.writeText(createdRecord.businessEnvironmentCode);
     setCopied(true);
   }
 
   if (createdRecord) {
-    const connectHref = `/app/connect?code=${createdRecord.businessEnvironmentCode}`;
     return (
       <div className="mx-auto max-w-3xl">
         <Card>
@@ -144,7 +173,9 @@ export function CoffeeOnboardingScreen({
                 className="mt-3 font-mono text-2xl font-semibold tracking-[0.08em] text-[var(--text)] sm:text-3xl"
                 data-testid="generated-business-environment-code"
               >
-                {formatBusinessEnvironmentCode(createdRecord.businessEnvironmentCode)}
+                {formatBusinessEnvironmentCode(
+                  createdRecord.businessEnvironmentCode ?? '',
+                )}
               </p>
               <Button
                 type="button"
@@ -160,18 +191,23 @@ export function CoffeeOnboardingScreen({
 
             <div className="mt-8 flex flex-col-reverse justify-center gap-3 sm:flex-row">
               <Link
-                href="/projects"
-                className={buttonVariants({ variant: 'secondary', size: 'lg' })}
+                href={`/projects/${projectId}`}
+                className={buttonVariants({ size: 'lg' })}
               >
                 {t('coffeeOnboarding.backToProjects')}
-              </Link>
-              <Link href={connectHref} className={buttonVariants({ size: 'lg' })}>
-                {t('coffeeOnboarding.enterWithCode')}
-                <ArrowRight className="size-4" />
               </Link>
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-5" aria-label={t('common.loading')}>
+        <div className="skeleton h-28 max-w-2xl rounded-[16px]" />
+        <div className="skeleton h-96 rounded-[16px]" />
       </div>
     );
   }
@@ -183,13 +219,13 @@ export function CoffeeOnboardingScreen({
           <Coffee className="size-6" aria-hidden="true" />
         </span>
         <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-[var(--action)]">
-          {t('coffeeOnboarding.eyebrow')}
+          {t('coffeeOnboarding.managerEyebrow')}
         </p>
         <h1 className="mt-3 text-balance text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
-          {t('coffeeOnboarding.title')}
+          {t('coffeeOnboarding.managerTitle')}
         </h1>
         <p className="mt-4 max-w-2xl text-[15px] leading-6 text-[var(--text-secondary)]">
-          {t('coffeeOnboarding.description')}
+          {t('coffeeOnboarding.managerDescription')}
         </p>
       </div>
 
@@ -366,14 +402,14 @@ export function CoffeeOnboardingScreen({
 
         <div className="mt-7 flex flex-col-reverse justify-between gap-3 sm:flex-row">
           <Link
-            href="/projects"
+            href={`/projects/${projectId}`}
             className={buttonVariants({ variant: 'quiet', size: 'lg' })}
           >
             <ArrowLeft className="size-4" />
             {t('wizard.cancel')}
           </Link>
           <Button type="submit" size="lg" disabled={isSubmitting}>
-            {t(isSubmitting ? 'coffeeOnboarding.creating' : 'coffeeOnboarding.create')}
+            {t(isSubmitting ? 'coffeeOnboarding.saving' : 'coffeeOnboarding.save')}
             {!isSubmitting && <ArrowRight className="size-4" />}
           </Button>
         </div>

@@ -1,15 +1,16 @@
 'use client';
 
-import { ArrowRight, Check, CircleDashed, Coffee, KeyRound } from 'lucide-react';
-import Link from 'next/link';
+import { ArrowRight, Check, CircleDashed, KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { useState, type FormEvent } from 'react';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/i18n-provider';
-import {
-  localCoffeeOnboardingRepository,
-  type LocalCoffeeOnboardingRepository,
-} from '@/features/coffee-onboarding/local-coffee-onboarding-repository';
+import { localBusinessEnvironmentResolver } from '../infrastructure/local-business-environment-directory';
+import { localOperationalRuntimeSession } from '../infrastructure/local-operational-runtime-session';
+import type {
+  BusinessEnvironmentResolver,
+  OperationalRuntimeSessionStore,
+} from '../application/business-environment-resolution';
 import {
   isBusinessEnvironmentCodeComplete,
   normalizeBusinessEnvironmentCode,
@@ -19,38 +20,19 @@ import { BusinessEnvironmentCodeInput } from './business-environment-code-input'
 type SubmissionState = 'idle' | 'resolving' | 'invalid' | 'error';
 
 export function ConnectionScreen({
-  initialCode = '',
-  repository = localCoffeeOnboardingRepository,
+  resolver = localBusinessEnvironmentResolver,
+  session = localOperationalRuntimeSession,
 }: {
-  initialCode?: string;
-  repository?: LocalCoffeeOnboardingRepository;
+  resolver?: BusinessEnvironmentResolver;
+  session?: OperationalRuntimeSessionStore;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [code, setCode] = useState(() => normalizeBusinessEnvironmentCode(initialCode));
+  const [code, setCode] = useState('');
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [hasProjects, setHasProjects] = useState<boolean | null>(null);
   const [submissionState, setSubmissionState] = useState<SubmissionState>('idle');
   const isComplete = isBusinessEnvironmentCodeComplete(code);
   const isInvalid = hasInteracted && code.length > 0 && !isComplete;
-
-  useEffect(() => {
-    let active = true;
-    void repository
-      .hasProjects()
-      .then((available) => {
-        if (active) setHasProjects(available);
-      })
-      .catch(() => {
-        if (active) {
-          setHasProjects(true);
-          setSubmissionState('error');
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [repository]);
 
   function handleCodeChange(value: string): void {
     setCode(normalizeBusinessEnvironmentCode(value));
@@ -64,56 +46,16 @@ export function ConnectionScreen({
     if (!isComplete) return;
     setSubmissionState('resolving');
     try {
-      const environment = await repository.resolve(code);
+      const environment = await resolver.resolve(code);
       if (!environment) {
         setSubmissionState('invalid');
         return;
       }
-      router.push(`/projects/${environment.project.id}/coffee`);
+      session.authorize(environment);
+      router.push(`/app/runtime/${environment.projectId}`);
     } catch {
       setSubmissionState('error');
     }
-  }
-
-  if (hasProjects === null) {
-    return (
-      <section className="w-full max-w-xl text-center" aria-live="polite">
-        <CircleDashed
-          className="mx-auto size-7 animate-spin text-[var(--action)] motion-reduce:animate-none"
-          aria-hidden="true"
-        />
-        <h1 className="mt-5 text-xl font-semibold">{t('universal.checkingLocal')}</h1>
-      </section>
-    );
-  }
-
-  if (!hasProjects) {
-    return (
-      <section className="w-full max-w-xl text-center" aria-labelledby="empty-title">
-        <span className="soft-icon-tile mx-auto grid size-16 place-items-center rounded-[20px]">
-          <Coffee className="size-7" aria-hidden="true" />
-        </span>
-        <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-[var(--action)]">
-          {t('universal.eyebrow')}
-        </p>
-        <h1
-          id="empty-title"
-          className="mt-3 text-balance text-3xl font-semibold tracking-[-0.045em] sm:text-4xl"
-        >
-          {t('universal.noCoffeeTitle')}
-        </h1>
-        <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-[var(--text-secondary)] sm:text-[15px]">
-          {t('universal.noCoffeeDescription')}
-        </p>
-        <Link
-          href="/projects/new/coffee"
-          className={`${buttonVariants({ size: 'lg' })} mt-7`}
-        >
-          {t('universal.createCoffee')}
-          <ArrowRight className="size-4" />
-        </Link>
-      </section>
-    );
   }
 
   return (

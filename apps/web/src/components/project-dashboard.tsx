@@ -1,23 +1,35 @@
 'use client';
 
-import { ArrowRight, Check, Coffee, Settings2, UserPlus } from 'lucide-react';
+import { ArrowRight, Check, Coffee, Settings2, Trash2, UserPlus } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { roleLabelKeys, solutionLabelKeys } from '@/i18n/entity-labels';
 import { useTranslation } from '@/i18n/i18n-provider';
 import { mockRepository, type ProjectSummary } from '@/lib/mock-repository';
+import { localCoffeeManagerSetupRepository } from '@/features/manager-coffee-setup/coffee-manager-setup-repository';
 import { PageHeading } from './page-heading';
 import { Badge } from './ui/badge';
 import { buttonVariants } from './ui/button';
 import { Card, CardContent } from './ui/card';
 
 export function ProjectDashboard({ projectId }: { projectId: string }) {
+  const router = useRouter();
   const { t } = useTranslation();
   const [project, setProject] = useState<ProjectSummary | null | undefined>(undefined);
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     void mockRepository.getProject(projectId).then(setProject);
   }, [projectId]);
+
+  async function removeDemo(): Promise<void> {
+    if (!window.confirm(t('dashboard.removeDemoConfirmation'))) return;
+    setRemoving(true);
+    await localCoffeeManagerSetupRepository.removeDevelopmentDemo();
+    router.push('/projects');
+    router.refresh();
+  }
 
   if (project === undefined) {
     return (
@@ -69,6 +81,24 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
               {t('dashboard.beginDescription')}
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {project.solutionId === 'coffee' && (
+                <>
+                  <Link
+                    href={`/projects/${project.id}/admin/solutions/coffee/setup`}
+                    className={buttonVariants()}
+                  >
+                    <Settings2 className="size-4" />
+                    {t('dashboard.configureCoffee')}
+                  </Link>
+                  <Link
+                    href={`/projects/${project.id}/coffee`}
+                    className={buttonVariants({ variant: 'secondary' })}
+                  >
+                    <Coffee className="size-4" />
+                    {t('dashboard.openCoffeeAdmin')}
+                  </Link>
+                </>
+              )}
               <Link
                 href="/profile"
                 className={buttonVariants({ variant: 'secondary' })}
@@ -82,6 +112,21 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
                 <Settings2 className="size-4" /> {t('dashboard.reviewSubscription')}
               </Link>
             </div>
+            {project.isDevelopmentDemo && (
+              <button
+                type="button"
+                disabled={removing}
+                onClick={() => void removeDemo()}
+                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[var(--danger)]"
+              >
+                <Trash2 className="size-4" />
+                {t(
+                  removing
+                    ? 'dashboard.removingDemo'
+                    : 'dashboard.removeDevelopmentDemo',
+                )}
+              </button>
+            )}
           </CardContent>
         </Card>
         <Card>

@@ -22,8 +22,11 @@ import type {
   SetupStep,
 } from './domain';
 import type { CoffeeTranslationKey } from './i18n';
-import { localCoffeeRepositories } from './repositories';
-import { CoffeeRepositoryError, type CoffeeRepositories } from './repository-contracts';
+import { localCoffeeManagerRepositories } from './repositories';
+import {
+  CoffeeRepositoryError,
+  type CoffeeManagerRepositories,
+} from './repository-contracts';
 
 interface CoffeeWorkspaceContextValue {
   projectId: string;
@@ -80,12 +83,12 @@ function createName(values: FormValues): string {
 export function CoffeeWorkspaceProvider({
   projectId,
   projectName,
-  repositories = localCoffeeRepositories,
+  repositories = localCoffeeManagerRepositories,
   children,
 }: {
   projectId: string;
   projectName: string;
-  repositories?: CoffeeRepositories;
+  repositories?: CoffeeManagerRepositories;
   children: ReactNode;
 }) {
   const [snapshot, setSnapshot] = useState<CoffeeSnapshot | null>(null);

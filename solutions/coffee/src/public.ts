@@ -11,14 +11,23 @@ export {
 } from './hub-screens';
 export { CoffeeSettingsScreen } from './settings-screen';
 export { CoffeeNotFoundScreen } from './not-found-screen';
-export type { CoffeeLocale } from './domain';
+export type {
+  CoffeeDevelopmentSeed,
+  CoffeeLocale,
+  CoffeeOperationalSnapshot,
+} from './domain';
 export { CoffeeRepositoryError } from './repository-contracts';
-export { localCoffeeRepositories } from './repositories';
+export {
+  localCoffeeManagerRepositories,
+  localCoffeeOperationalReadRepository,
+} from './repositories';
 export type {
   ActivityRepository,
   BusinessProfileRepository,
+  CoffeeDevelopmentSeedRepository,
+  CoffeeManagerRepositories,
+  CoffeeOperationalReadRepository,
   CoffeeProjectRepository,
-  CoffeeRepositories,
   CoffeeSettingsRepository,
   CollectionRepository,
   PermissionRepository,

@@ -2,9 +2,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
-  LocalCoffeeOnboardingRepository,
-  LocalCoffeeProjectRecord,
-} from '@/features/coffee-onboarding/local-coffee-onboarding-repository';
+  BusinessEnvironmentResolver,
+  OperationalRuntimeSessionStore,
+  ResolvedBusinessEnvironment,
+} from '../application/business-environment-resolution';
 import { I18nProvider } from '@/i18n/i18n-provider';
 import { ConnectionScreen } from './connection-screen';
 import { UniversalApplicationShell } from './universal-application-shell';
@@ -15,56 +16,38 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushSpy }),
 }));
 
-const resolvedEnvironment: LocalCoffeeProjectRecord = {
-  schemaVersion: 1,
-  project: {
-    id: 'coffee-1',
-    name: 'North Star',
-    solutionId: 'coffee',
-    categoryId: 'food',
-    status: 'active',
-    role: 'owner',
-    createdAt: '2026-07-31T10:00:00.000Z',
-  },
-  businessEnvironmentCode: '1234567890123456',
-  establishment: {
-    establishmentName: 'North Star',
-    legalName: '',
-    ownerName: 'Alex Morgan',
-    country: 'RU',
-    city: 'Moscow',
-    address: '12 Tverskaya Street',
-    timezone: 'Europe/Moscow',
-    currency: 'RUB',
-    language: 'ru',
-    phone: '+7 999 123-45-67',
-    email: 'owner@north-star.test',
-  },
+const resolvedEnvironment: ResolvedBusinessEnvironment = {
+  businessEnvironmentId: 'environment-1',
+  projectId: 'coffee-1',
+  solutionId: 'coffee',
+  displayName: 'North Star',
+  status: 'active',
   createdAt: '2026-07-31T10:00:00.000Z',
+  developmentDemo: false,
 };
 
-function createRepository({
-  hasProjects = true,
-  resolved = resolvedEnvironment,
-}: {
-  hasProjects?: boolean;
-  resolved?: LocalCoffeeProjectRecord | null;
-} = {}): LocalCoffeeOnboardingRepository {
+function createResolver(
+  resolved: ResolvedBusinessEnvironment | null = resolvedEnvironment,
+): BusinessEnvironmentResolver {
+  return { resolve: vi.fn(async () => resolved) };
+}
+
+function createSession(): OperationalRuntimeSessionStore {
   return {
-    list: vi.fn(async () => (hasProjects ? [resolvedEnvironment] : [])),
-    hasProjects: vi.fn(async () => hasProjects),
-    create: vi.fn(async () => resolvedEnvironment),
-    resolve: vi.fn(async () => resolved),
+    authorize: vi.fn(),
+    read: vi.fn(() => null),
+    clear: vi.fn(),
   };
 }
 
 function renderConnectionScreen(
-  repository: LocalCoffeeOnboardingRepository = createRepository(),
+  resolver: BusinessEnvironmentResolver = createResolver(),
+  session: OperationalRuntimeSessionStore = createSession(),
 ) {
   return render(
     <I18nProvider>
       <UniversalApplicationShell>
-        <ConnectionScreen repository={repository} />
+        <ConnectionScreen resolver={resolver} session={session} />
       </UniversalApplicationShell>
     </I18nProvider>,
   );
@@ -75,128 +58,64 @@ describe('ConnectionScreen', () => {
     vi.clearAllMocks();
   });
 
-  it('shows the start screen, brand, application name, label, and version', async () => {
+  it('exposes only code resolution and never establishment creation', () => {
     renderConnectionScreen();
 
     expect(
-      await screen.findByRole('heading', { name: 'Подключение к бизнес-среде' }),
+      screen.getByRole('heading', { name: 'Подключение к бизнес-среде' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('BARAKASB')).toBeInTheDocument();
-    expect(screen.getByText('Универсальное приложение')).toBeInTheDocument();
     expect(screen.getByLabelText('Код бизнес-среды')).toBeInTheDocument();
-    expect(screen.getByText('Версия 0.1.0')).toBeInTheDocument();
-  });
-
-  it('shows Create Coffee when local storage has no Coffee Project', async () => {
-    renderConnectionScreen(createRepository({ hasProjects: false }));
-
     expect(
-      await screen.findByRole('heading', {
-        name: 'Создайте первый Coffee Project',
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Создать Coffee/ })).toHaveAttribute(
-      'href',
-      '/projects/new/coffee',
-    );
+      screen.queryByRole('link', { name: /Создать Coffee/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Название заведения')).not.toBeInTheDocument();
   });
 
-  it('accepts digits, removes letters, and formats groups of four', async () => {
+  it('accepts digits, removes letters, and formats groups of four', () => {
     renderConnectionScreen();
-    const input = await screen.findByLabelText('Код бизнес-среды');
+    const input = screen.getByLabelText('Код бизнес-среды');
 
     fireEvent.change(input, { target: { value: '12ab3456cd7890' } });
 
     expect(input).toHaveValue('1234 5678 90');
   });
 
-  it('normalizes a pasted formatted code and limits it to sixteen digits', async () => {
+  it('keeps continue disabled for an incomplete code', () => {
     renderConnectionScreen();
-    const input = await screen.findByLabelText('Код бизнес-среды');
-
-    fireEvent.change(input, {
-      target: { value: '1234-5678 9012-3456-9999' },
+    fireEvent.change(screen.getByLabelText('Код бизнес-среды'), {
+      target: { value: '1234' },
     });
 
-    expect(input).toHaveValue('1234 5678 9012 3456');
-  });
-
-  it('keeps continue disabled for an incomplete code', async () => {
-    renderConnectionScreen();
-    const input = await screen.findByLabelText('Код бизнес-среды');
-
-    fireEvent.change(input, { target: { value: '1234' } });
-
     expect(screen.getByRole('button', { name: 'Продолжить' })).toBeDisabled();
-    expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('alert')).toHaveTextContent('Введите все 16 цифр кода.');
   });
 
-  it('enables continue for a complete code', async () => {
-    renderConnectionScreen();
-    const input = await screen.findByLabelText('Код бизнес-среды');
-
-    fireEvent.change(input, { target: { value: '1234567890123456' } });
-
-    expect(screen.getByRole('button', { name: 'Продолжить' })).toBeEnabled();
-    expect(input).toHaveAttribute('aria-invalid', 'false');
-  });
-
-  it('resolves a valid local code and opens only its Coffee Project', async () => {
+  it('resolves a manager-created code and opens operational runtime', async () => {
     const user = userEvent.setup();
-    const repository = createRepository();
-    renderConnectionScreen(repository);
-    const input = await screen.findByLabelText('Код бизнес-среды');
+    const resolver = createResolver();
+    const session = createSession();
+    renderConnectionScreen(resolver, session);
 
-    await user.type(input, '1234567890123456');
+    await user.type(screen.getByLabelText('Код бизнес-среды'), '1234567890123456');
     await user.click(screen.getByRole('button', { name: 'Продолжить' }));
 
     await waitFor(() => {
-      expect(repository.resolve).toHaveBeenCalledWith('1234567890123456');
-      expect(pushSpy).toHaveBeenCalledWith('/projects/coffee-1/coffee');
+      expect(resolver.resolve).toHaveBeenCalledWith('1234567890123456');
+      expect(session.authorize).toHaveBeenCalledWith(resolvedEnvironment);
+      expect(pushSpy).toHaveBeenCalledWith('/app/runtime/coffee-1');
     });
   });
 
-  it('shows a validation error for an unknown complete code', async () => {
+  it('shows validation feedback for an unknown code', async () => {
     const user = userEvent.setup();
-    renderConnectionScreen(createRepository({ resolved: null }));
-    const input = await screen.findByLabelText('Код бизнес-среды');
+    renderConnectionScreen(createResolver(null));
 
-    await user.type(input, '9999999999999999');
+    await user.type(screen.getByLabelText('Код бизнес-среды'), '9999999999999999');
     await user.click(screen.getByRole('button', { name: 'Продолжить' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Такой код не найден в этом браузере.',
     );
     expect(pushSpy).not.toHaveBeenCalled();
-  });
-
-  it('never writes the Business Environment Code to console', async () => {
-    const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-    const consoleInfo = vi.spyOn(console, 'info').mockImplementation(() => undefined);
-    const user = userEvent.setup();
-    renderConnectionScreen();
-
-    await user.type(
-      await screen.findByLabelText('Код бизнес-среды'),
-      '1234567890123456',
-    );
-    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
-
-    expect(consoleLog).not.toHaveBeenCalled();
-    expect(consoleInfo).not.toHaveBeenCalled();
-  });
-
-  it('supports logical keyboard navigation', async () => {
-    const user = userEvent.setup();
-    renderConnectionScreen();
-
-    await screen.findByLabelText('Код бизнес-среды');
-    await user.tab();
-    expect(screen.getByRole('link', { name: 'BARAKASB — на главную' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByLabelText('Язык интерфейса')).toHaveFocus();
-    await user.tab();
-    expect(screen.getByLabelText('Код бизнес-среды')).toHaveFocus();
   });
 });

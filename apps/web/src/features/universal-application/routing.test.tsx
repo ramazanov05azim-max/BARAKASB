@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import UniversalApplicationConnectPage from '@/app/app/connect/page';
 import InvalidUniversalApplicationRoute from '@/app/app/[...invalidUniversalPath]/page';
 import UniversalApplicationUnavailablePage from '@/app/app/unavailable/page';
+import OperationalRuntimePage from '@/app/app/runtime/[projectId]/page';
 import { I18nProvider } from '@/i18n/i18n-provider';
 import { UniversalBootstrapRoute } from './presentation/bootstrap-route';
 import { universalApplicationRoutes, universalApplicationRouteValues } from './routes';
@@ -27,6 +28,7 @@ describe('Universal Application routing', () => {
     expect(universalApplicationRoutes).toEqual({
       root: '/app',
       connect: '/app/connect',
+      runtime: '/app/runtime',
       unavailable: '/app/unavailable',
     });
     expect(
@@ -49,24 +51,23 @@ describe('Universal Application routing', () => {
     );
   });
 
-  it('renders the connection route', async () => {
-    window.localStorage.setItem(
-      'barakasb.local.coffee.environments.v1',
-      JSON.stringify([
-        {
-          schemaVersion: 1,
-          businessEnvironmentCode: '1234567890123456',
-          project: { id: 'coffee-1' },
-        },
-      ]),
-    );
-    const page = await UniversalApplicationConnectPage({
-      searchParams: Promise.resolve({}),
+  it('renders the connection route', () => {
+    const page = UniversalApplicationConnectPage();
+    render(<I18nProvider>{page}</I18nProvider>);
+
+    expect(
+      screen.getByRole('heading', { name: 'Подключение к бизнес-среде' }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders a project-scoped operational route safely without a session', async () => {
+    const page = await OperationalRuntimePage({
+      params: Promise.resolve({ projectId: 'coffee-1' }),
     });
     render(<I18nProvider>{page}</I18nProvider>);
 
     expect(
-      await screen.findByRole('heading', { name: 'Подключение к бизнес-среде' }),
+      await screen.findByRole('heading', { name: 'Введите код бизнес-среды' }),
     ).toBeInTheDocument();
   });
 

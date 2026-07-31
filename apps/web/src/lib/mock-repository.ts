@@ -13,6 +13,7 @@ export interface ProjectSummary {
   status: ProjectStatus;
   role: ProjectRole;
   createdAt: string;
+  isDevelopmentDemo?: boolean;
 }
 
 export interface SolutionSummary {
@@ -37,6 +38,8 @@ export interface MockRepository {
   listProjects(): Promise<ProjectSummary[]>;
   getProject(id: string): Promise<ProjectSummary | null>;
   createProject(input: CreateProjectInput): Promise<ProjectSummary>;
+  ensureProject(project: ProjectSummary): Promise<ProjectSummary>;
+  deleteProject(id: string): Promise<void>;
   listSolutions(): Promise<SolutionSummary[]>;
   authenticate(email: string, password: string): Promise<void>;
   register(name: string, email: string, password: string): Promise<void>;
@@ -135,6 +138,21 @@ export const mockRepository: MockRepository = {
     const projects = [...readProjects(), project];
     window.localStorage.setItem(storageKey, JSON.stringify(projects));
     return project;
+  },
+  async ensureProject(project) {
+    await wait(120);
+    const projects = readProjects();
+    const existing = projects.find((candidate) => candidate.id === project.id);
+    if (existing) return existing;
+    window.localStorage.setItem(storageKey, JSON.stringify([...projects, project]));
+    return structuredClone(project);
+  },
+  async deleteProject(id) {
+    await wait(120);
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify(readProjects().filter((project) => project.id !== id)),
+    );
   },
   async listSolutions() {
     await wait(240);

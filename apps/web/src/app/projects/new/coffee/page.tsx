@@ -1,15 +1,5 @@
-import { PlatformShell } from '@/components/platform-shell';
-import { CoffeeOnboardingScreen } from '@/features/coffee-onboarding/coffee-onboarding-screen';
+import { redirect } from 'next/navigation';
 
-export default async function CreateCoffeeProjectPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ name?: string }>;
-}) {
-  const query = await searchParams;
-  return (
-    <PlatformShell>
-      <CoffeeOnboardingScreen defaultName={query.name ?? ''} />
-    </PlatformShell>
-  );
+export default function CreateCoffeeProjectPage() {
+  redirect('/projects/new?category=food&solution=coffee');
 }

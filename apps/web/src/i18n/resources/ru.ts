@@ -19,6 +19,7 @@ export const ru = {
   'common.fullName': 'Полное имя',
   'common.optional': 'Необязательно',
   'common.saved': 'Сохранено',
+  'common.loading': 'Загрузка',
   'common.available': 'Доступно',
   'common.comingSoon': 'Скоро',
   'common.active': 'Активен',
@@ -237,23 +238,31 @@ export const ru = {
   'coffeeOnboarding.validation.phone': 'Введите корректный номер телефона.',
   'coffeeOnboarding.validation.required': 'Выберите значение.',
   'coffeeOnboarding.validation.maxLength': 'Значение слишком длинное.',
-  'coffeeOnboarding.successEyebrow': 'Coffee Project создан',
+  'coffeeOnboarding.successEyebrow': 'Coffee Solution настроено',
   'coffeeOnboarding.successTitle': 'Ваш код бизнес-среды готов',
   'coffeeOnboarding.successDescription':
-    'Сохраните этот код. Он неизменяем и открывает только созданный Coffee Project в локальном прототипе.',
+    'Сохраните этот код. Он неизменяем и разрешает только эту бизнес-среду в локальном прототипе.',
   'coffeeOnboarding.copyCode': 'Скопировать код',
   'coffeeOnboarding.copied': 'Код скопирован',
   'coffeeOnboarding.backToProjects': 'К моим проектам',
   'coffeeOnboarding.enterWithCode': 'Войти по коду',
+  'coffeeOnboarding.managerEyebrow': 'Manager Platform · Coffee Solution',
+  'coffeeOnboarding.managerTitle': 'Настройте заведение',
+  'coffeeOnboarding.managerDescription':
+    'Укажите сведения о заведении. После сохранения Manager Platform создаст неизменяемый локальный код бизнес-среды.',
+  'coffeeOnboarding.save': 'Сохранить и создать код',
+  'coffeeOnboarding.saving': 'Сохраняем конфигурацию…',
+  'coffeeOnboarding.notInstalled': 'Coffee Solution не установлено для этого проекта.',
+  'coffeeOnboarding.errorLoad': 'Не удалось загрузить установку Coffee Solution.',
   'dashboard.notFound': 'Проект не найден',
   'dashboard.notFoundDescription':
     'Возможно, проект удалён или ваши права доступа изменились.',
   'dashboard.returnProjects': 'Вернуться к моим проектам',
   'dashboard.description':
-    'Проект готов. Бизнес-пространства намеренно остаются пустыми в этом прототипе платформы.',
+    'Управляйте установкой Coffee Solution, конфигурацией заведения и доступом к административной среде.',
   'dashboard.beginTitle': 'Понятная точка старта',
   'dashboard.beginDescription':
-    'Решение «Кофейня» выбрано, но POS, меню, склад, финансы, аналитика и рабочие места сотрудников ещё не реализованы. Они относятся к следующим этапам развития решения.',
+    'Manager Platform хранит установку Solution, сведения о заведении и неизменяемый код. Операционные POS, закупки, движение запасов и отчётность ещё не реализованы.',
   'dashboard.reviewProfile': 'Проверить профиль',
   'dashboard.reviewSubscription': 'Проверить подписку',
   'dashboard.setup': 'Настройка проекта',
@@ -261,8 +270,15 @@ export const ru = {
   'dashboard.workspaceReady': 'Независимое пространство готово',
   'dashboard.solutionSelected': 'Решение выбрано',
   'dashboard.businessSetup': 'Настройка бизнеса',
-  'dashboard.laterPhase': 'Доступно на следующем этапе',
+  'dashboard.laterPhase': 'Доступно в Manager Platform',
   'dashboard.exploreSolutions': 'Посмотреть решения',
+  'dashboard.configureCoffee': 'Настроить Coffee',
+  'dashboard.openCoffeeAdmin': 'Открыть администрирование',
+  'dashboard.removeDevelopmentDemo': 'Удалить демонстрационный проект',
+  'dashboard.removingDemo': 'Удаляем демонстрационный проект…',
+  'dashboard.removeDemoConfirmation':
+    'Удалить локальный демонстрационный проект? Он не будет создан повторно автоматически.',
+  'projects.developmentDemo': 'Демо · только разработка',
   'solutions.eyebrow': 'Решения',
   'solutions.title': 'Выберите, как будет работать проект',
   'solutions.description':
@@ -383,7 +399,7 @@ export const ru = {
   'universal.notImplemented':
     'Разрешение бизнес-среды будет подключено на следующем этапе. Код не сохранён и не отправлен.',
   'universal.whereCode':
-    'Код показан владельцу сразу после создания Coffee Project и может использоваться повторно в этом браузере.',
+    'Код создаётся владельцем в Manager Platform и может использоваться повторно в этом браузере.',
   'universal.checkingLocal': 'Проверяем локальные Coffee Projects',
   'universal.noCoffeeTitle': 'Создайте первый Coffee Project',
   'universal.noCoffeeDescription':
@@ -397,6 +413,26 @@ export const ru = {
     'Не удалось продолжить безопасный запуск. Попробуйте вернуться к стартовому состоянию.',
   'universal.tryAgain': 'Начать заново',
   'universal.footerVersion': 'Версия',
+  'operational.eyebrow': 'Coffee · операционная среда',
+  'operational.readinessTitle': 'Готовность операционных модулей',
+  'operational.readinessDescription':
+    'Бизнес-среда разрешена. Доступны только реализованные операционные возможности.',
+  'operational.prototypeNotice':
+    'Операционные модули ещё не реализованы. Они показаны отключёнными без имитации рабочих процессов.',
+  'operational.notReady': 'Не готово к операциям',
+  'operational.unavailable': 'Ещё не реализовано',
+  'operational.changeEnvironment': 'Сменить бизнес-среду',
+  'operational.accessDeniedTitle': 'Введите код бизнес-среды',
+  'operational.accessDeniedDescription':
+    'Эта операционная среда не была разрешена в текущем сеансе.',
+  'operational.enterCode': 'Перейти к вводу кода',
+  'operational.modules.goodsReceipt': 'Приёмка товаров',
+  'operational.modules.purchasing': 'Закупки',
+  'operational.modules.stockBalances': 'Остатки',
+  'operational.modules.inventoryAdjustments': 'Корректировки запасов',
+  'operational.modules.production': 'Производство по техкартам',
+  'operational.modules.productSales': 'Продажи продукции',
+  'operational.modules.operationalReporting': 'Операционная отчётность',
   'notFound.title': 'Этой страницы нет',
   'notFound.code': '404',
   'notFound.description':

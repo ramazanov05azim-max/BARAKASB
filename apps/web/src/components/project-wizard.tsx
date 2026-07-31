@@ -14,6 +14,7 @@ import { useMemo, useState } from 'react';
 import { z } from 'zod';
 import { useTranslation } from '@/i18n/i18n-provider';
 import type { TranslationKey } from '@/i18n/config';
+import { localCoffeeManagerSetupRepository } from '@/features/manager-coffee-setup/coffee-manager-setup-repository';
 import {
   mockRepository,
   type CategoryId,
@@ -101,10 +102,6 @@ export function ProjectWizard({ directCoffee = false }: { directCoffee?: boolean
       setError(t('wizard.errorSolution'));
       return;
     }
-    if (solution === 'coffee') {
-      router.push(`/projects/new/coffee?name=${encodeURIComponent(name.trim())}`);
-      return;
-    }
     setCreating(true);
     setError('');
     try {
@@ -113,7 +110,12 @@ export function ProjectWizard({ directCoffee = false }: { directCoffee?: boolean
         categoryId: selectedCategory?.id ?? 'food',
         solutionId: solution,
       });
-      router.push(`/projects/${project.id}`);
+      if (solution === 'coffee') {
+        await localCoffeeManagerSetupRepository.install(project);
+        router.push(`/projects/${project.id}/admin/solutions/coffee/setup`);
+      } else {
+        router.push(`/projects/${project.id}`);
+      }
     } catch {
       setError(t('wizard.errorCreate'));
       setCreating(false);

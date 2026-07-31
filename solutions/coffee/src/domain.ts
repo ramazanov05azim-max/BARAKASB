@@ -171,6 +171,17 @@ export interface Warehouse extends BaseEntity {
   responsibleEmployeeId: string;
 }
 
+export interface OpeningStockBalance {
+  id: string;
+  warehouseId: string;
+  ingredientId: string;
+  quantity: number;
+  unitId: string;
+  unitCost: number;
+  source: 'development-demo';
+  recordedAt: string;
+}
+
 export interface Supplier extends BaseEntity {
   contactPerson: string;
   phone: string;
@@ -250,6 +261,7 @@ export interface CoffeeSnapshot {
   ingredients: Ingredient[];
   units: UnitOfMeasure[];
   warehouses: Warehouse[];
+  openingStockBalances: OpeningStockBalance[];
   suppliers: Supplier[];
   employees: Employee[];
   roles: CoffeeRole[];
@@ -257,6 +269,26 @@ export interface CoffeeSnapshot {
   setupSteps: SetupStep[];
   activities: ConfigurationActivity[];
   currentRoleId: CoffeeRoleId;
+  developmentSeedId: string | null;
+}
+
+export interface CoffeeDevelopmentSeed {
+  id: string;
+  warehouses: Warehouse[];
+  ingredients: Ingredient[];
+  menuCategories: MenuCategory[];
+  menuItems: MenuItem[];
+  recipes: Recipe[];
+  openingStockBalances: OpeningStockBalance[];
+}
+
+export interface CoffeeOperationalSnapshot {
+  project: CoffeeProject;
+  warehouses: ReadonlyArray<Warehouse>;
+  ingredients: ReadonlyArray<Ingredient>;
+  menuItems: ReadonlyArray<MenuItem>;
+  recipes: ReadonlyArray<Recipe>;
+  openingStockBalances: ReadonlyArray<OpeningStockBalance>;
 }
 
 export type CollectionKey =

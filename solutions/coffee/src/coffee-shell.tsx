@@ -41,7 +41,7 @@ import {
   type CoffeeTranslationKey,
   useCoffeeTranslation,
 } from './i18n';
-import type { CoffeeRepositories } from './repository-contracts';
+import type { CoffeeManagerRepositories } from './repository-contracts';
 import { CoffeeWorkspaceProvider, useCoffeeWorkspace } from './workspace-store';
 
 type IconComponent = typeof Gauge;
@@ -192,7 +192,7 @@ export function CoffeeProjectEnvironment({
   locale: CoffeeLocale;
   projects: Array<{ id: string; name: string }>;
   languageControl: ReactNode;
-  repositories?: CoffeeRepositories;
+  repositories?: CoffeeManagerRepositories;
   children: ReactNode;
 }) {
   return (

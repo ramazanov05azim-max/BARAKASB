@@ -2,6 +2,8 @@
 
 import type {
   CoffeeCapability,
+  CoffeeDevelopmentSeed,
+  CoffeeOperationalSnapshot,
   CoffeeRole,
   CoffeeRoleId,
   CoffeeSnapshot,
@@ -13,7 +15,8 @@ import type {
 } from './domain';
 import {
   CoffeeRepositoryError,
-  type CoffeeRepositories,
+  type CoffeeManagerRepositories,
+  type CoffeeOperationalReadRepository,
   type CollectionRepository,
 } from './repository-contracts';
 
@@ -302,6 +305,7 @@ function initialSnapshot(projectId: string, projectName: string): CoffeeSnapshot
       },
     ],
     warehouses: [],
+    openingStockBalances: [],
     suppliers: [],
     employees: [],
     roles: structuredClone(roles),
@@ -319,6 +323,7 @@ function initialSnapshot(projectId: string, projectName: string): CoffeeSnapshot
       },
     ],
     currentRoleId: 'owner',
+    developmentSeedId: null,
   };
 }
 
@@ -341,6 +346,12 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
     if (!parsed.settings) {
       parsed.settings = initialSnapshot(projectId, parsed.project.name).settings;
       writeSnapshot(projectId, parsed);
+    }
+    if (!parsed.openingStockBalances) {
+      parsed.openingStockBalances = [];
+    }
+    if (parsed.developmentSeedId === undefined) {
+      parsed.developmentSeedId = null;
     }
     return parsed;
   } catch {
@@ -442,7 +453,7 @@ function collectionRepository<K extends CollectionKey>(
   };
 }
 
-export const localCoffeeRepositories: CoffeeRepositories = {
+export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
   coffeeProject: {
     async initialize(projectId, projectName) {
       await wait(80);
@@ -494,6 +505,12 @@ export const localCoffeeRepositories: CoffeeRepositories = {
       appendActivity(snapshot, 'activity.projectReady', snapshot.project.name);
       writeSnapshot(projectId, snapshot);
       return structuredClone(snapshot.project);
+    },
+    async remove(projectId) {
+      await wait(60);
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(storageKey(projectId));
+      }
     },
   },
   businessProfile: {
@@ -611,9 +628,44 @@ export const localCoffeeRepositories: CoffeeRepositories = {
       return structuredClone(readSnapshot(projectId).activities);
     },
   },
+  developmentSeed: {
+    async apply(projectId, seed: CoffeeDevelopmentSeed) {
+      await wait(120);
+      const snapshot = readSnapshot(projectId);
+      if (snapshot.developmentSeedId === seed.id) return;
+      snapshot.warehouses = structuredClone(seed.warehouses);
+      snapshot.ingredients = structuredClone(seed.ingredients);
+      snapshot.menuCategories = structuredClone(seed.menuCategories);
+      snapshot.menuItems = structuredClone(seed.menuItems);
+      snapshot.recipes = structuredClone(seed.recipes);
+      snapshot.openingStockBalances = structuredClone(seed.openingStockBalances);
+      snapshot.developmentSeedId = seed.id;
+      appendActivity(
+        snapshot,
+        'activity.developmentSeedApplied',
+        snapshot.project.name,
+      );
+      writeSnapshot(projectId, snapshot);
+    },
+  },
   async loadSnapshot(projectId) {
     await wait(220);
     return structuredClone(readSnapshot(projectId));
+  },
+};
+
+export const localCoffeeOperationalReadRepository: CoffeeOperationalReadRepository = {
+  async load(projectId): Promise<CoffeeOperationalSnapshot> {
+    await wait(80);
+    const snapshot = readSnapshot(projectId);
+    return structuredClone({
+      project: snapshot.project,
+      warehouses: snapshot.warehouses,
+      ingredients: snapshot.ingredients,
+      menuItems: snapshot.menuItems,
+      recipes: snapshot.recipes,
+      openingStockBalances: snapshot.openingStockBalances,
+    });
   },
 };
 

@@ -34,9 +34,9 @@ The responsibilities remain separated:
   Project installation state, compatibility policy, and lifecycle.
 
 The `/app` feature area does not import Coffee or another Solution implementation.
-Elsewhere, `apps/web` may compose approved administrative Solution screens through
-their public boundary. A future operational Solution UI may be composed only through
-reviewed contracts and the extension host.
+Elsewhere, `apps/web` may compose approved administrative Solution screens through their
+public boundary. A future operational Solution UI may be composed only through reviewed
+contracts and the extension host.
 
 ## Route model
 

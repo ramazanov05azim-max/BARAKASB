@@ -1,6 +1,8 @@
 import type {
   BusinessProfile,
   CoffeeCapability,
+  CoffeeDevelopmentSeed,
+  CoffeeOperationalSnapshot,
   CoffeeProject,
   CoffeeRole,
   CoffeeRoleId,
@@ -17,6 +19,7 @@ export interface CoffeeProjectRepository {
   get(projectId: string): Promise<CoffeeProject>;
   setDefaultLocation(projectId: string, locationId: string): Promise<CoffeeProject>;
   markReady(projectId: string): Promise<CoffeeProject>;
+  remove(projectId: string): Promise<void>;
 }
 
 export interface BusinessProfileRepository {
@@ -62,7 +65,11 @@ export interface ActivityRepository {
   list(projectId: string): Promise<ConfigurationActivity[]>;
 }
 
-export interface CoffeeRepositories {
+export interface CoffeeDevelopmentSeedRepository {
+  apply(projectId: string, seed: CoffeeDevelopmentSeed): Promise<void>;
+}
+
+export interface CoffeeManagerRepositories {
   coffeeProject: CoffeeProjectRepository;
   businessProfile: BusinessProfileRepository;
   settings: CoffeeSettingsRepository;
@@ -82,7 +89,12 @@ export interface CoffeeRepositories {
   permissions: PermissionRepository;
   setupChecklist: SetupChecklistRepository;
   activity: ActivityRepository;
+  developmentSeed: CoffeeDevelopmentSeedRepository;
   loadSnapshot(projectId: string): Promise<CoffeeSnapshot>;
+}
+
+export interface CoffeeOperationalReadRepository {
+  load(projectId: string): Promise<CoffeeOperationalSnapshot>;
 }
 
 export class CoffeeRepositoryError extends Error {

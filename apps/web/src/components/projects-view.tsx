@@ -9,6 +9,7 @@ import {
   solutionLabelKeys,
 } from '@/i18n/entity-labels';
 import { useTranslation } from '@/i18n/i18n-provider';
+import { localCoffeeManagerSetupRepository } from '@/features/manager-coffee-setup/coffee-manager-setup-repository';
 import { mockRepository, type ProjectSummary } from '@/lib/mock-repository';
 import { PageHeading } from './page-heading';
 import { Badge } from './ui/badge';
@@ -22,7 +23,17 @@ export function ProjectsView() {
   const [query, setQuery] = useState('');
 
   useEffect(() => {
-    void mockRepository.listProjects().then(setProjects);
+    let active = true;
+    void localCoffeeManagerSetupRepository
+      .seedDevelopmentDemo()
+      .catch(() => null)
+      .then(() => mockRepository.listProjects())
+      .then((items) => {
+        if (active) setProjects(items);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const visible = useMemo(
@@ -40,7 +51,10 @@ export function ProjectsView() {
         title={t('projects.title')}
         description={t('projects.description')}
         action={
-          <Link href="/projects/new/coffee" className={buttonVariants({ size: 'lg' })}>
+          <Link
+            href="/projects/new?category=food&solution=coffee"
+            className={buttonVariants({ size: 'lg' })}
+          >
             <Plus className="size-4" /> {t('projects.createCoffee')}
           </Link>
         }
@@ -82,7 +96,10 @@ export function ProjectsView() {
                 {t('projects.clearSearch')}
               </button>
             ) : (
-              <Link href="/projects/new/coffee" className={`${buttonVariants()} mt-6`}>
+              <Link
+                href="/projects/new?category=food&solution=coffee"
+                className={`${buttonVariants()} mt-6`}
+              >
                 {t('projects.createCoffee')}
               </Link>
             )}
@@ -93,11 +110,7 @@ export function ProjectsView() {
           {visible.map((project) => (
             <Link
               key={project.id}
-              href={
-                project.solutionId === 'coffee'
-                  ? `/projects/${project.id}/coffee`
-                  : `/projects/${project.id}`
-              }
+              href={`/projects/${project.id}`}
               className="group rounded-[var(--radius-card)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             >
               <Card className="h-full transition duration-300 group-hover:-translate-y-1 group-hover:border-[var(--border-strong)] group-hover:shadow-[var(--shadow-float)]">
@@ -113,6 +126,9 @@ export function ProjectsView() {
                   <h2 className="mt-8 text-xl font-semibold tracking-[-0.025em]">
                     {project.name}
                   </h2>
+                  {project.isDevelopmentDemo && (
+                    <Badge className="mt-2">{t('projects.developmentDemo')}</Badge>
+                  )}
                   <p className="mt-1 text-sm text-[var(--text-secondary)]">
                     {t(solutionLabelKeys[project.solutionId])} ·{' '}
                     {t(roleLabelKeys[project.role])}

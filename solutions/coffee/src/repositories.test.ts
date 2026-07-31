@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { localCoffeeRepositories } from './repositories';
+import {
+  localCoffeeManagerRepositories,
+  localCoffeeOperationalReadRepository,
+} from './repositories';
 
 const storedValues = new Map<string, string>();
 const localStorageAdapter: Storage = {
@@ -39,11 +42,11 @@ describe('local Coffee repository adapter', () => {
 
   it('keeps prototype data isolated by Project identifier', async () => {
     await Promise.all([
-      localCoffeeRepositories.coffeeProject.initialize('project-a', 'Coffee A'),
-      localCoffeeRepositories.coffeeProject.initialize('project-b', 'Coffee B'),
+      localCoffeeManagerRepositories.coffeeProject.initialize('project-a', 'Coffee A'),
+      localCoffeeManagerRepositories.coffeeProject.initialize('project-b', 'Coffee B'),
     ]);
 
-    await localCoffeeRepositories.locations.create('project-a', {
+    await localCoffeeManagerRepositories.locations.create('project-a', {
       name: 'North',
       status: 'active',
       code: 'NORTH',
@@ -58,36 +61,36 @@ describe('local Coffee repository adapter', () => {
     });
 
     await expect(
-      localCoffeeRepositories.locations.list('project-a'),
+      localCoffeeManagerRepositories.locations.list('project-a'),
     ).resolves.toHaveLength(1);
-    await expect(localCoffeeRepositories.locations.list('project-b')).resolves.toEqual(
-      [],
-    );
+    await expect(
+      localCoffeeManagerRepositories.locations.list('project-b'),
+    ).resolves.toEqual([]);
   });
 
   it('returns defensive copies instead of mutable stored references', async () => {
-    await localCoffeeRepositories.coffeeProject.initialize(
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
       'project-copy',
       'Coffee Copy',
     );
 
-    const first = await localCoffeeRepositories.loadSnapshot('project-copy');
+    const first = await localCoffeeManagerRepositories.loadSnapshot('project-copy');
     first.project.name = 'Mutated outside repository';
     first.roles.length = 0;
 
-    const second = await localCoffeeRepositories.loadSnapshot('project-copy');
+    const second = await localCoffeeManagerRepositories.loadSnapshot('project-copy');
     expect(second.project.name).toBe('Coffee Copy');
     expect(second.roles.length).toBeGreaterThan(0);
   });
 
   it('rejects readiness while required setup steps are incomplete', async () => {
-    await localCoffeeRepositories.coffeeProject.initialize(
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
       'project-incomplete',
       'Coffee Incomplete',
     );
 
     await expect(
-      localCoffeeRepositories.coffeeProject.markReady('project-incomplete'),
+      localCoffeeManagerRepositories.coffeeProject.markReady('project-incomplete'),
     ).rejects.toMatchObject({
       code: 'invalid-operation',
     });
@@ -95,30 +98,52 @@ describe('local Coffee repository adapter', () => {
 
   it('rejects references to locations owned by another Project', async () => {
     await Promise.all([
-      localCoffeeRepositories.coffeeProject.initialize('project-one', 'Coffee One'),
-      localCoffeeRepositories.coffeeProject.initialize('project-two', 'Coffee Two'),
+      localCoffeeManagerRepositories.coffeeProject.initialize(
+        'project-one',
+        'Coffee One',
+      ),
+      localCoffeeManagerRepositories.coffeeProject.initialize(
+        'project-two',
+        'Coffee Two',
+      ),
     ]);
-    const location = await localCoffeeRepositories.locations.create('project-one', {
-      name: 'Only One',
-      status: 'active',
-      code: 'ONE',
-      locationType: 'coffee-shop',
-      address: 'Address One',
-      timezone: 'Europe/Moscow',
-      currency: 'RUB',
-      phone: '+70000000001',
-      email: 'one@example.test',
-      openingHours: '08:00-22:00',
-      isDefault: false,
-    });
+    const location = await localCoffeeManagerRepositories.locations.create(
+      'project-one',
+      {
+        name: 'Only One',
+        status: 'active',
+        code: 'ONE',
+        locationType: 'coffee-shop',
+        address: 'Address One',
+        timezone: 'Europe/Moscow',
+        currency: 'RUB',
+        phone: '+70000000001',
+        email: 'one@example.test',
+        openingHours: '08:00-22:00',
+        isDefault: false,
+      },
+    );
 
     await expect(
-      localCoffeeRepositories.coffeeProject.setDefaultLocation(
+      localCoffeeManagerRepositories.coffeeProject.setDefaultLocation(
         'project-two',
         location.id,
       ),
     ).rejects.toMatchObject({
       code: 'not-found',
     });
+  });
+
+  it('keeps the operational contract read-only', async () => {
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
+      'project-operational',
+      'Operational Coffee',
+    );
+
+    const snapshot =
+      await localCoffeeOperationalReadRepository.load('project-operational');
+
+    expect(snapshot.project.name).toBe('Operational Coffee');
+    expect(Object.keys(localCoffeeOperationalReadRepository)).toEqual(['load']);
   });
 });
