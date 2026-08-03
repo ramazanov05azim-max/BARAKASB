@@ -84,44 +84,132 @@ const state: CoffeeBarState = {
       categoryId: 'coffee',
       price: 190,
       currency: 'RUB',
+      modifierGroupIds: ['volume', 'espresso-additional'],
+    },
+    {
+      id: 'croissant',
+      name: 'Круассан',
+      categoryId: 'coffee',
+      price: 230,
+      currency: 'RUB',
       modifierGroupIds: [],
     },
   ],
-  modifierGroups: [],
+  modifierGroups: [
+    {
+      id: 'volume',
+      name: 'Объём',
+      purpose: 'configuration',
+      selectionType: 'single',
+      required: true,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      defaultOptionName: null,
+      options: [
+        { name: '30 мл', priceAdjustment: 0 },
+        { name: '60 мл', priceAdjustment: 90 },
+      ],
+    },
+    {
+      id: 'espresso-additional',
+      name: 'Дополнительно',
+      purpose: 'additional',
+      selectionType: 'multiple',
+      required: false,
+      minimumSelections: 0,
+      maximumSelections: 2,
+      defaultOptionName: null,
+      options: [
+        { name: 'Сахар', priceAdjustment: 0 },
+        { name: 'Корица', priceAdjustment: 0 },
+      ],
+    },
+    {
+      id: 'milk',
+      name: 'Молоко',
+      purpose: 'configuration',
+      selectionType: 'single',
+      required: false,
+      minimumSelections: 0,
+      maximumSelections: 1,
+      defaultOptionName: null,
+      options: [{ name: 'Овсяное', priceAdjustment: 70 }],
+    },
+  ],
   orders: [],
 };
 
-function serviceFixture(): CoffeeBarService {
+function serviceFixture(initialState: CoffeeBarState = state): CoffeeBarService {
+  let currentState = structuredClone(initialState);
+  const storeOrder = (nextOrder: CoffeeOrder): CoffeeOrder => {
+    currentState = {
+      ...currentState,
+      orders: [
+        ...currentState.orders.filter(
+          (candidate) => candidate.orderId !== nextOrder.orderId,
+        ),
+        nextOrder,
+      ],
+    };
+    return structuredClone(nextOrder);
+  };
   return {
-    load: vi.fn(async () => structuredClone(state)),
-    createTableOrder: vi.fn(async () => structuredClone(order)),
+    load: vi.fn(async () => structuredClone(currentState)),
+    createTableOrder: vi.fn(async () => storeOrder(order)),
     createUnassignedOrder: vi.fn(async () =>
-      structuredClone({
+      storeOrder({
         ...order,
         orderType: 'UNASSIGNED' as const,
         tableId: null,
       }),
     ),
     createTakeawayOrder: vi.fn(async () =>
-      structuredClone({
+      storeOrder({
         ...order,
         orderType: 'TAKEAWAY' as const,
         tableId: null,
       }),
     ),
-    assignOrder: vi.fn(async () => structuredClone(order)),
-    changeGuestCount: vi.fn(async () => structuredClone(order)),
-    transferOrder: vi.fn(async () => structuredClone(order)),
+    assignOrder: vi.fn(async () => storeOrder(order)),
+    changeGuestCount: vi.fn(async () => storeOrder(order)),
+    transferOrder: vi.fn(async () => storeOrder(order)),
     releaseTable: vi.fn(async () => undefined),
-    addItem: vi.fn(async () => structuredClone(order)),
-    updateItemQuantity: vi.fn(async () => structuredClone(order)),
-    updateItemDetails: vi.fn(async () => structuredClone(order)),
-    removeItem: vi.fn(async () => structuredClone(order)),
-    sendOrder: vi.fn(async () => structuredClone(order)),
-    updateBarItemStatus: vi.fn(async () => structuredClone(order)),
-    recordPayment: vi.fn(async () => structuredClone(order)),
-    completeOrder: vi.fn(async () => structuredClone(order)),
-    cancelOrder: vi.fn(async () => structuredClone(order)),
+    addItem: vi.fn(async (_context, orderId, input) => {
+      const existing =
+        currentState.orders.find((candidate) => candidate.orderId === orderId) ?? order;
+      const product = currentState.products.find(
+        (candidate) => candidate.id === input.productId,
+      )!;
+      return storeOrder({
+        ...existing,
+        total: existing.total + product.price,
+        items: [
+          ...existing.items,
+          {
+            id: `item-${existing.items.length + 1}`,
+            productId: product.id,
+            productName: product.name,
+            variantName: null,
+            quantity: 1,
+            unitPrice: product.price,
+            finalUnitPrice: product.price,
+            modifiers: [],
+            comment: input.comment ?? '',
+            preparationWorkspace: 'BAR',
+            status: 'DRAFT',
+            submittedBatchId: null,
+          },
+        ],
+      });
+    }),
+    updateItemQuantity: vi.fn(async () => storeOrder(order)),
+    updateItemDetails: vi.fn(async () => storeOrder(order)),
+    removeItem: vi.fn(async () => storeOrder(order)),
+    sendOrder: vi.fn(async () => storeOrder(order)),
+    updateBarItemStatus: vi.fn(async () => storeOrder(order)),
+    recordPayment: vi.fn(async () => storeOrder(order)),
+    completeOrder: vi.fn(async () => storeOrder(order)),
+    cancelOrder: vi.fn(async () => storeOrder(order)),
     subscribe: vi.fn(() => () => undefined),
   };
 }
@@ -130,13 +218,7 @@ describe('Coffee Bar operator navigation', () => {
   it('shows only the floor plan in the Hall screen and opens a free table directly', async () => {
     const service = serviceFixture();
     const user = userEvent.setup();
-    render(
-      <CoffeeBarWorkspaceScreen
-        context={context}
-        accessCode="6728 0175 1693"
-        service={service}
-      />,
-    );
+    render(<CoffeeBarWorkspaceScreen context={context} service={service} />);
 
     expect(await screen.findByRole('heading', { name: 'План зала' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Меню' })).toBeNull();
@@ -152,13 +234,7 @@ describe('Coffee Bar operator navigation', () => {
   it('creates an unassigned order before selecting a destination', async () => {
     const service = serviceFixture();
     const user = userEvent.setup();
-    render(
-      <CoffeeBarWorkspaceScreen
-        context={context}
-        accessCode="6728 0175 1693"
-        service={service}
-      />,
-    );
+    render(<CoffeeBarWorkspaceScreen context={context} service={service} />);
 
     await user.click(await screen.findByRole('button', { name: 'Новый заказ' }));
     await waitFor(() =>
@@ -169,13 +245,7 @@ describe('Coffee Bar operator navigation', () => {
 
   it('exposes the separate operational journal and its required filters', async () => {
     const user = userEvent.setup();
-    render(
-      <CoffeeBarWorkspaceScreen
-        context={context}
-        accessCode="6728 0175 1693"
-        service={serviceFixture()}
-      />,
-    );
+    render(<CoffeeBarWorkspaceScreen context={context} service={serviceFixture()} />);
 
     await user.click(await screen.findByRole('button', { name: 'Заказы' }));
     expect(screen.getByRole('heading', { name: 'Журнал заказов' })).toBeTruthy();
@@ -190,5 +260,127 @@ describe('Coffee Bar operator navigation', () => {
     ]) {
       expect(screen.getByRole('button', { name: label })).toBeTruthy();
     }
+    expect(
+      screen.getByRole('button', { name: 'Активные' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
+  it('builds the configurator only from groups assigned to the selected product', async () => {
+    const service = serviceFixture();
+    const user = userEvent.setup();
+    render(<CoffeeBarWorkspaceScreen context={context} service={service} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Новый заказ' }));
+    await user.click(await screen.findByRole('button', { name: /Эспрессо/ }));
+
+    expect(await screen.findByRole('heading', { name: 'Эспрессо' })).toBeTruthy();
+    expect(screen.getByText('Объём')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Дополнительно' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /30 мл/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Сахар/ })).toBeTruthy();
+    expect(screen.queryByText('Молоко')).toBeNull();
+    expect(screen.queryByLabelText('Вариант')).toBeNull();
+  });
+
+  it('adds a simple product immediately without opening the configurator', async () => {
+    const service = serviceFixture();
+    const user = userEvent.setup();
+    render(<CoffeeBarWorkspaceScreen context={context} service={service} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Новый заказ' }));
+    await user.click(await screen.findByRole('button', { name: /Круассан/ }));
+
+    await waitFor(() =>
+      expect(service.addItem).toHaveBeenCalledWith(context, order.orderId, {
+        productId: 'croissant',
+      }),
+    );
+    expect(screen.queryByRole('heading', { name: 'Круассан' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Меню' })).toBeTruthy();
+  });
+
+  it('opens the menu from the current order without changing the selected order', async () => {
+    const activeState: CoffeeBarState = {
+      ...structuredClone(state),
+      tables: [
+        {
+          ...state.tables[0]!,
+          status: 'DRAFT',
+          activeOrderId: order.orderId,
+        },
+      ],
+      orders: [order],
+    };
+    const user = userEvent.setup();
+    render(
+      <CoffeeBarWorkspaceScreen
+        context={context}
+        service={serviceFixture(activeState)}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: /Стол 1: Новый заказ/ }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Добавить позиции' }));
+
+    expect(await screen.findByRole('heading', { name: 'Меню' })).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: /Б-0001/ })).toBeTruthy();
+  });
+
+  it('resets the journal to Active and highlights the opened order with a preview', async () => {
+    const previewItems = ['Капучино', 'Круассан', 'Чай', 'Вода'].map(
+      (productName, index) => ({
+        id: `preview-${index}`,
+        productId: `preview-product-${index}`,
+        productName,
+        variantName: null,
+        quantity: index === 0 ? 2 : 1,
+        unitPrice: 100,
+        finalUnitPrice: 100,
+        modifiers: [],
+        comment: '',
+        preparationWorkspace: 'BAR' as const,
+        status: 'DRAFT' as const,
+        submittedBatchId: null,
+      }),
+    );
+    const previewOrder: CoffeeOrder = {
+      ...order,
+      total: 500,
+      items: previewItems,
+    };
+    const journalState: CoffeeBarState = {
+      ...structuredClone(state),
+      orders: [previewOrder],
+    };
+    const user = userEvent.setup();
+    render(
+      <CoffeeBarWorkspaceScreen
+        context={context}
+        service={serviceFixture(journalState)}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Заказы' }));
+    const activeFilter = screen.getByRole('button', { name: 'Активные' });
+    expect(activeFilter.getAttribute('aria-pressed')).toBe('true');
+    await user.click(screen.getByRole('button', { name: 'Все' }));
+    expect(
+      screen.getByRole('button', { name: 'Все' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    await user.click(screen.getByRole('button', { name: 'Меню' }));
+    await user.click(screen.getByRole('button', { name: 'Заказы' }));
+    expect(
+      screen.getByRole('button', { name: 'Активные' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+
+    const card = screen.getByRole('button', {
+      name: /Стол 1.*Б-0001.*Капучино ×2.*Круассан ×1.*Чай ×1.*ещё 1 позиций/s,
+    });
+    expect(card.getAttribute('aria-pressed')).toBe('false');
+    await user.click(card);
+    expect(card.getAttribute('aria-pressed')).toBe('true');
   });
 });

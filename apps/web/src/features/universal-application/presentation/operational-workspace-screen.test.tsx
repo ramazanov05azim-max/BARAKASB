@@ -38,7 +38,7 @@ function createSession(
 }
 
 describe('OperationalWorkspaceScreen', () => {
-  it('renders a Russian placeholder with environment, code and employee context', async () => {
+  it('renders the operational context without exposing the workspace code', async () => {
     const session = createSession(activeSession);
     render(
       <I18nProvider>
@@ -52,7 +52,8 @@ describe('OperationalWorkspaceScreen', () => {
 
     expect(await screen.findByRole('heading', { name: 'Бар' })).toBeInTheDocument();
     expect(screen.getByText('Север')).toBeInTheDocument();
-    expect(screen.getByText('1234 5678 9012')).toBeInTheDocument();
+    expect(screen.queryByText('1234 5678 9012')).not.toBeInTheDocument();
+    expect(screen.queryByText('Код рабочего пространства')).not.toBeInTheDocument();
     expect(screen.getAllByText('Анна Петрова')).toHaveLength(2);
 
     fireEvent.change(screen.getByLabelText('Выберите текущего сотрудника'), {

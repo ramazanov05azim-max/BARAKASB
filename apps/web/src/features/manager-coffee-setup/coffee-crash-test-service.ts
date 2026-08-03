@@ -2,6 +2,7 @@
 
 import {
   clearLocalCoffeeDevelopmentStorage,
+  coffeeCrashTestSeedVersion,
   localCoffeeManagerRepositories,
   type CoffeeManagerRepositories,
 } from '@barakasb/solution-coffee';
@@ -156,7 +157,8 @@ export function createCoffeeCrashTestService(
       summary.environmentCount === 1 &&
       summary.selectedProjectId === coffeeCrashTestProjectId &&
       summary.obsoleteKeyCount === 0 &&
-      summary.schemaVersion === 2;
+      summary.schemaVersion === 2 &&
+      record.crashTestSeedVersion === coffeeCrashTestSeedVersion;
     const hasAnyLocalTestData =
       summary.projectCount > 0 ||
       summary.installationCount > 0 ||

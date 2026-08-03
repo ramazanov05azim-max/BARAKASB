@@ -210,6 +210,7 @@ export interface MenuItem extends BaseEntity {
 }
 
 export interface ModifierGroup extends BaseEntity {
+  purpose: 'configuration' | 'additional';
   selectionType: 'single' | 'multiple';
   required: boolean;
   minimumSelections: number;

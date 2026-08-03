@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, KeyRound, UserRound, UsersRound } from 'lucide-react';
+import { ArrowLeft, UserRound, UsersRound } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CoffeeBarWorkspaceScreen } from '@barakasb/solution-coffee';
@@ -12,7 +12,6 @@ import type {
   OperationalWorkspaceSession,
   OperationalWorkspaceSessionStore,
 } from '../application/workspace-access';
-import { formatWorkspaceAccessCode } from '../domain/workspace-access-code';
 import { localOperationalWorkspaceSession } from '../infrastructure/local-operational-workspace-session';
 
 const selectClassName =
@@ -74,7 +73,6 @@ export function OperationalWorkspaceScreen({
   ) {
     return (
       <CoffeeBarWorkspaceScreen
-        accessCode={formatWorkspaceAccessCode(current.workspace.accessCode)}
         context={{
           projectId: current.workspace.projectId,
           businessEnvironmentId: current.workspace.businessEnvironmentId,
@@ -105,27 +103,14 @@ export function OperationalWorkspaceScreen({
           className={buttonVariants({ variant: 'secondary' })}
         >
           <ArrowLeft className="size-4" />
-          {t('workspace.changeCode')}
+          {t('workspace.changeWorkspace')}
         </Link>
       </div>
 
       <div className="mt-8 grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
         <Card>
           <CardContent className="p-6 sm:p-8">
-            <div className="flex items-center gap-3">
-              <span className="soft-icon-tile grid size-12 place-items-center rounded-[16px]">
-                <KeyRound className="size-5" />
-              </span>
-              <div>
-                <p className="text-xs text-[var(--muted)]">
-                  {t('workspace.accessCode')}
-                </p>
-                <p className="mt-1 font-mono text-lg font-semibold tracking-[0.08em]">
-                  {formatWorkspaceAccessCode(current.workspace.accessCode)}
-                </p>
-              </div>
-            </div>
-            <dl className="mt-7 grid gap-5 border-t border-[var(--border)] pt-6 sm:grid-cols-2">
+            <dl className="grid gap-5 sm:grid-cols-2">
               <ReadOnlyValue
                 label={t('workspace.environment')}
                 value={current.workspace.environmentDisplayName}
@@ -141,9 +126,6 @@ export function OperationalWorkspaceScreen({
                 value={current.workspace.workspaceName}
               />
             </dl>
-            <p className="mt-6 rounded-[14px] bg-[var(--subtle)] px-4 py-3 text-xs leading-5 text-[var(--muted)]">
-              {t('workspace.codeIdentityNotice')}
-            </p>
           </CardContent>
         </Card>
 

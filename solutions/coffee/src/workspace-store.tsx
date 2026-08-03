@@ -231,6 +231,10 @@ export function CoffeeWorkspaceProvider({
           case 'modifiers':
             await repositories.modifiers.create(projectId, {
               ...common,
+              purpose:
+                value(values, 'purpose') === 'additional'
+                  ? 'additional'
+                  : 'configuration',
               selectionType:
                 value(values, 'selectionType') === 'multiple' ? 'multiple' : 'single',
               required: value(values, 'required') === 'true',
@@ -399,6 +403,10 @@ export function CoffeeWorkspaceProvider({
           case 'modifiers':
             await repositories.modifiers.update(projectId, id, {
               ...common,
+              purpose:
+                value(values, 'purpose') === 'additional'
+                  ? 'additional'
+                  : 'configuration',
               selectionType:
                 value(values, 'selectionType') === 'multiple' ? 'multiple' : 'single',
               required: value(values, 'required') === 'true',

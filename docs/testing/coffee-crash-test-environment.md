@@ -24,8 +24,8 @@ environment.
 | Business Environment ID    | `business-environment-coffee-crash-test-v2`         |
 | Business Environment Code  | `5715 4221 5648 5027`                               |
 | Bar Workspace Access Code  | `6728 0175 1693`                                    |
-| Seed ID                    | `coffee-crash-test-v4`                              |
-| Seed schema version        | `4`                                                 |
+| Seed ID                    | `coffee-crash-test-v5`                              |
+| Seed schema version        | `5`                                                 |
 
 The 16-digit code is deterministic, immutable after creation, and resolves only the
 canonical project in the current browser.
@@ -78,7 +78,7 @@ After a successful reset, the invariants are:
 
 ## Dataset coverage
 
-The version 4 seed contains:
+The version 5 seed contains:
 
 - one complete business profile, configured Coffee project, and generated Bar workspace;
 - two locations, one register, five workstations, and four storage areas;
@@ -86,7 +86,7 @@ The version 4 seed contains:
 - eight units of measure with supported conversion data;
 - five suppliers;
 - at least 30 ingredients and opening balances;
-- at least 20 available products and four modifier groups;
+- at least 20 available products and eight product-specific modifier groups;
 - at least 15 versioned recipes with ingredient rows, cost, sale price, and gross-margin
   data;
 - five employees representing owner, manager, barista, cashier, and inventory
@@ -141,33 +141,46 @@ business test data and is intentionally preserved.
     table must appear exactly once and no order list may be duplicated under the plan.
 13. Select free `Стол 1`. A one-guest draft order must open immediately and the
     workspace must switch directly to `Меню`, without a seating dialog.
-14. Add `Капучино`, choose `Овсяное +70 ₽`, enter variant `Большой`, add a comment, and
-    set quantity to two. Verify the modifier snapshot and total.
-15. Send the first batch. Add `Вода без газа` to the same table and verify it appears
+14. Add `Эспрессо` and verify its configurator contains only `Объём`,
+    `Дополнительный шот`, Coffee-specific `Дополнительно`, and the comment field. Verify
+    it does not contain milk, syrup, or a free-text variant field.
+15. Add `Капучино` and verify its owner-defined configuration contains volume, milk,
+    syrup, extra shot, Coffee-specific additions, and comment. Open tea and verify its
+    additions contain honey and lemon instead of Coffee additions.
+16. Select the simple product `Круассан`. Verify it is added immediately without opening
+    the product configurator.
+17. From the open order choose `Добавить позиции`. Verify the menu opens without leaving
+    or replacing the order, configured products return to the same order, and only newly
+    added items form the next unsent batch.
+18. Send the first batch. Add `Вода без газа` to the same table and verify it appears
     under `Новые позиции` while the cappuccino remains immutable under `Уже отправлено`.
     Send only the additional batch.
-16. Advance the Bar item through `Принят`, `Готовится`, and `Готов`. Verify a
+19. Advance the Bar item through `Принят`, `Готовится`, and `Готов`. Verify a
     Kitchen-routed item cannot be completed from Bar.
-17. Mark `Карта`. Verify payment does not change preparation state and cannot be
+20. Mark `Карта`. Verify payment does not change preparation state and cannot be
     recorded twice.
-18. When all positions are ready and the order is paid, choose
+21. When all positions are ready and the order is paid, choose
     `Выдать, завершить и освободить стол`. Verify status `Завершён`, immutable history,
     completion metadata, and the table returning to `Свободен`.
-19. Choose `Новый заказ`, add `Вода без газа` before assigning a table, then use
+22. Choose `Новый заказ`, add `Вода без газа` before assigning a table, then use
     `Прикрепить заказ` to choose a free table or `Оформить навынос`. After assignment
     the action must become `Перенести заказ`.
-20. Transfer an active order to another free table. Verify the old table becomes free,
+23. Transfer an active order to another free table. Verify the old table becomes free,
     the new table becomes occupied, and the transfer audit keeps both table identifiers.
-21. In `Заказы`, verify filters for all, active, takeaway, delivery, ready, completed,
-    and cancelled orders. Search by order number and reopen an active order in the same
-    order editor used by the floor plan.
-22. Open another table, send an item, and cancel it. Verify a reason is required and
+24. In `Заказы`, verify `Активные` is selected by default. Verify filters for all,
+    takeaway, delivery, ready, completed, and cancelled orders. Each card must show up
+    to three position summaries, remaining-item count, total, and a secondary order
+    number. Search by order number and reopen an active order in the same order editor
+    used by the floor plan; its card must retain a light pastel-blue selection state.
+25. Verify the Workspace Access Code is absent from the Bar header, order editor,
+    receipts, and all operational status areas after connection.
+26. Open another table, send an item, and cancel it. Verify a reason is required and
     retained in history. Verify an empty unsent table can be released.
-23. Verify identity, active location, catalog, recipe, stock, supplier, and employee
+27. Verify identity, active location, catalog, recipe, stock, supplier, and employee
     summaries appear while unfinished transactional modules stay disabled.
-24. Reload the page and verify the selected workspace, orders, and completed history
+28. Reload the page and verify the selected workspace, orders, and completed history
     remain readable.
-25. Repeat at 1024 × 768 and 1280 × 800. Each operational screen must use internal
+29. Repeat at 1024 × 768 and 1280 × 800. Each operational screen must use internal
     scrolling where needed and the document must not overflow horizontally.
 
 ## Current prototype limitations

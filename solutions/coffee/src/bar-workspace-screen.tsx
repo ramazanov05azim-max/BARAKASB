@@ -65,6 +65,10 @@ type OrderAssignment =
       readonly seating: CoffeeSeatingInput;
     }
   | { readonly type: 'TAKEAWAY' };
+type ModifierSelection = {
+  readonly modifierGroupId: string;
+  readonly optionName: string;
+};
 const currency = (value: number): string =>
   new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -83,11 +87,9 @@ function nextBarStatus(
 
 export function CoffeeBarWorkspaceScreen({
   context,
-  accessCode,
   service = defaultService,
 }: {
   context: CoffeeBarRuntimeContext;
-  accessCode: string;
   service?: CoffeeBarService;
 }) {
   const [state, setState] = useState<CoffeeBarState | null>(null);
@@ -118,7 +120,7 @@ export function CoffeeBarWorkspaceScreen({
       setSelectedOrderId((current) =>
         current && next.orders.some((order) => order.orderId === current)
           ? current
-          : (next.orders.find((order) => !terminal(order))?.orderId ?? null),
+          : null,
       );
       setMessage(null);
     } catch (error) {
@@ -201,6 +203,10 @@ export function CoffeeBarWorkspaceScreen({
         .toLocaleLowerCase('ru')
         .includes(query.trim().toLocaleLowerCase('ru')),
   );
+  const isConfigurable = (candidate: CoffeeBarState['products'][number]): boolean =>
+    candidate.modifierGroupIds.some((groupId) =>
+      state.modifierGroups.some((group) => group.id === groupId),
+    );
 
   async function openFreeTable(table: CoffeeBarState['tables'][number]): Promise<void> {
     setOrderOpen(false);
@@ -247,7 +253,10 @@ export function CoffeeBarWorkspaceScreen({
               className={`min-h-9 flex-1 rounded-lg px-5 text-sm font-semibold transition sm:flex-none ${
                 view === id ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600'
               }`}
-              onClick={() => setView(id)}
+              onClick={() => {
+                if (id === 'orders') setOrderFilter('ACTIVE');
+                setView(id);
+              }}
             >
               {label}
             </button>
@@ -400,12 +409,24 @@ export function CoffeeBarWorkspaceScreen({
                 <button
                   key={candidate.id}
                   disabled={
+                    busy ||
                     !selectedOrder ||
                     terminal(selectedOrder) ||
                     selectedOrder.paymentStatus === 'PAID'
                   }
                   className="min-h-24 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-40"
-                  onClick={() => setProduct(candidate)}
+                  onClick={() => {
+                    if (!selectedOrder) return;
+                    if (isConfigurable(candidate)) {
+                      setProduct(candidate);
+                      return;
+                    }
+                    void run(() =>
+                      service.addItem(context, selectedOrder.orderId, {
+                        productId: candidate.id,
+                      }),
+                    );
+                  }}
                 >
                   <span className="block text-sm font-semibold">{candidate.name}</span>
                   <span className="mt-3 block text-xs font-bold text-blue-600">
@@ -424,6 +445,7 @@ export function CoffeeBarWorkspaceScreen({
             tables={state.tables}
             filter={orderFilter}
             query={orderQuery}
+            selectedOrderId={selectedOrderId}
             onFilter={setOrderFilter}
             onQuery={setOrderQuery}
             onSelect={(orderId) => {
@@ -503,10 +525,11 @@ export function CoffeeBarWorkspaceScreen({
                   service.assignOrder(context, selectedOrder.orderId, destination),
                 )
               }
+              onAddItems={() => {
+                setOrderOpen(false);
+                setView('menu');
+              }}
             />
-            <p className="border-t border-slate-100 px-3 py-2 text-center font-mono text-[10px] tracking-wider text-slate-400">
-              {accessCode}
-            </p>
           </div>
         </Modal>
       )}
@@ -548,6 +571,7 @@ function OrderJournal({
   tables,
   filter,
   query,
+  selectedOrderId,
   onFilter,
   onQuery,
   onSelect,
@@ -556,6 +580,7 @@ function OrderJournal({
   tables: CoffeeBarState['tables'];
   filter: OrderJournalFilter;
   query: string;
+  selectedOrderId: string | null;
   onFilter: (filter: OrderJournalFilter) => void;
   onQuery: (query: string) => void;
   onSelect: (orderId: string) => void;
@@ -609,6 +634,7 @@ function OrderJournal({
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((order) => {
             const table = tables.find((candidate) => candidate.id === order.tableId);
+            const selected = order.orderId === selectedOrderId;
             const destination =
               order.orderType === 'TABLE'
                 ? (table?.name ?? coffeeBarRu.table)
@@ -617,22 +643,52 @@ function OrderJournal({
                   : order.orderType === 'DELIVERY'
                     ? coffeeBarRu.filterDelivery
                     : 'Не прикреплён';
+            const previewItems = order.items.slice(0, 3);
+            const remainingItems = Math.max(
+              0,
+              order.items.length - previewItems.length,
+            );
             return (
               <button
                 key={order.orderId}
-                className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50"
+                aria-pressed={selected}
+                className={`rounded-2xl border p-4 text-left transition hover:border-blue-300 ${
+                  selected
+                    ? 'border-blue-200 bg-blue-50/70 shadow-[0_10px_30px_rgba(37,99,235,.08)]'
+                    : 'border-slate-200 bg-white hover:bg-blue-50/40'
+                }`}
                 onClick={() => onSelect(order.orderId)}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <strong>{order.orderNumber}</strong>
+                  <strong>{destination}</strong>
                   <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold">
                     {coffeeOrderStatusRu[order.status]}
                   </span>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  {destination} · {order.guestCount} гост.
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {order.orderNumber} · {order.guestCount} гост.
                 </p>
-                <p className="mt-3 text-sm font-semibold">{currency(order.total)}</p>
+                <div className="mt-3 space-y-1">
+                  {previewItems.map((item) => (
+                    <p
+                      key={item.id}
+                      className="truncate text-xs font-medium text-slate-700"
+                    >
+                      {item.productName} ×{item.quantity}
+                    </p>
+                  ))}
+                  {remainingItems > 0 && (
+                    <p className="text-xs text-slate-500">
+                      {coffeeBarRu.moreItems(remainingItems)}
+                    </p>
+                  )}
+                  {order.items.length === 0 && (
+                    <p className="text-xs text-slate-400">
+                      {coffeeBarRu.emptyOrderPreview}
+                    </p>
+                  )}
+                </div>
+                <p className="mt-4 text-sm font-semibold">{currency(order.total)}</p>
               </button>
             );
           })}
@@ -659,6 +715,7 @@ function Receipt({
   onTransfer,
   onRelease,
   onAssign,
+  onAddItems,
 }: {
   order: CoffeeOrder;
   state: CoffeeBarState;
@@ -678,6 +735,7 @@ function Receipt({
   onTransfer: (tableId: string, override: boolean) => Promise<void>;
   onRelease: () => Promise<void>;
   onAssign: (destination: OrderAssignment) => Promise<void>;
+  onAddItems: () => void;
 }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [guestOpen, setGuestOpen] = useState(false);
@@ -692,6 +750,12 @@ function Receipt({
   const freeTables = state.tables.filter(
     (table) => table.status === 'FREE' && table.id !== order.tableId,
   );
+  const canConfigureItem = (item: CoffeeOrderItem): boolean =>
+    state.products
+      .find((product) => product.id === item.productId)
+      ?.modifierGroupIds.some((groupId) =>
+        state.modifierGroups.some((group) => group.id === groupId),
+      ) ?? false;
   return (
     <>
       <div className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500">
@@ -711,6 +775,18 @@ function Receipt({
           )}
         </div>
       </div>
+      {!terminal(order) && order.paymentStatus === 'UNPAID' && (
+        <div className="border-b border-slate-100 p-3">
+          <button
+            className={`${secondary} w-full border-blue-100 text-blue-700`}
+            disabled={busy}
+            onClick={onAddItems}
+          >
+            <Plus className="size-4" />
+            {coffeeBarRu.addItems}
+          </button>
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <ItemGroup
           title={coffeeBarRu.submitted}
@@ -721,6 +797,7 @@ function Receipt({
           onQuantity={onQuantity}
           onRemove={onRemove}
           onStatus={onStatus}
+          canEditDetails={canConfigureItem}
         />
         <ItemGroup
           title={coffeeBarRu.newItems}
@@ -731,6 +808,7 @@ function Receipt({
           onQuantity={onQuantity}
           onRemove={onRemove}
           onStatus={onStatus}
+          canEditDetails={canConfigureItem}
         />
       </div>
       <div className="border-t border-slate-100 p-3">
@@ -877,6 +955,7 @@ function ItemGroup({
   onQuantity,
   onRemove,
   onStatus,
+  canEditDetails,
 }: {
   title: string;
   items: ReadonlyArray<CoffeeOrderItem>;
@@ -889,6 +968,7 @@ function ItemGroup({
     item: CoffeeOrderItem,
     status: Exclude<CoffeeOrderItemStatus, 'DRAFT' | 'CANCELLED'>,
   ) => Promise<void>;
+  canEditDetails: (item: CoffeeOrderItem) => boolean;
 }) {
   if (!items.length) return null;
   return (
@@ -943,14 +1023,16 @@ function ItemGroup({
                   >
                     <Plus className="size-3.5" />
                   </button>
+                  {canEditDetails(item) && (
+                    <button
+                      className="ml-auto px-2 text-xs font-semibold text-blue-600"
+                      onClick={() => onEdit(item)}
+                    >
+                      {coffeeBarRu.edit}
+                    </button>
+                  )}
                   <button
-                    className="ml-auto px-2 text-xs font-semibold text-blue-600"
-                    onClick={() => onEdit(item)}
-                  >
-                    {coffeeBarRu.edit}
-                  </button>
-                  <button
-                    className="grid size-8 place-items-center text-rose-600"
+                    className={`${canEditDetails(item) ? '' : 'ml-auto'} grid size-8 place-items-center text-rose-600`}
                     onClick={() => void onRemove(item)}
                   >
                     <Trash2 className="size-4" />
@@ -992,14 +1074,17 @@ function ProductDialog({
   const groups = state.modifierGroups.filter((group) =>
     product.modifierGroupIds.includes(group.id),
   );
-  const [selections, setSelections] = useState(
+  const configurationGroups = groups.filter(
+    (group) => group.purpose === 'configuration',
+  );
+  const additionalGroups = groups.filter((group) => group.purpose === 'additional');
+  const [selections, setSelections] = useState<ModifierSelection[]>(
     item?.modifiers.map((modifier) => ({
       modifierGroupId: modifier.modifierGroupId,
       optionName: modifier.optionName,
     })) ?? [],
   );
   const [comment, setComment] = useState(item?.comment ?? '');
-  const [variantName, setVariantName] = useState(item?.variantName ?? '');
   const valid = groups.every((group) => {
     const count = selections.filter(
       (selection) => selection.modifierGroupId === group.id,
@@ -1011,67 +1096,64 @@ function ProductDialog({
           : group.minimumSelections) && count <= group.maximumSelections
     );
   });
+
+  function toggle(group: CoffeeBarState['modifierGroups'][number], optionName: string) {
+    const checked = selections.some(
+      (selection) =>
+        selection.modifierGroupId === group.id && selection.optionName === optionName,
+    );
+    const withoutOption = selections.filter(
+      (selection) =>
+        selection.modifierGroupId !== group.id || selection.optionName !== optionName,
+    );
+    if (checked) {
+      if (!group.required || group.selectionType === 'multiple') {
+        setSelections(withoutOption);
+      }
+      return;
+    }
+    if (group.selectionType === 'single') {
+      setSelections([
+        ...selections.filter((selection) => selection.modifierGroupId !== group.id),
+        { modifierGroupId: group.id, optionName },
+      ]);
+      return;
+    }
+    const groupCount = selections.filter(
+      (selection) => selection.modifierGroupId === group.id,
+    ).length;
+    if (groupCount < group.maximumSelections) {
+      setSelections([...selections, { modifierGroupId: group.id, optionName }]);
+    }
+  }
+
   return (
     <Modal title={product.name} onClose={onClose}>
       <div className="space-y-4">
-        <label className="block text-sm font-medium">
-          Вариант
-          <input
-            className={`${control} mt-1 w-full`}
-            value={variantName}
-            onChange={(event) => setVariantName(event.target.value)}
-            placeholder="Например: большой"
+        {configurationGroups.map((group) => (
+          <ModifierOptionGroup
+            key={group.id}
+            group={group}
+            selections={selections}
+            onToggle={(optionName) => toggle(group, optionName)}
           />
-        </label>
-        {groups.map((group) => (
-          <fieldset key={group.id}>
-            <legend className="text-sm font-semibold">
-              {group.name}
-              {group.required && <span className="ml-1 text-rose-600">*</span>}
-            </legend>
-            <p className="mb-2 text-xs text-slate-500">
-              Выберите от {group.minimumSelections} до {group.maximumSelections}
-            </p>
-            <div className="space-y-2">
-              {group.options.map((option) => {
-                const checked = selections.some(
-                  (selection) =>
-                    selection.modifierGroupId === group.id &&
-                    selection.optionName === option.name,
-                );
-                return (
-                  <label
-                    key={option.name}
-                    className="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 p-3"
-                  >
-                    <span className="text-sm">{option.name}</span>
-                    <input
-                      type={group.selectionType === 'single' ? 'radio' : 'checkbox'}
-                      name={group.id}
-                      checked={checked}
-                      onChange={() => {
-                        const others = selections.filter(
-                          (selection) =>
-                            selection.modifierGroupId !== group.id ||
-                            (group.selectionType === 'multiple' &&
-                              selection.optionName !== option.name),
-                        );
-                        setSelections(
-                          checked && group.selectionType === 'multiple'
-                            ? others
-                            : [
-                                ...others,
-                                { modifierGroupId: group.id, optionName: option.name },
-                              ],
-                        );
-                      }}
-                    />
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
         ))}
+        {additionalGroups.length > 0 && (
+          <section className="rounded-2xl bg-slate-50 p-4">
+            <h3 className="text-sm font-semibold">{coffeeBarRu.additional}</h3>
+            <div className="mt-3 space-y-4">
+              {additionalGroups.map((group) => (
+                <ModifierOptionGroup
+                  key={group.id}
+                  group={group}
+                  selections={selections}
+                  showLegend={group.name !== coffeeBarRu.additional}
+                  onToggle={(optionName) => toggle(group, optionName)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
         <label className="block text-sm font-medium">
           {coffeeBarRu.comment}
           <textarea
@@ -1087,7 +1169,6 @@ function ProductDialog({
           onClick={() =>
             onSubmit({
               productId: product.id,
-              variantName,
               modifiers: selections,
               comment,
             })
@@ -1097,6 +1178,77 @@ function ProductDialog({
         </button>
       </div>
     </Modal>
+  );
+}
+
+function ModifierOptionGroup({
+  group,
+  selections,
+  showLegend = true,
+  onToggle,
+}: {
+  group: CoffeeBarState['modifierGroups'][number];
+  selections: ReadonlyArray<ModifierSelection>;
+  showLegend?: boolean;
+  onToggle: (optionName: string) => void;
+}) {
+  const selectionCount = selections.filter(
+    (selection) => selection.modifierGroupId === group.id,
+  ).length;
+  return (
+    <fieldset>
+      <legend className={showLegend ? 'text-sm font-semibold' : 'sr-only'}>
+        {group.name}
+        {group.required && <span className="ml-1 text-rose-600">*</span>}
+      </legend>
+      {showLegend && (
+        <p className="mb-2 text-xs text-slate-500">
+          {group.required
+            ? coffeeBarRu.requiredOption
+            : group.maximumSelections === 1
+              ? coffeeBarRu.optionalOption
+              : coffeeBarRu.maximumOptions(group.maximumSelections)}
+        </p>
+      )}
+      <div className="grid gap-2 sm:grid-cols-2">
+        {group.options.map((option) => {
+          const checked = selections.some(
+            (selection) =>
+              selection.modifierGroupId === group.id &&
+              selection.optionName === option.name,
+          );
+          const limitReached =
+            !checked &&
+            group.selectionType === 'multiple' &&
+            selectionCount >= group.maximumSelections;
+          return (
+            <button
+              key={option.name}
+              type="button"
+              aria-pressed={checked}
+              disabled={limitReached}
+              className={`flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left text-sm transition disabled:opacity-40 ${
+                checked
+                  ? 'border-blue-200 bg-blue-50/80 text-blue-950'
+                  : 'border-slate-200 bg-white hover:border-blue-200'
+              }`}
+              onClick={() => onToggle(option.name)}
+            >
+              <span>{option.name}</span>
+              <span
+                className={`grid size-5 shrink-0 place-items-center rounded-full border ${
+                  checked
+                    ? 'border-blue-300 bg-blue-100 text-blue-700'
+                    : 'border-slate-300 text-transparent'
+                }`}
+              >
+                <Check className="size-3" />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
@@ -1393,6 +1545,7 @@ function Category({
 }) {
   return (
     <button
+      aria-pressed={active}
       className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold ${active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}
       onClick={onClick}
     >

@@ -503,6 +503,7 @@ export function createCoffeeBarService({
           .map((group) => ({
             id: group.id,
             name: group.name,
+            purpose: group.purpose ?? 'configuration',
             selectionType: group.selectionType,
             required: group.required,
             minimumSelections: group.minimumSelections,

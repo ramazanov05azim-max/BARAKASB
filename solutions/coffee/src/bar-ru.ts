@@ -38,6 +38,8 @@ export const coffeeBarRu = {
   allCategories: 'Все',
   noProducts: 'Позиции не найдены.',
   add: 'Добавить',
+  addItems: 'Добавить позиции',
+  additional: 'Дополнительно',
   composition: 'Чек',
   submitted: 'Уже отправлено',
   newItems: 'Новые позиции',
@@ -83,6 +85,11 @@ export const coffeeBarRu = {
   filterCompleted: 'Завершённые',
   filterCancelled: 'Отменённые',
   noOrders: 'Заказы не найдены.',
+  emptyOrderPreview: 'Позиции не добавлены',
+  moreItems: (count: number) => `+ ещё ${count} позиций`,
+  requiredOption: 'Выберите обязательный вариант',
+  optionalOption: 'Необязательный выбор',
+  maximumOptions: (count: number) => `Можно выбрать до ${count}`,
   noTables: 'Для выбранной локации столы не настроены.',
 } as const;
 

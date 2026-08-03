@@ -137,7 +137,19 @@ async function withItem(
   productId = 'crash-item-espresso',
 ): Promise<CoffeeOrder> {
   const order = await tableOrder(service);
-  return service.addItem(context, order.orderId, { productId });
+  return service.addItem(context, order.orderId, {
+    productId,
+    ...(productId === 'crash-item-espresso'
+      ? {
+          modifiers: [
+            {
+              modifierGroupId: 'crash-modifier-espresso-volume',
+              optionName: '30 мл',
+            },
+          ],
+        }
+      : {}),
+  });
 }
 
 describe('Coffee Bar application service', () => {
@@ -161,6 +173,51 @@ describe('Coffee Bar application service', () => {
       zoneId: 'crash-zone-main',
       shape: 'ROUND',
     });
+  });
+
+  it('exposes product-specific configuration and leaves simple products unconfigured', async () => {
+    const state = await service.load(context);
+    const groupIdsFor = (productId: string): readonly string[] =>
+      state.products.find((product) => product.id === productId)?.modifierGroupIds ??
+      [];
+
+    expect(groupIdsFor('crash-item-espresso')).toEqual([
+      'crash-modifier-espresso-volume',
+      'crash-modifier-extra-shot',
+      'crash-modifier-coffee-additional',
+    ]);
+    expect(groupIdsFor('crash-item-cappuccino')).toEqual([
+      'crash-modifier-coffee-volume',
+      'crash-modifier-milk',
+      'crash-modifier-syrup',
+      'crash-modifier-extra-shot',
+      'crash-modifier-coffee-additional',
+    ]);
+    expect(groupIdsFor('crash-item-black-tea')).toEqual([
+      'crash-modifier-tea-volume',
+      'crash-modifier-tea-additional',
+    ]);
+    expect(groupIdsFor('crash-item-croissant')).toEqual([]);
+
+    const coffeeAdditional = state.modifierGroups.find(
+      (group) => group.id === 'crash-modifier-coffee-additional',
+    );
+    const teaAdditional = state.modifierGroups.find(
+      (group) => group.id === 'crash-modifier-tea-additional',
+    );
+    expect(coffeeAdditional).toMatchObject({ purpose: 'additional' });
+    expect(
+      coffeeAdditional?.options.some((option) => option.name.startsWith('Корица')),
+    ).toBe(true);
+    expect(
+      coffeeAdditional?.options.some((option) => option.name.startsWith('Лимон')),
+    ).toBe(false);
+    expect(
+      teaAdditional?.options.some((option) => option.name.startsWith('Лимон')),
+    ).toBe(true);
+    expect(
+      teaAdditional?.options.some((option) => option.name.startsWith('Корица')),
+    ).toBe(false);
   });
 
   it('opens a free table with seating metadata', async () => {
@@ -273,24 +330,30 @@ describe('Coffee Bar application service', () => {
     });
   });
 
-  it('stores modifier, variant and comment snapshots', async () => {
+  it('stores only owner-configured options and the employee comment', async () => {
     const order = await tableOrder(service);
     const updated = await service.addItem(context, order.orderId, {
       productId: 'crash-item-cappuccino',
-      variantName: 'Большой',
       modifiers: [
         {
-          modifierGroupId: 'crash-modifier-alternative-milk',
+          modifierGroupId: 'crash-modifier-coffee-volume',
+          optionName: '250 мл',
+        },
+        {
+          modifierGroupId: 'crash-modifier-milk',
           optionName: 'Овсяное +70 ₽',
         },
       ],
       comment: 'Без сахара',
     });
     expect(updated.items[0]).toMatchObject({
-      variantName: 'Большой',
+      variantName: null,
       comment: 'Без сахара',
       finalUnitPrice: 380,
     });
+    expect(
+      updated.items[0]?.modifiers.map((modifier) => modifier.modifierName),
+    ).toEqual(['Объём', 'Молоко']);
   });
 
   it('validates modifier ownership and limits', async () => {
@@ -343,7 +406,19 @@ describe('Coffee Bar application service', () => {
       'crash-item-sandwich',
       'crash-item-bottled-water',
     ]) {
-      order = await service.addItem(context, order.orderId, { productId });
+      order = await service.addItem(context, order.orderId, {
+        productId,
+        ...(productId === 'crash-item-espresso'
+          ? {
+              modifiers: [
+                {
+                  modifierGroupId: 'crash-modifier-espresso-volume',
+                  optionName: '30 мл',
+                },
+              ],
+            }
+          : {}),
+      });
     }
     expect(order.items.map((item) => item.preparationWorkspace)).toEqual([
       'BAR',

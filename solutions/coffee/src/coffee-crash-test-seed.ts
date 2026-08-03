@@ -6,13 +6,14 @@ import type {
   Employee,
   Ingredient,
   MenuItem,
+  ModifierGroup,
   Recipe,
   Supplier,
   UnitOfMeasure,
   Warehouse,
 } from './domain';
 
-export const coffeeCrashTestSeedVersion = 4;
+export const coffeeCrashTestSeedVersion = 5;
 export const coffeeCrashTestSeedId = `coffee-crash-test-v${coffeeCrashTestSeedVersion}`;
 
 const active = 'active' as const;
@@ -700,6 +701,24 @@ const productSpecs = [
 ] as const;
 
 function menuItems(timestamp: string): MenuItem[] {
+  const modifierGroupsByProduct: Record<string, string[]> = {
+    espresso: ['espresso-volume', 'extra-shot', 'coffee-additional'],
+    'double-espresso': ['espresso-volume', 'coffee-additional'],
+    americano: ['coffee-volume', 'extra-shot', 'coffee-additional'],
+    cappuccino: ['coffee-volume', 'milk', 'syrup', 'extra-shot', 'coffee-additional'],
+    latte: ['coffee-volume', 'milk', 'syrup', 'coffee-additional'],
+    'flat-white': ['coffee-volume', 'milk', 'extra-shot', 'coffee-additional'],
+    raf: ['coffee-volume', 'syrup', 'coffee-additional'],
+    mocha: ['coffee-volume', 'milk', 'syrup', 'coffee-additional'],
+    'filter-coffee': ['coffee-volume', 'coffee-additional'],
+    'decaf-cappuccino': ['coffee-volume', 'milk', 'syrup', 'coffee-additional'],
+    'black-tea': ['tea-volume', 'tea-additional'],
+    'green-tea': ['tea-volume', 'tea-additional'],
+    cocoa: ['coffee-volume', 'milk', 'coffee-additional'],
+    'iced-latte': ['coffee-volume', 'milk', 'syrup', 'coffee-additional'],
+    'vanilla-latte': ['coffee-volume', 'milk', 'coffee-additional'],
+    'caramel-cappuccino': ['coffee-volume', 'milk', 'coffee-additional'],
+  };
   return productSpecs.map(([id, name, category, price]) => ({
     id: `crash-item-${id}`,
     name,
@@ -723,16 +742,100 @@ function menuItems(timestamp: string): MenuItem[] {
     ].includes(id)
       ? ''
       : `crash-recipe-${id}`,
-    modifierGroupIds:
-      category === 'coffee'
-        ? [
-            'crash-modifier-alternative-milk',
-            'crash-modifier-extra-shot',
-            'crash-modifier-vanilla',
-            'crash-modifier-caramel',
-          ]
-        : [],
+    modifierGroupIds: (modifierGroupsByProduct[id] ?? []).map(
+      (groupId) => `crash-modifier-${groupId}`,
+    ),
     status: id === 'espresso-tonic-preview' ? 'draft' : active,
+    updatedAt: timestamp,
+  }));
+}
+
+function modifierGroups(timestamp: string): ModifierGroup[] {
+  const definitions: Array<Omit<ModifierGroup, 'status' | 'updatedAt'>> = [
+    {
+      id: 'crash-modifier-espresso-volume',
+      name: 'Объём',
+      purpose: 'configuration',
+      selectionType: 'single',
+      required: true,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      options: '30 мл; 60 мл +90 ₽',
+    },
+    {
+      id: 'crash-modifier-coffee-volume',
+      name: 'Объём',
+      purpose: 'configuration',
+      selectionType: 'single',
+      required: true,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      options: '250 мл; 350 мл +70 ₽',
+    },
+    {
+      id: 'crash-modifier-milk',
+      name: 'Молоко',
+      purpose: 'configuration',
+      selectionType: 'single',
+      required: false,
+      minimumSelections: 0,
+      maximumSelections: 1,
+      options: 'Обычное; Овсяное +70 ₽; Безлактозное +50 ₽',
+    },
+    {
+      id: 'crash-modifier-syrup',
+      name: 'Сироп',
+      purpose: 'configuration',
+      selectionType: 'single',
+      required: false,
+      minimumSelections: 0,
+      maximumSelections: 1,
+      options: 'Ванильный +50 ₽; Карамельный +50 ₽',
+    },
+    {
+      id: 'crash-modifier-extra-shot',
+      name: 'Дополнительный шот',
+      purpose: 'configuration',
+      selectionType: 'single',
+      required: false,
+      minimumSelections: 0,
+      maximumSelections: 1,
+      options: '1 шот +90 ₽; 2 шота +180 ₽',
+    },
+    {
+      id: 'crash-modifier-coffee-additional',
+      name: 'Дополнительно',
+      purpose: 'additional',
+      selectionType: 'multiple',
+      required: false,
+      minimumSelections: 0,
+      maximumSelections: 4,
+      options: 'Сахар; Корица; Сливки +60 ₽; Маршмеллоу +50 ₽',
+    },
+    {
+      id: 'crash-modifier-tea-volume',
+      name: 'Объём',
+      purpose: 'configuration',
+      selectionType: 'single',
+      required: true,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      options: '400 мл; 600 мл +80 ₽',
+    },
+    {
+      id: 'crash-modifier-tea-additional',
+      name: 'Дополнительно',
+      purpose: 'additional',
+      selectionType: 'multiple',
+      required: false,
+      minimumSelections: 0,
+      maximumSelections: 2,
+      options: 'Мёд +40 ₽; Лимон +30 ₽',
+    },
+  ];
+  return definitions.map((definition) => ({
+    ...definition,
+    status: active,
     updatedAt: timestamp,
   }));
 }
@@ -1030,28 +1133,7 @@ export function createCoffeeCrashTestSeed(timestamp: string): CoffeeDevelopmentS
       updatedAt: timestamp,
     })),
     menuItems: menuItems(timestamp),
-    modifiers: (
-      [
-        [
-          'alternative-milk',
-          'Альтернативное молоко',
-          'Овсяное +70 ₽; Безлактозное +50 ₽',
-        ],
-        ['extra-shot', 'Дополнительный шот', '1 шот +90 ₽'],
-        ['vanilla', 'Ванильный сироп', '20 мл +50 ₽'],
-        ['caramel', 'Карамельный сироп', '20 мл +50 ₽'],
-      ] satisfies Array<[string, string, string]>
-    ).map(([id, name, options]) => ({
-      id: `crash-modifier-${id}`,
-      name,
-      selectionType: 'single',
-      required: false,
-      minimumSelections: 0,
-      maximumSelections: 1,
-      options,
-      status: active,
-      updatedAt: timestamp,
-    })),
+    modifiers: modifierGroups(timestamp),
     recipes: recipes(timestamp),
     openingStockBalances: inventory.map((ingredient, index) => {
       const specId = ingredient.id.replace('crash-ingredient-', '');

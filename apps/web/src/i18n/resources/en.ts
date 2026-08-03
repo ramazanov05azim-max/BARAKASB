@@ -556,6 +556,7 @@ export const en = {
   'workspace.codeIdentityNotice':
     'Код определяет рабочее пространство, но не личность сотрудника.',
   'workspace.changeCode': 'Ввести другой код',
+  'workspace.changeWorkspace': 'Change workspace',
   'workspace.accessDeniedTitle': 'Рабочее пространство недоступно',
   'workspace.accessDeniedDescription':
     'Введите код рабочего пространства заново. Текущий сеанс не содержит доступа к этому адресу.',

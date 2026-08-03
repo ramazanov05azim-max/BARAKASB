@@ -160,6 +160,7 @@ export interface CoffeeBarState {
   readonly modifierGroups: ReadonlyArray<{
     readonly id: string;
     readonly name: string;
+    readonly purpose: 'configuration' | 'additional';
     readonly selectionType: 'single' | 'multiple';
     readonly required: boolean;
     readonly minimumSelections: number;
