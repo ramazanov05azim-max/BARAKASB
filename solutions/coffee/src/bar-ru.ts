@@ -15,6 +15,7 @@ export const coffeeBarRu = {
   menu: 'Меню',
   orders: 'Заказы',
   activeEmployee: 'Сотрудник',
+  changeEmployee: 'Сменить сотрудника',
   location: 'Локация',
   establishment: 'Заведение',
   newOrder: 'Новый заказ',

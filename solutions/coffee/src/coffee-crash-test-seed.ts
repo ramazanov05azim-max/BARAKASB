@@ -1045,6 +1045,18 @@ function employees(timestamp: string): Employee[] {
   ].map(([id, fullName, role, assignedLocationIds], index) => ({
     id: `crash-employee-${id}`,
     name: fullName as string,
+    firstName: (fullName as string).split(' ')[0] ?? '',
+    lastName: (fullName as string).split(' ').slice(1).join(' '),
+    position:
+      role === 'owner'
+        ? 'Владелец'
+        : role === 'location-manager'
+          ? 'Менеджер'
+          : role === 'barista'
+            ? 'Бариста'
+            : role === 'cashier'
+              ? 'Кассир'
+              : 'Кладовщик',
     fullName: fullName as string,
     email: `${id}@sever-coffee.test`,
     phone: `+7 999 555-20-0${index + 1}`,

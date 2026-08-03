@@ -87,9 +87,11 @@ function nextBarStatus(
 
 export function CoffeeBarWorkspaceScreen({
   context,
+  onLogoutEmployee,
   service = defaultService,
 }: {
   context: CoffeeBarRuntimeContext;
+  onLogoutEmployee?: () => void;
   service?: CoffeeBarService;
 }) {
   const [state, setState] = useState<CoffeeBarState | null>(null);
@@ -276,6 +278,11 @@ export function CoffeeBarWorkspaceScreen({
             <Plus className="size-4" />
             {coffeeBarRu.newOrder}
           </button>
+          {onLogoutEmployee && (
+            <button className={secondary} onClick={onLogoutEmployee} type="button">
+              {coffeeBarRu.changeEmployee}
+            </button>
+          )}
         </div>
       </header>
 

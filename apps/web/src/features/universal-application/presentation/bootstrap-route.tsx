@@ -10,8 +10,14 @@ import {
   type ApplicationBootstrapSnapshot,
 } from '../application/bootstrap';
 import { universalApplicationRoutes } from '../routes';
+import type { OperationalWorkspaceSessionStore } from '../application/workspace-access';
+import { localOperationalWorkspaceSession } from '../infrastructure/local-operational-workspace-session';
 
-export function UniversalBootstrapRoute() {
+export function UniversalBootstrapRoute({
+  workspaceSession = localOperationalWorkspaceSession,
+}: {
+  workspaceSession?: OperationalWorkspaceSessionStore;
+}) {
   const { t } = useTranslation();
   const router = useRouter();
   const [controller] = useState<ApplicationBootstrapController>(
@@ -23,6 +29,15 @@ export function UniversalBootstrapRoute() {
 
   useEffect(() => {
     let active = true;
+    const connected = workspaceSession.readConnected();
+    if (connected) {
+      router.replace(
+        `/app/runtime/${connected.workspace.projectId}/workspaces/${connected.workspace.workspaceId}`,
+      );
+      return () => {
+        active = false;
+      };
+    }
 
     void controller.start().then(() => {
       if (!active) return;
@@ -37,7 +52,7 @@ export function UniversalBootstrapRoute() {
     return () => {
       active = false;
     };
-  }, [controller, router]);
+  }, [controller, router, workspaceSession]);
 
   return (
     <section className="text-center" aria-live="polite">

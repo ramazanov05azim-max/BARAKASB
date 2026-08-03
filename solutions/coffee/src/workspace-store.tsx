@@ -304,9 +304,14 @@ export function CoffeeWorkspaceProvider({
           case 'employees': {
             const employmentStatus = value(values, 'employmentStatus');
             const assignedRole = value(values, 'assignedRoleId');
+            const fullName = value(values, 'fullName').trim();
+            const [firstName = '', ...lastNameParts] = fullName.split(/\s+/);
             await repositories.employees.create(projectId, {
               ...common,
-              fullName: value(values, 'fullName'),
+              firstName,
+              lastName: lastNameParts.join(' '),
+              position: '',
+              fullName,
               email: value(values, 'email'),
               phone: value(values, 'phone'),
               employeeCode: value(values, 'employeeCode'),
@@ -476,9 +481,13 @@ export function CoffeeWorkspaceProvider({
           case 'employees': {
             const assignedRole = value(values, 'assignedRoleId');
             const employmentStatus = value(values, 'employmentStatus');
+            const fullName = value(values, 'fullName').trim();
+            const [firstName = '', ...lastNameParts] = fullName.split(/\s+/);
             await repositories.employees.update(projectId, id, {
               ...common,
-              fullName: value(values, 'fullName'),
+              firstName,
+              lastName: lastNameParts.join(' '),
+              fullName,
               email: value(values, 'email'),
               phone: value(values, 'phone'),
               employeeCode: value(values, 'employeeCode'),

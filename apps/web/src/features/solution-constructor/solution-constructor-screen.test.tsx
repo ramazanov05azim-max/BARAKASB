@@ -49,8 +49,13 @@ function service(): SolutionConstructorService {
     load: vi.fn(async () => initialState),
     generate: vi.fn(async () => initialState),
     createEmployee: vi.fn(async () => initialState),
+    updateEmployee: vi.fn(async () => initialState),
+    setEmployeeActive: vi.fn(async () => initialState),
+    deleteEmployee: vi.fn(async () => initialState),
+    resetEmployeePassword: vi.fn(async () => initialState),
     assignEmployee: vi.fn(async () => initialState),
     issueAccessCode: vi.fn(async () => initialState),
+    rotateAccessCode: vi.fn(async () => initialState),
   };
 }
 
@@ -76,6 +81,40 @@ describe('SolutionConstructorScreen', () => {
         'coffee-1',
         ['bar'],
         expect.objectContaining({ bar: 'Бар', kitchen: 'Кухня' }),
+      ),
+    );
+  });
+
+  it('sends owner-created employee details and password through the service boundary', async () => {
+    const user = userEvent.setup();
+    const constructorService = service();
+    render(
+      <I18nProvider>
+        <SolutionConstructorScreen projectId="coffee-1" service={constructorService} />
+      </I18nProvider>,
+    );
+
+    await screen.findByRole('heading', { name: '3. Сотрудники' });
+    await user.type(screen.getByLabelText('Имя'), 'Иван');
+    await user.type(screen.getByLabelText('Фамилия'), 'Петров');
+    await user.type(screen.getByLabelText('Должность'), 'Бариста');
+    await user.type(screen.getByLabelText('Телефон'), '+7 999 123-45-67');
+    await user.type(screen.getByLabelText('Примечание'), 'Утренняя смена');
+    await user.type(screen.getByLabelText('Пароль'), 'Coffee2026');
+    await user.click(screen.getByRole('button', { name: 'Добавить сотрудника' }));
+
+    await waitFor(() =>
+      expect(constructorService.createEmployee).toHaveBeenCalledWith(
+        'coffee-1',
+        {
+          firstName: 'Иван',
+          lastName: 'Петров',
+          position: 'Бариста',
+          phone: '+7 999 123-45-67',
+          notes: 'Утренняя смена',
+          password: 'Coffee2026',
+        },
+        expect.objectContaining({ bar: 'Бар', manager: 'Руководитель' }),
       ),
     );
   });

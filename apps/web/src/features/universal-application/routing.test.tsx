@@ -8,6 +8,7 @@ import OperationalWorkspacePage from '@/app/app/runtime/[projectId]/workspaces/[
 import { I18nProvider } from '@/i18n/i18n-provider';
 import { UniversalBootstrapRoute } from './presentation/bootstrap-route';
 import { universalApplicationRoutes, universalApplicationRouteValues } from './routes';
+import type { OperationalWorkspaceSessionStore } from './application/workspace-access';
 
 const { redirectSpy, replaceSpy } = vi.hoisted(() => ({
   redirectSpy: vi.fn(),
@@ -49,6 +50,44 @@ describe('Universal Application routing', () => {
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(replaceSpy).toHaveBeenCalledWith(universalApplicationRoutes.connect),
+    );
+  });
+
+  it('returns a previously connected device directly to its workspace', async () => {
+    const workspaceSession: OperationalWorkspaceSessionStore = {
+      authorize: vi.fn(),
+      readConnected: vi.fn(() => ({
+        workspace: {
+          accessCode: '123456789012',
+          projectId: 'coffee-1',
+          solutionId: 'coffee',
+          solutionInstallationId: 'installation-1',
+          businessEnvironmentId: 'environment-1',
+          environmentDisplayName: 'Север',
+          workspaceId: 'workspace-bar',
+          workspaceType: 'bar',
+          workspaceName: 'Бар',
+          assignedEmployees: [],
+          createdAt: '2026-08-04T10:00:00.000Z',
+        },
+        currentEmployeeId: null,
+      })),
+      read: vi.fn(() => null),
+      authenticateEmployee: vi.fn(() => null),
+      logoutEmployee: vi.fn(() => null),
+      clear: vi.fn(),
+    };
+
+    render(
+      <I18nProvider>
+        <UniversalBootstrapRoute workspaceSession={workspaceSession} />
+      </I18nProvider>,
+    );
+
+    await waitFor(() =>
+      expect(replaceSpy).toHaveBeenCalledWith(
+        '/app/runtime/coffee-1/workspaces/workspace-bar',
+      ),
     );
   });
 

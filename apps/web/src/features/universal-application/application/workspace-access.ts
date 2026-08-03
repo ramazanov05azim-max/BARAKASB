@@ -30,6 +30,7 @@ export interface OperationalWorkspaceAccessIssuer {
   sync(
     input: OperationalWorkspaceAccessInput,
   ): Promise<ResolvedOperationalWorkspace | null>;
+  rotate(input: OperationalWorkspaceAccessInput): Promise<ResolvedOperationalWorkspace>;
   removeUnavailable(
     projectId: string,
     workspaceIds: ReadonlySet<string>,
@@ -44,11 +45,25 @@ export interface OperationalWorkspaceSession {
 
 export interface OperationalWorkspaceSessionStore {
   authorize(workspace: ResolvedOperationalWorkspace): void;
+  readConnected(): OperationalWorkspaceSession | null;
   read(projectId: string, workspaceId: string): OperationalWorkspaceSession | null;
-  selectEmployee(
+  authenticateEmployee(
     projectId: string,
     workspaceId: string,
-    employeeId: string | null,
+    employeeId: string,
+  ): OperationalWorkspaceSession | null;
+  logoutEmployee(
+    projectId: string,
+    workspaceId: string,
   ): OperationalWorkspaceSession | null;
   clear(): void;
+}
+
+export interface OperationalEmployeeAuthenticator {
+  verify(input: {
+    readonly projectId: string;
+    readonly workspaceId: string;
+    readonly employeeId: string;
+    readonly password: string;
+  }): Promise<boolean>;
 }

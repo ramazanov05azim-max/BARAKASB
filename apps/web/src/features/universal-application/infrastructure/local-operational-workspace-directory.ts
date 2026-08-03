@@ -91,13 +91,15 @@ function workspaceKey(
 function generateCode(
   input: OperationalWorkspaceAccessInput,
   entries: ReadonlyArray<ResolvedOperationalWorkspace>,
+  rotationSeed = '',
 ): string {
   const occupied = new Set(entries.map((entry) => entry.accessCode));
-  const seed = [
+  const baseSeed = [
     input.solutionInstallationId,
     input.businessEnvironmentId,
     input.workspaceId,
   ].join('|');
+  const seed = rotationSeed ? `${baseSeed}|${rotationSeed}` : baseSeed;
   for (let attempt = 0; attempt < Number.MAX_SAFE_INTEGER; attempt += 1) {
     const candidate = hashToCode(`${seed}|${attempt}`);
     if (!occupied.has(candidate)) return candidate;
@@ -157,6 +159,32 @@ export function createLocalOperationalWorkspaceDirectory(
         writeEntries(storage, entries);
         return structuredClone(updated);
       },
+      async rotate(input) {
+        const entries = readEntries(storage);
+        const key = workspaceKey(input);
+        const index = entries.findIndex((candidate) => workspaceKey(candidate) === key);
+        const existing = entries[index];
+        if (!existing) {
+          const created: ResolvedOperationalWorkspace = {
+            ...input,
+            assignedEmployees: structuredClone(input.assignedEmployees),
+            accessCode: generateCode(input, entries),
+            createdAt: now(),
+          };
+          writeEntries(storage, [...entries, created]);
+          return structuredClone(created);
+        }
+        const rotated: ResolvedOperationalWorkspace = {
+          ...existing,
+          ...input,
+          assignedEmployees: structuredClone(input.assignedEmployees),
+          accessCode: generateCode(input, entries, `rotate:${existing.accessCode}`),
+          createdAt: now(),
+        };
+        entries[index] = rotated;
+        writeEntries(storage, entries);
+        return structuredClone(rotated);
+      },
       async removeUnavailable(projectId, workspaceIds) {
         writeEntries(
           storage,
@@ -191,6 +219,7 @@ export const localOperationalWorkspaceAccessIssuer: OperationalWorkspaceAccessIs
   issue: (input) => browserDirectory().issuer.issue(input),
   listByProject: (projectId) => browserDirectory().issuer.listByProject(projectId),
   sync: (input) => browserDirectory().issuer.sync(input),
+  rotate: (input) => browserDirectory().issuer.rotate(input),
   removeUnavailable: (projectId, workspaceIds) =>
     browserDirectory().issuer.removeUnavailable(projectId, workspaceIds),
   removeProject: (projectId) => browserDirectory().issuer.removeProject(projectId),

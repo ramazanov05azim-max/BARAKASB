@@ -50,6 +50,8 @@ export {
 } from './bar-repository-contracts';
 export type {
   CoffeeDevelopmentSeed,
+  CoffeeEmployeeCredentialRecord,
+  CoffeeEmployeePasswordCredential,
   CoffeeFloorPlan,
   CoffeeFloorPlanZone,
   CoffeeLocale,
@@ -72,6 +74,11 @@ export {
 } from './coffee-crash-test-seed';
 export { CoffeeRepositoryError } from './repository-contracts';
 export {
+  coffeeEmployeeCredentialStoragePrefix,
+  createCoffeeEmployeeCredentialRepository,
+  localCoffeeEmployeeCredentialRepository,
+} from './employee-credential-repository';
+export {
   clearLocalCoffeeDevelopmentStorage,
   localCoffeeManagerRepositories,
   localCoffeeOperationalReadRepository,
@@ -80,6 +87,7 @@ export type {
   ActivityRepository,
   BusinessProfileRepository,
   CoffeeDevelopmentSeedRepository,
+  CoffeeEmployeeCredentialRepository,
   CoffeeFloorPlanRepository,
   CoffeeManagerRepositories,
   CoffeeOperationalReadRepository,

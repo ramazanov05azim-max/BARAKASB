@@ -197,6 +197,9 @@ describe('local Coffee repository adapter', () => {
       'project-assignments',
       {
         name: 'Анна Петрова',
+        firstName: 'Анна',
+        lastName: 'Петрова',
+        position: 'Кассир',
         fullName: 'Анна Петрова',
         email: 'anna@example.test',
         phone: '+79990000000',

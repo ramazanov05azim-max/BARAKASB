@@ -23,6 +23,10 @@ import {
 } from './repository-contracts';
 import { coffeeBarOrderStoragePrefix } from './bar-local-repository';
 import { createCoffeeCrashTestSeed } from './coffee-crash-test-seed';
+import {
+  coffeeEmployeeCredentialStoragePrefix,
+  localCoffeeEmployeeCredentialRepository,
+} from './employee-credential-repository';
 
 const storagePrefix = 'barakasb.mock.coffee.project.v1';
 
@@ -467,6 +471,17 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
       ).solutionStructure;
       writeSnapshot(projectId, parsed);
     }
+    parsed.employees = parsed.employees.map((employee) => {
+      const [derivedFirstName = employee.fullName, ...lastNameParts] = employee.fullName
+        .trim()
+        .split(/\s+/u);
+      return {
+        ...employee,
+        firstName: employee.firstName ?? derivedFirstName,
+        lastName: employee.lastName ?? lastNameParts.join(' '),
+        position: employee.position ?? '',
+      };
+    });
     return parsed;
   } catch {
     throw new CoffeeRepositoryError('corrupt-data');
@@ -564,6 +579,17 @@ function collectionRepository<K extends CollectionKey>(
       writeSnapshot(projectId, snapshot);
       return structuredClone(updated);
     },
+    async remove(projectId, id) {
+      await wait(140);
+      const snapshot = readSnapshot(projectId);
+      const list = snapshot[key] as CollectionEntityMap[K][];
+      const index = list.findIndex((item) => item.id === id);
+      const current = list[index];
+      if (!current) throw new CoffeeRepositoryError('not-found');
+      list.splice(index, 1);
+      appendActivity(snapshot, 'activity.deleted', current.name);
+      writeSnapshot(projectId, snapshot);
+    },
   };
 }
 
@@ -627,6 +653,7 @@ export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
         window.localStorage.removeItem(
           `${coffeeBarOrderStoragePrefix}.${encodeURIComponent(projectId)}`,
         );
+        await localCoffeeEmployeeCredentialRepository.removeProject(projectId);
       }
     },
   },
@@ -671,6 +698,7 @@ export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
   warehouses: collectionRepository('warehouses'),
   suppliers: collectionRepository('suppliers'),
   employees: collectionRepository('employees'),
+  employeeCredentials: localCoffeeEmployeeCredentialRepository,
   solutionConstructor: {
     async get(projectId) {
       await wait();
@@ -928,7 +956,8 @@ export function clearLocalCoffeeDevelopmentStorage(storage: Storage): number {
   const targets = keys.filter(
     (key) =>
       key.startsWith(`${storagePrefix}.`) ||
-      key.startsWith(`${coffeeBarOrderStoragePrefix}.`),
+      key.startsWith(`${coffeeBarOrderStoragePrefix}.`) ||
+      key.startsWith(`${coffeeEmployeeCredentialStoragePrefix}.`),
   );
   for (const key of targets) storage.removeItem(key);
   return targets.length;

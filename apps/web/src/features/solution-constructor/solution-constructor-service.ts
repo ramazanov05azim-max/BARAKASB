@@ -14,6 +14,7 @@ import type {
   ResolvedOperationalWorkspace,
 } from '@/features/universal-application/application/workspace-access';
 import { localOperationalWorkspaceAccessIssuer } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
+import { createPasswordCredential } from '@/features/universal-application/domain/employee-password';
 import {
   localCoffeeManagerSetupRepository,
   type CoffeeManagerSetupRecord,
@@ -23,10 +24,22 @@ import {
 export type CoffeeModuleNames = Readonly<Record<CoffeeSolutionModuleId, string>>;
 
 export interface CreateConstructorEmployeeInput {
-  readonly fullName: string;
-  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly position: string;
   readonly phone: string;
-  readonly employeeCode: string;
+  readonly notes: string;
+  readonly password: string;
+}
+
+export type UpdateConstructorEmployeeInput = Omit<
+  CreateConstructorEmployeeInput,
+  'password'
+>;
+
+export interface ResetConstructorEmployeePasswordInput {
+  readonly employeeId: string;
+  readonly password: string;
 }
 
 export interface SolutionConstructorState {
@@ -46,6 +59,28 @@ export interface SolutionConstructorService {
   createEmployee(
     projectId: string,
     input: CreateConstructorEmployeeInput,
+    names: CoffeeModuleNames,
+  ): Promise<SolutionConstructorState>;
+  updateEmployee(
+    projectId: string,
+    employeeId: string,
+    input: UpdateConstructorEmployeeInput,
+    names: CoffeeModuleNames,
+  ): Promise<SolutionConstructorState>;
+  setEmployeeActive(
+    projectId: string,
+    employeeId: string,
+    active: boolean,
+    names: CoffeeModuleNames,
+  ): Promise<SolutionConstructorState>;
+  deleteEmployee(
+    projectId: string,
+    employeeId: string,
+    names: CoffeeModuleNames,
+  ): Promise<SolutionConstructorState>;
+  resetEmployeePassword(
+    projectId: string,
+    input: ResetConstructorEmployeePasswordInput,
   ): Promise<SolutionConstructorState>;
   assignEmployee(
     projectId: string,
@@ -59,13 +94,18 @@ export interface SolutionConstructorService {
     workspaceId: string,
     names: CoffeeModuleNames,
   ): Promise<SolutionConstructorState>;
+  rotateAccessCode(
+    projectId: string,
+    workspaceId: string,
+    names: CoffeeModuleNames,
+  ): Promise<SolutionConstructorState>;
 }
 
 interface Dependencies {
   setup: Pick<CoffeeManagerSetupRepository, 'get'>;
   coffee: Pick<
     CoffeeManagerRepositories,
-    'solutionConstructor' | 'employees' | 'loadSnapshot'
+    'solutionConstructor' | 'employees' | 'employeeCredentials' | 'loadSnapshot'
   >;
   access: OperationalWorkspaceAccessIssuer;
   today?: () => string;
@@ -104,7 +144,12 @@ function toAccessInput(
     workspaceType: workspace.moduleId,
     workspaceName: names[workspace.moduleId],
     assignedEmployees: employees
-      .filter((employee) => assigned.has(employee.id))
+      .filter(
+        (employee) =>
+          assigned.has(employee.id) &&
+          employee.status === 'active' &&
+          employee.employmentStatus === 'active',
+      )
       .map((employee) => ({
         employeeId: employee.id,
         displayName: employee.fullName,
@@ -161,21 +206,117 @@ export function createSolutionConstructorService({
       await syncIssuedWorkspaces(setupRecord, structure, employees, names);
       return load(projectId);
     },
-    async createEmployee(projectId, input) {
-      requireSetup(await setup.get(projectId));
-      await coffee.employees.create(projectId, {
-        name: input.fullName,
-        fullName: input.fullName,
-        email: input.email,
+    async createEmployee(projectId, input, names) {
+      const setupRecord = requireSetup(await setup.get(projectId));
+      const credential = await createPasswordCredential(input.password);
+      const employees = await coffee.employees.list(projectId);
+      const occupiedCodes = new Set(employees.map((employee) => employee.employeeCode));
+      let sequence = employees.length + 1;
+      while (occupiedCodes.has(`EMP-${String(sequence).padStart(3, '0')}`)) {
+        sequence += 1;
+      }
+      const employee = await coffee.employees.create(projectId, {
+        name: `${input.firstName} ${input.lastName}`.trim(),
+        firstName: input.firstName,
+        lastName: input.lastName,
+        position: input.position,
+        fullName: `${input.firstName} ${input.lastName}`.trim(),
+        email: '',
         phone: input.phone,
-        employeeCode: input.employeeCode,
+        employeeCode: `EMP-${String(sequence).padStart(3, '0')}`,
         assignedLocationIds: [],
         assignedRoleId: null,
         employmentStatus: 'active',
         hireDate: today(),
-        notes: '',
+        notes: input.notes,
         status: 'active',
       });
+      try {
+        await coffee.employeeCredentials.set(projectId, employee.id, credential);
+      } catch (error) {
+        await coffee.employees.remove(projectId, employee.id);
+        throw error;
+      }
+      await syncIssuedWorkspaces(
+        setupRecord,
+        (await coffee.loadSnapshot(projectId)).solutionStructure,
+        await coffee.employees.list(projectId),
+        names,
+      );
+      return load(projectId);
+    },
+    async updateEmployee(projectId, employeeId, input, names) {
+      const setupRecord = requireSetup(await setup.get(projectId));
+      await coffee.employees.update(projectId, employeeId, {
+        name: `${input.firstName} ${input.lastName}`.trim(),
+        firstName: input.firstName,
+        lastName: input.lastName,
+        position: input.position,
+        fullName: `${input.firstName} ${input.lastName}`.trim(),
+        phone: input.phone,
+        notes: input.notes,
+      });
+      const snapshot = await coffee.loadSnapshot(projectId);
+      await syncIssuedWorkspaces(
+        setupRecord,
+        snapshot.solutionStructure,
+        snapshot.employees,
+        names,
+      );
+      return load(projectId);
+    },
+    async setEmployeeActive(projectId, employeeId, active, names) {
+      const setupRecord = requireSetup(await setup.get(projectId));
+      await coffee.employees.update(projectId, employeeId, {
+        status: active ? 'active' : 'inactive',
+        employmentStatus: active ? 'active' : 'inactive',
+      });
+      const snapshot = await coffee.loadSnapshot(projectId);
+      await syncIssuedWorkspaces(
+        setupRecord,
+        snapshot.solutionStructure,
+        snapshot.employees,
+        names,
+      );
+      return load(projectId);
+    },
+    async deleteEmployee(projectId, employeeId, names) {
+      const setupRecord = requireSetup(await setup.get(projectId));
+      const snapshot = await coffee.loadSnapshot(projectId);
+      for (const workspace of snapshot.solutionStructure.workspaces) {
+        if (workspace.assignedEmployeeIds.includes(employeeId)) {
+          await coffee.solutionConstructor.assignEmployee(
+            projectId,
+            workspace.id,
+            employeeId,
+            false,
+          );
+        }
+      }
+      await Promise.all([
+        coffee.employeeCredentials.remove(projectId, employeeId),
+        coffee.employees.remove(projectId, employeeId),
+      ]);
+      const updated = await coffee.loadSnapshot(projectId);
+      await syncIssuedWorkspaces(
+        setupRecord,
+        updated.solutionStructure,
+        updated.employees,
+        names,
+      );
+      return load(projectId);
+    },
+    async resetEmployeePassword(projectId, input) {
+      requireSetup(await setup.get(projectId));
+      const employee = (await coffee.employees.list(projectId)).find(
+        (candidate) => candidate.id === input.employeeId,
+      );
+      if (!employee) throw new Error('employee-not-found');
+      await coffee.employeeCredentials.set(
+        projectId,
+        input.employeeId,
+        await createPasswordCredential(input.password),
+      );
       return load(projectId);
     },
     async assignEmployee(projectId, workspaceId, employeeId, assigned, names) {
@@ -198,6 +339,18 @@ export function createSolutionConstructorService({
       );
       if (!workspace) throw new Error('workspace-not-found');
       await access.issue(
+        toAccessInput(setupRecord, workspace, snapshot.employees, names),
+      );
+      return load(projectId);
+    },
+    async rotateAccessCode(projectId, workspaceId, names) {
+      const setupRecord = requireSetup(await setup.get(projectId));
+      const snapshot = await coffee.loadSnapshot(projectId);
+      const workspace = snapshot.solutionStructure.workspaces.find(
+        (candidate) => candidate.id === workspaceId,
+      );
+      if (!workspace) throw new Error('workspace-not-found');
+      await access.rotate(
         toAccessInput(setupRecord, workspace, snapshot.employees, names),
       );
       return load(projectId);

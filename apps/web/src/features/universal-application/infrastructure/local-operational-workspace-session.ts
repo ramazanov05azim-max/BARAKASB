@@ -7,6 +7,8 @@ import type {
 } from '../application/workspace-access';
 
 export const operationalWorkspaceSessionStorageKey =
+  'barakasb.operational-workspace.device.v2';
+export const legacyOperationalWorkspaceSessionStorageKey =
   'barakasb.operational-workspace.session.v1';
 
 export interface SessionStoragePort {
@@ -68,7 +70,11 @@ export function createOperationalWorkspaceSessionStore(
         ? structuredClone(session)
         : null;
     },
-    selectEmployee(projectId, workspaceId, employeeId) {
+    readConnected() {
+      const session = readSession(storage);
+      return session ? structuredClone(session) : null;
+    },
+    authenticateEmployee(projectId, workspaceId, employeeId) {
       const session = readSession(storage);
       if (
         !session ||
@@ -78,7 +84,6 @@ export function createOperationalWorkspaceSessionStore(
         return null;
       }
       if (
-        employeeId !== null &&
         !session.workspace.assignedEmployees.some(
           (employee) => employee.employeeId === employeeId,
         )
@@ -92,8 +97,25 @@ export function createOperationalWorkspaceSessionStore(
       storage.setItem(operationalWorkspaceSessionStorageKey, JSON.stringify(updated));
       return structuredClone(updated);
     },
+    logoutEmployee(projectId, workspaceId) {
+      const session = readSession(storage);
+      if (
+        !session ||
+        session.workspace.projectId !== projectId ||
+        session.workspace.workspaceId !== workspaceId
+      ) {
+        return null;
+      }
+      const updated: OperationalWorkspaceSession = {
+        ...session,
+        currentEmployeeId: null,
+      };
+      storage.setItem(operationalWorkspaceSessionStorageKey, JSON.stringify(updated));
+      return structuredClone(updated);
+    },
     clear() {
       storage.removeItem(operationalWorkspaceSessionStorageKey);
+      storage.removeItem(legacyOperationalWorkspaceSessionStorageKey);
     },
   };
 }
@@ -102,13 +124,16 @@ function browserSession(): OperationalWorkspaceSessionStore {
   if (typeof window === 'undefined') {
     throw new Error('local-operational-workspace-session-browser-only');
   }
-  return createOperationalWorkspaceSessionStore(window.sessionStorage);
+  return createOperationalWorkspaceSessionStore(window.localStorage);
 }
 
 export const localOperationalWorkspaceSession: OperationalWorkspaceSessionStore = {
   authorize: (workspace) => browserSession().authorize(workspace),
+  readConnected: () => browserSession().readConnected(),
   read: (projectId, workspaceId) => browserSession().read(projectId, workspaceId),
-  selectEmployee: (projectId, workspaceId, employeeId) =>
-    browserSession().selectEmployee(projectId, workspaceId, employeeId),
+  authenticateEmployee: (projectId, workspaceId, employeeId) =>
+    browserSession().authenticateEmployee(projectId, workspaceId, employeeId),
+  logoutEmployee: (projectId, workspaceId) =>
+    browserSession().logoutEmployee(projectId, workspaceId),
   clear: () => browserSession().clear(),
 };

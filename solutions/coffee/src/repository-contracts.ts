@@ -2,6 +2,7 @@ import type {
   BusinessProfile,
   CoffeeCapability,
   CoffeeDevelopmentSeed,
+  CoffeeEmployeePasswordCredential,
   CoffeeFloorPlan,
   CoffeeOperationalSnapshot,
   CoffeeProject,
@@ -39,6 +40,21 @@ export interface CollectionRepository<T extends { id: string }> {
   list(projectId: string): Promise<T[]>;
   create(projectId: string, input: Omit<T, 'id' | 'updatedAt'>): Promise<T>;
   update(projectId: string, id: string, input: Partial<Omit<T, 'id'>>): Promise<T>;
+  remove(projectId: string, id: string): Promise<void>;
+}
+
+export interface CoffeeEmployeeCredentialRepository {
+  get(
+    projectId: string,
+    employeeId: string,
+  ): Promise<CoffeeEmployeePasswordCredential | null>;
+  set(
+    projectId: string,
+    employeeId: string,
+    credential: CoffeeEmployeePasswordCredential,
+  ): Promise<void>;
+  remove(projectId: string, employeeId: string): Promise<void>;
+  removeProject(projectId: string): Promise<void>;
 }
 
 export interface RoleRepository {
@@ -107,6 +123,7 @@ export interface CoffeeManagerRepositories {
   warehouses: CollectionRepository<CollectionEntityMap['warehouses']>;
   suppliers: CollectionRepository<CollectionEntityMap['suppliers']>;
   employees: CollectionRepository<CollectionEntityMap['employees']>;
+  employeeCredentials: CoffeeEmployeeCredentialRepository;
   solutionConstructor: CoffeeSolutionConstructorRepository;
   floorPlan: CoffeeFloorPlanRepository;
   roles: RoleRepository;

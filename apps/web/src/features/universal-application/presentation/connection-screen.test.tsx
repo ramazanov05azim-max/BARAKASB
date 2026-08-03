@@ -68,8 +68,10 @@ function createWorkspaceResolver(
 function createWorkspaceSession(): OperationalWorkspaceSessionStore {
   return {
     authorize: vi.fn(),
+    readConnected: vi.fn(() => null),
     read: vi.fn(() => null),
-    selectEmployee: vi.fn(() => null),
+    authenticateEmployee: vi.fn(() => null),
+    logoutEmployee: vi.fn(() => null),
     clear: vi.fn(),
   };
 }

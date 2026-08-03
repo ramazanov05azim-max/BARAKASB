@@ -199,6 +199,7 @@ function normalizeAudit(value: unknown): CoffeeBarAuditEntry | null {
     id: String(entry.id),
     projectId: String(entry.projectId ?? ''),
     businessEnvironmentId: String(entry.businessEnvironmentId ?? ''),
+    workspaceId: String(entry.workspaceId ?? ''),
     orderId: String(entry.orderId),
     employeeId: String(entry.employeeId ?? ''),
     operation: operation as CoffeeBarAuditEntry['operation'],

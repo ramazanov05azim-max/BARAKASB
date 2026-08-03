@@ -284,17 +284,6 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
     fields: [
       { name: 'name', labelKey: 'fields.name', type: 'text', required: true },
       {
-        name: 'purpose',
-        labelKey: 'fields.modifierPurpose',
-        type: 'select',
-        required: true,
-        defaultValue: 'configuration',
-        options: [
-          { value: 'configuration', labelKey: 'options.modifierConfiguration' },
-          { value: 'additional', labelKey: 'options.modifierAdditional' },
-        ],
-      },
-      {
         name: 'categoryId',
         labelKey: 'fields.category',
         type: 'select',
@@ -351,6 +340,17 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
     duplicate: true,
     fields: [
       { name: 'name', labelKey: 'fields.name', type: 'text', required: true },
+      {
+        name: 'purpose',
+        labelKey: 'fields.modifierPurpose',
+        type: 'select',
+        required: true,
+        defaultValue: 'configuration',
+        options: [
+          { value: 'configuration', labelKey: 'options.modifierConfiguration' },
+          { value: 'additional', labelKey: 'options.modifierAdditional' },
+        ],
+      },
       {
         name: 'selectionType',
         labelKey: 'fields.selectionType',

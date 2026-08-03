@@ -85,6 +85,7 @@ export interface CoffeeBarAuditEntry {
   readonly id: string;
   readonly projectId: string;
   readonly businessEnvironmentId: string;
+  readonly workspaceId: string;
   readonly orderId: string;
   readonly employeeId: string;
   readonly operation:

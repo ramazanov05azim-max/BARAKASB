@@ -306,6 +306,7 @@ export function createCoffeeBarService({
       id: createId(),
       projectId: context.projectId,
       businessEnvironmentId: context.businessEnvironmentId,
+      workspaceId: context.workspaceId,
       orderId,
       employeeId: context.employeeId,
       operation,

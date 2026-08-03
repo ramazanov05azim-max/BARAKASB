@@ -308,6 +308,7 @@ describe('Coffee Bar application service', () => {
     });
     expect(updated.guestCount).toBe(1);
     expect(repository.value.audit[0]?.operation).toBe('GUEST_COUNT_CHANGED');
+    expect(repository.value.audit[0]?.workspaceId).toBe('workspace-bar');
   });
 
   it('releases only an empty unsent table order', async () => {

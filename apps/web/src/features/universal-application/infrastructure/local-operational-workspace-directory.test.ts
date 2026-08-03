@@ -69,4 +69,17 @@ describe('local Operational Workspace directory', () => {
       second,
     );
   });
+
+  it('rotates a code explicitly and invalidates the previous code', async () => {
+    const directory = createLocalOperationalWorkspaceDirectory(window.localStorage);
+    const first = await directory.issuer.issue(bar);
+    const rotated = await directory.issuer.rotate(bar);
+
+    expect(rotated.accessCode).not.toBe(first.accessCode);
+    expect(rotated.accessCode).toMatch(/^\d{12}$/u);
+    await expect(directory.resolver.resolve(first.accessCode)).resolves.toBeNull();
+    await expect(directory.resolver.resolve(rotated.accessCode)).resolves.toEqual(
+      rotated,
+    );
+  });
 });

@@ -297,6 +297,9 @@ export interface Supplier extends BaseEntity {
 }
 
 export interface Employee extends BaseEntity {
+  firstName: string;
+  lastName: string;
+  position: string;
   fullName: string;
   email: string;
   phone: string;
@@ -306,6 +309,19 @@ export interface Employee extends BaseEntity {
   employmentStatus: 'invited' | 'active' | 'inactive';
   hireDate: string;
   notes: string;
+}
+
+export interface CoffeeEmployeePasswordCredential {
+  algorithm: 'PBKDF2-SHA256';
+  salt: string;
+  iterations: number;
+  digest: string;
+  updatedAt: string;
+}
+
+export interface CoffeeEmployeeCredentialRecord {
+  employeeId: string;
+  credential: CoffeeEmployeePasswordCredential;
 }
 
 export interface CoffeeOperationalWorkspace {

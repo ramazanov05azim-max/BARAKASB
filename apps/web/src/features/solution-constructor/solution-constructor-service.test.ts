@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { localCoffeeManagerRepositories } from '@barakasb/solution-coffee';
 import type { CoffeeManagerSetupRecord } from '@/features/manager-coffee-setup/coffee-manager-setup-repository';
 import { createLocalOperationalWorkspaceDirectory } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
+import { verifyPasswordCredential } from '@/features/universal-application/domain/employee-password';
+import { localCoffeeEmployeeAuthenticator } from '@/features/universal-application/infrastructure/local-coffee-employee-authenticator';
 import {
   createSolutionConstructorService,
   type CoffeeModuleNames,
@@ -109,12 +111,18 @@ describe('Solution Constructor service', () => {
       names,
     );
     const code = issued.accessCodes[0]?.accessCode;
-    const withEmployee = await service.createEmployee(setup.project.id, {
-      fullName: 'Анна Петрова',
-      email: 'anna@example.test',
-      phone: '+79990000000',
-      employeeCode: 'EMP-001',
-    });
+    const withEmployee = await service.createEmployee(
+      setup.project.id,
+      {
+        firstName: 'Анна',
+        lastName: 'Петрова',
+        position: 'Кассир',
+        phone: '+79990000000',
+        notes: '',
+        password: 'Coffee2026',
+      },
+      names,
+    );
     const employee = withEmployee.employees[0];
     expect(employee).toBeDefined();
     const assigned = await service.assignEmployee(
@@ -129,5 +137,147 @@ describe('Solution Constructor service', () => {
     expect(assigned.accessCodes[0]?.assignedEmployees).toEqual([
       { employeeId: employee?.id, displayName: 'Анна Петрова' },
     ]);
+    const credential = await localCoffeeManagerRepositories.employeeCredentials.get(
+      setup.project.id,
+      employee?.id ?? '',
+    );
+    expect(credential).not.toBeNull();
+    expect(credential).not.toHaveProperty('password');
+    await expect(verifyPasswordCredential('Coffee2026', credential!)).resolves.toBe(
+      true,
+    );
+    await expect(
+      localCoffeeEmployeeAuthenticator.verify({
+        projectId: setup.project.id,
+        workspaceId: workspace?.id ?? '',
+        employeeId: employee?.id ?? '',
+        password: 'Coffee2026',
+      }),
+    ).resolves.toBe(true);
+  });
+
+  it('updates, deactivates, resets and deletes an employee across assigned workspaces', async () => {
+    const access = createLocalOperationalWorkspaceDirectory(window.localStorage);
+    const service = createSolutionConstructorService({
+      setup: { get: async () => setup },
+      coffee: localCoffeeManagerRepositories,
+      access: access.issuer,
+      today: () => '2026-08-04',
+    });
+    const generated = await service.generate(setup.project.id, ['bar'], names);
+    const workspace = generated.structure.workspaces[0]!;
+    await service.issueAccessCode(setup.project.id, workspace.id, names);
+    const created = await service.createEmployee(
+      setup.project.id,
+      {
+        firstName: 'Иван',
+        lastName: 'Беляев',
+        position: 'Бариста',
+        phone: '',
+        notes: 'Утро',
+        password: 'Coffee2026',
+      },
+      names,
+    );
+    const employee = created.employees[0]!;
+    await service.assignEmployee(
+      setup.project.id,
+      workspace.id,
+      employee.id,
+      true,
+      names,
+    );
+
+    const updated = await service.updateEmployee(
+      setup.project.id,
+      employee.id,
+      {
+        firstName: 'Иван',
+        lastName: 'Беляев',
+        position: 'Старший бариста',
+        phone: '+79990000000',
+        notes: 'Утро',
+      },
+      names,
+    );
+    expect(updated.employees[0]).toMatchObject({
+      fullName: 'Иван Беляев',
+      position: 'Старший бариста',
+    });
+
+    const inactive = await service.setEmployeeActive(
+      setup.project.id,
+      employee.id,
+      false,
+      names,
+    );
+    expect(inactive.employees[0]?.employmentStatus).toBe('inactive');
+    expect(inactive.accessCodes[0]?.assignedEmployees).toEqual([]);
+    await expect(
+      localCoffeeEmployeeAuthenticator.verify({
+        projectId: setup.project.id,
+        workspaceId: workspace.id,
+        employeeId: employee.id,
+        password: 'Coffee2026',
+      }),
+    ).resolves.toBe(false);
+
+    await service.setEmployeeActive(setup.project.id, employee.id, true, names);
+    await service.resetEmployeePassword(setup.project.id, {
+      employeeId: employee.id,
+      password: 'NewCoffee2026',
+    });
+    await expect(
+      localCoffeeEmployeeAuthenticator.verify({
+        projectId: setup.project.id,
+        workspaceId: workspace.id,
+        employeeId: employee.id,
+        password: 'Coffee2026',
+      }),
+    ).resolves.toBe(false);
+    await expect(
+      localCoffeeEmployeeAuthenticator.verify({
+        projectId: setup.project.id,
+        workspaceId: workspace.id,
+        employeeId: employee.id,
+        password: 'NewCoffee2026',
+      }),
+    ).resolves.toBe(true);
+
+    const deleted = await service.deleteEmployee(setup.project.id, employee.id, names);
+    expect(deleted.employees).toEqual([]);
+    expect(deleted.structure.workspaces[0]?.assignedEmployeeIds).toEqual([]);
+    await expect(
+      localCoffeeManagerRepositories.employeeCredentials.get(
+        setup.project.id,
+        employee.id,
+      ),
+    ).resolves.toBeNull();
+  }, 15_000);
+
+  it('rotates a workspace code only after an explicit owner action', async () => {
+    const access = createLocalOperationalWorkspaceDirectory(window.localStorage);
+    const service = createSolutionConstructorService({
+      setup: { get: async () => setup },
+      coffee: localCoffeeManagerRepositories,
+      access: access.issuer,
+    });
+    const generated = await service.generate(setup.project.id, ['bar'], names);
+    const workspace = generated.structure.workspaces[0]!;
+    const issued = await service.issueAccessCode(setup.project.id, workspace.id, names);
+    const originalCode = issued.accessCodes[0]!.accessCode;
+
+    const rotated = await service.rotateAccessCode(
+      setup.project.id,
+      workspace.id,
+      names,
+    );
+    const nextCode = rotated.accessCodes[0]!.accessCode;
+
+    expect(nextCode).not.toBe(originalCode);
+    await expect(access.resolver.resolve(originalCode)).resolves.toBeNull();
+    await expect(access.resolver.resolve(nextCode)).resolves.toMatchObject({
+      workspaceId: workspace.id,
+    });
   });
 });
