@@ -24,7 +24,9 @@ export interface FieldDefinition {
     | 'select'
     | 'date'
     | 'image'
-    | 'multi-select';
+    | 'multi-select'
+    | 'recipe-target'
+    | 'recipe-components';
   required?: boolean;
   min?: number;
   options?: FieldOption[];
@@ -71,24 +73,22 @@ const categoryOptions = (snapshot: CoffeeSnapshot): FieldOption[] =>
     label: category.name,
   }));
 
-const menuItemOptions = (snapshot: CoffeeSnapshot): FieldOption[] =>
-  snapshot.menuItems.map((item) => ({ value: item.id, label: item.name }));
-
 const recipeOptions = (snapshot: CoffeeSnapshot): FieldOption[] => [
   { value: '', labelKey: 'common.none' },
-  ...snapshot.recipes.map((recipe) => ({ value: recipe.id, label: recipe.name })),
+  ...snapshot.recipes
+    .filter((recipe) => {
+      const legacy = recipe as unknown as { menuItemId?: unknown };
+      return (
+        recipe.target?.type === 'menu-item' || typeof legacy.menuItemId === 'string'
+      );
+    })
+    .map((recipe) => ({ value: recipe.id, label: recipe.name })),
 ];
 
 const modifierGroupOptions = (snapshot: CoffeeSnapshot): FieldOption[] =>
   snapshot.modifiers.map((group) => ({
     value: group.id,
     label: group.name,
-  }));
-
-const ingredientOptions = (snapshot: CoffeeSnapshot): FieldOption[] =>
-  snapshot.ingredients.map((ingredient) => ({
-    value: ingredient.id,
-    label: ingredient.name,
   }));
 
 const unitOptions = (snapshot: CoffeeSnapshot): FieldOption[] =>
@@ -427,16 +427,14 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
     addKey: 'recipes.add',
     readCapability: 'recipes.read',
     manageCapability: 'recipes.manage',
-    summaryFields: ['menuItemId', 'outputQuantity', 'wastePercentage'],
-    duplicate: true,
+    summaryFields: ['outputQuantity', 'outputUnitId'],
     fields: [
-      { name: 'name', labelKey: 'fields.name', type: 'text', required: true },
       {
-        name: 'menuItemId',
-        labelKey: 'fields.menuItem',
-        type: 'select',
+        name: 'target',
+        labelKey: 'fields.recipeTarget',
+        type: 'recipe-target',
         required: true,
-        optionsFrom: menuItemOptions,
+        defaultValue: '{"type":"menu-item","id":"","name":""}',
       },
       {
         name: 'outputQuantity',
@@ -457,38 +455,21 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
         name: 'preparationInstructions',
         labelKey: 'fields.preparationInstructions',
         type: 'textarea',
-        required: true,
       },
       {
-        name: 'ingredientId',
-        labelKey: 'fields.ingredient',
-        type: 'select',
+        name: 'components',
+        labelKey: 'fields.recipeComponents',
+        type: 'recipe-components',
         required: true,
-        optionsFrom: ingredientOptions,
+        defaultValue: '[]',
       },
       {
-        name: 'ingredientQuantity',
-        labelKey: 'fields.ingredientQuantity',
-        type: 'number',
-        required: true,
-        min: 0.0001,
+        ...statusField,
+        options: [
+          { value: 'active', labelKey: 'options.recipeActive' },
+          { value: 'inactive', labelKey: 'options.recipeInactive' },
+        ],
       },
-      {
-        name: 'ingredientUnitId',
-        labelKey: 'fields.ingredientUnit',
-        type: 'select',
-        required: true,
-        optionsFrom: unitOptions,
-      },
-      {
-        name: 'wastePercentage',
-        labelKey: 'fields.wastePercentage',
-        type: 'number',
-        required: true,
-        min: 0,
-        defaultValue: '0',
-      },
-      statusField,
     ],
   },
   ingredients: {

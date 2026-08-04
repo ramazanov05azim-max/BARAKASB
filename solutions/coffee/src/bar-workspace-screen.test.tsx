@@ -139,6 +139,48 @@ const state: CoffeeBarState = {
   orders: [],
 };
 
+function preparedOrder(itemStatus: 'NEW' | 'PREPARING' | 'READY'): CoffeeOrder {
+  return {
+    ...order,
+    status:
+      itemStatus === 'NEW'
+        ? 'SENT'
+        : itemStatus === 'PREPARING'
+          ? 'IN_PREPARATION'
+          : 'READY',
+    total: 190,
+    items: [
+      {
+        id: 'sent-item',
+        productId: 'espresso',
+        productName: 'Эспрессо',
+        variantName: null,
+        quantity: 1,
+        unitPrice: 190,
+        finalUnitPrice: 190,
+        modifiers: [],
+        comment: '',
+        preparationWorkspace: 'BAR',
+        status: itemStatus,
+        submittedBatchId: 'batch-1',
+        issuedAt: null,
+        issuedByEmployeeId: null,
+      },
+    ],
+    batches: [
+      {
+        batchId: 'batch-1',
+        orderId: order.orderId,
+        createdAt: timestamp,
+        createdByEmployeeId: context.employeeId,
+        itemIds: ['sent-item'],
+        sentAt: timestamp,
+        status: 'SENT',
+      },
+    ],
+  };
+}
+
 function serviceFixture(initialState: CoffeeBarState = state): CoffeeBarService {
   let currentState = structuredClone(initialState);
   const storeOrder = (nextOrder: CoffeeOrder): CoffeeOrder => {
@@ -198,6 +240,8 @@ function serviceFixture(initialState: CoffeeBarState = state): CoffeeBarService 
             preparationWorkspace: 'BAR',
             status: 'DRAFT',
             submittedBatchId: null,
+            issuedAt: null,
+            issuedByEmployeeId: null,
           },
         ],
       });
@@ -206,7 +250,30 @@ function serviceFixture(initialState: CoffeeBarState = state): CoffeeBarService 
     updateItemDetails: vi.fn(async () => storeOrder(order)),
     removeItem: vi.fn(async () => storeOrder(order)),
     sendOrder: vi.fn(async () => storeOrder(order)),
-    updateBarItemStatus: vi.fn(async () => storeOrder(order)),
+    updateBarItemStatus: vi.fn(async (_context, orderId, itemId, status) => {
+      const existing =
+        currentState.orders.find((candidate) => candidate.orderId === orderId) ?? order;
+      return storeOrder({
+        ...existing,
+        status: status === 'READY' ? 'READY' : 'IN_PREPARATION',
+        items: existing.items.map((item) =>
+          item.id === itemId ? { ...item, status } : item,
+        ),
+      });
+    }),
+    issueReadyOrder: vi.fn(async (_context, orderId) => {
+      const existing =
+        currentState.orders.find((candidate) => candidate.orderId === orderId) ?? order;
+      return storeOrder({
+        ...existing,
+        issuedAt: timestamp,
+        items: existing.items.map((item) => ({
+          ...item,
+          issuedAt: timestamp,
+          issuedByEmployeeId: context.employeeId,
+        })),
+      });
+    }),
     recordPayment: vi.fn(async () => storeOrder(order)),
     completeOrder: vi.fn(async () => storeOrder(order)),
     cancelOrder: vi.fn(async () => storeOrder(order)),
@@ -241,6 +308,78 @@ describe('Coffee Bar operator navigation', () => {
       expect(service.createUnassignedOrder).toHaveBeenCalledWith(context),
     );
     expect(await screen.findByRole('heading', { name: 'Меню' })).toBeTruthy();
+  });
+
+  it('uses the exact sent-position flow and reveals the atomic issue action only when ready', async () => {
+    const sentOrder = preparedOrder('NEW');
+    const preparedState: CoffeeBarState = {
+      ...structuredClone(state),
+      tables: [
+        {
+          ...state.tables[0]!,
+          status: 'SENT',
+          activeOrderId: sentOrder.orderId,
+        },
+      ],
+      orders: [sentOrder],
+    };
+    const service = serviceFixture(preparedState);
+    const user = userEvent.setup();
+    render(<CoffeeBarWorkspaceScreen context={context} service={service} />);
+
+    await user.click(await screen.findByRole('button', { name: /Стол 1:/ }));
+    expect(await screen.findByText('Готовит бар · Новый')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Принять' })).toBeTruthy();
+    expect(screen.queryByText(/Следующий статус/u)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Всё готово' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Принять' }));
+    expect(await screen.findByText('Готовит бар · Готовится')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Готов' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Всё готово' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Готов' }));
+    expect(await screen.findByText('Готовит бар · Готов')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Готов' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Всё готово' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Всё готово' }));
+    await waitFor(() => expect(service.issueReadyOrder).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('button', { name: 'Всё готово' })).toBeNull();
+  });
+
+  it('uses pastel red only for occupied tables and keeps free tables neutral', async () => {
+    const occupiedOrder = preparedOrder('NEW');
+    const floorState: CoffeeBarState = {
+      ...structuredClone(state),
+      tables: [
+        {
+          ...state.tables[0]!,
+          status: 'SENT',
+          activeOrderId: occupiedOrder.orderId,
+        },
+        {
+          ...state.tables[0]!,
+          id: 'table-2',
+          name: 'Стол 2',
+          code: 'T-02',
+          positionX: 250,
+        },
+      ],
+      orders: [occupiedOrder],
+    };
+    render(
+      <CoffeeBarWorkspaceScreen
+        context={context}
+        service={serviceFixture(floorState)}
+      />,
+    );
+
+    const occupied = await screen.findByRole('button', { name: /Стол 1:/ });
+    const free = screen.getByRole('button', { name: /Стол 2: Свободен/ });
+    expect(occupied.className).toContain('bg-rose-50');
+    expect(free.className).toContain('bg-white');
+    expect(free.className).not.toContain('bg-rose');
   });
 
   it('exposes the separate operational journal and its required filters', async () => {
@@ -344,6 +483,8 @@ describe('Coffee Bar operator navigation', () => {
         preparationWorkspace: 'BAR' as const,
         status: 'DRAFT' as const,
         submittedBatchId: null,
+        issuedAt: null,
+        issuedByEmployeeId: null,
       }),
     );
     const previewOrder: CoffeeOrder = {

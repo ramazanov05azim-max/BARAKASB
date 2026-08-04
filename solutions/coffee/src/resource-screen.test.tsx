@@ -363,6 +363,144 @@ describe('Coffee menu item owner form', () => {
   });
 });
 
+describe('Coffee recipe owner form', () => {
+  it('creates an automatically named menu-item recipe with ordered typed components', async () => {
+    await testRepositories.coffeeProject.initialize(projectId, 'Тестовая кофейня');
+    await testRepositories.developmentSeed.apply(
+      projectId,
+      createCoffeeCrashTestSeed(timestamp),
+    );
+    await testRepositories.recipes.create(projectId, {
+      name: 'Техкарта · Концентрат лимонада',
+      target: {
+        type: 'preparation',
+        id: 'preparation-lemonade-concentrate',
+        name: 'Концентрат лимонада',
+      },
+      outputQuantity: 1,
+      outputUnitId: 'unit-l',
+      preparationInstructions: '',
+      components: [
+        {
+          id: 'preparation-component-water',
+          type: 'ingredient',
+          referenceId: 'crash-ingredient-still-water',
+          grossQuantity: 1,
+          unitId: 'unit-l',
+          lossPercentage: 0,
+          netQuantity: 1,
+        },
+      ],
+      status: 'active',
+    });
+    renderResource('recipes', projectId, 'Тестовая кофейня');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'Рецептуры' });
+    await user.click(screen.getByRole('button', { name: 'Создать рецептуру' }));
+
+    expect(screen.queryByRole('textbox', { name: /^Название$/u })).toBeNull();
+    expect(
+      within(screen.getByRole('combobox', { name: 'Тип объекта' })).getByRole(
+        'option',
+        { name: 'Заготовка' },
+      ),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByRole('combobox', { name: 'Тип объекта' })).getByRole(
+        'option',
+        { name: 'Полуфабрикат' },
+      ),
+    ).toBeTruthy();
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Позиция меню' }),
+      'crash-item-bottled-water',
+    );
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Единица выхода' }),
+      'unit-ml',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Добавить компонент' }));
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Компонент 1' }),
+      'crash-ingredient-espresso-beans',
+    );
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Единица 1' }),
+      'unit-g',
+    );
+    const firstQuantity = screen.getByRole('spinbutton', { name: 'Количество 1' });
+    await user.clear(firstQuantity);
+    await user.type(firstQuantity, '18');
+    const firstLoss = screen.getByRole('spinbutton', { name: 'Потери, % 1' });
+    await user.clear(firstLoss);
+    await user.type(firstLoss, '3');
+
+    await user.click(screen.getByRole('button', { name: 'Добавить компонент' }));
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Тип компонента 2' }),
+      'preparation',
+    );
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Компонент 2' }),
+      'preparation-lemonade-concentrate',
+    );
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Единица 2' }),
+      'unit-ml',
+    );
+    const secondQuantity = screen.getByRole('spinbutton', {
+      name: 'Количество 2',
+    });
+    await user.clear(secondQuantity);
+    await user.type(secondQuantity, '20');
+    expect(screen.getByText('После потерь: 17.46')).toBeTruthy();
+
+    const status = screen.getByRole('combobox', { name: 'Статус' });
+    expect(within(status).getByRole('option', { name: 'Активна' })).toBeTruthy();
+    expect(within(status).getByRole('option', { name: 'Неактивна' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(async () => {
+      const snapshot = await testRepositories.loadSnapshot(projectId);
+      const recipe = snapshot.recipes.find(
+        (candidate) => candidate.target.id === 'crash-item-bottled-water',
+      );
+      expect(recipe).toMatchObject({
+        name: 'Техкарта · Вода без газа',
+        target: {
+          type: 'menu-item',
+          id: 'crash-item-bottled-water',
+          name: 'Вода без газа',
+        },
+        outputQuantity: 1,
+        outputUnitId: 'unit-ml',
+        preparationInstructions: '',
+        components: [
+          {
+            type: 'ingredient',
+            referenceId: 'crash-ingredient-espresso-beans',
+            grossQuantity: 18,
+            unitId: 'unit-g',
+            lossPercentage: 3,
+            netQuantity: 17.46,
+          },
+          {
+            type: 'preparation',
+            referenceId: 'preparation-lemonade-concentrate',
+            grossQuantity: 20,
+            unitId: 'unit-ml',
+            lossPercentage: 0,
+            netQuantity: 20,
+          },
+        ],
+        status: 'active',
+      });
+    });
+  });
+});
+
 describe('automatic menu item SKU', () => {
   it('generates the first free deterministic internal SKU', () => {
     expect(generateMenuItemSku(['SALE-CAPPUCCINO', 'MENU-0001', 'menu-0002'])).toBe(

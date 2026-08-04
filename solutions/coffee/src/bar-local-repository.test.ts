@@ -2,7 +2,10 @@
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CoffeeBarStore, CoffeeOrder } from './bar-domain';
-import { createLocalCoffeeBarOrderRepository } from './bar-local-repository';
+import {
+  coffeeBarOrderStoragePrefix,
+  createLocalCoffeeBarOrderRepository,
+} from './bar-local-repository';
 
 function order(projectId: string, orderId: string): CoffeeOrder {
   return {
@@ -107,6 +110,26 @@ describe('local Coffee Bar repository adapter', () => {
     const unsubscribe = repository.subscribe('project-a', listener);
 
     await repository.save('project-a', store('project-a', 'order-a'));
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('notifies the floor-plan subscriber when another browser tab changes the project', () => {
+    const repository = createLocalCoffeeBarOrderRepository(window.localStorage, window);
+    const listener = vi.fn();
+    const unsubscribe = repository.subscribe('project-a', listener);
+
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: `${coffeeBarOrderStoragePrefix}.project-a`,
+      }),
+    );
+    expect(listener).toHaveBeenCalledTimes(1);
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: `${coffeeBarOrderStoragePrefix}.project-b`,
+      }),
+    );
     expect(listener).toHaveBeenCalledTimes(1);
     unsubscribe();
   });

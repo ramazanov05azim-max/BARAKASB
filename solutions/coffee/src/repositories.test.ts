@@ -3,6 +3,7 @@
 import type { MediaAssetId } from '@barakasb/contracts-platform';
 import type { MediaAssetService } from '@barakasb/frontend-media';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createCoffeeCrashTestSeed } from './coffee-crash-test-seed';
 import {
   createLocalCoffeeManagerRepositories,
   localCoffeeManagerRepositories,
@@ -84,6 +85,69 @@ describe('local Coffee repository adapter', () => {
     const second = await localCoffeeManagerRepositories.loadSnapshot('project-copy');
     expect(second.project.name).toBe('Coffee Copy');
     expect(second.roles.length).toBeGreaterThan(0);
+  });
+
+  it('migrates legacy recipes in place without resetting Coffee or creating warehouse movements', async () => {
+    const projectId = 'project-recipe-migration';
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
+      projectId,
+      'Coffee сохранённый',
+    );
+    await localCoffeeManagerRepositories.developmentSeed.apply(
+      projectId,
+      createCoffeeCrashTestSeed('2026-07-31T12:00:00.000Z'),
+    );
+    const storageKey = `barakasb.mock.coffee.project.v1.${encodeURIComponent(
+      projectId,
+    )}`;
+    const raw = JSON.parse(window.localStorage.getItem(storageKey) ?? '{}') as {
+      project: { name: string };
+      recipes: Array<Record<string, unknown>>;
+      warehouses: unknown[];
+      openingStockBalances: unknown[];
+    };
+    const originalWarehouseState = structuredClone(raw.warehouses);
+    const originalBalances = structuredClone(raw.openingStockBalances);
+    raw.project.name = 'Coffee сохранённый';
+    raw.recipes[0] = {
+      id: 'legacy-recipe',
+      name: 'Старое имя',
+      status: 'active',
+      updatedAt: '2026-07-31T12:00:00.000Z',
+      menuItemId: 'crash-item-espresso',
+      outputQuantity: 1,
+      outputUnitId: 'unit-portion',
+      preparationInstructions: '',
+      ingredientId: 'crash-ingredient-espresso-beans',
+      ingredientQuantity: 18,
+      ingredientUnitId: 'unit-g',
+      wastePercentage: 3,
+    };
+    window.localStorage.setItem(storageKey, JSON.stringify(raw));
+
+    const migrated = await localCoffeeManagerRepositories.loadSnapshot(projectId);
+    expect(migrated.project.name).toBe('Coffee сохранённый');
+    expect(migrated.recipes[0]).toMatchObject({
+      id: 'legacy-recipe',
+      name: 'Техкарта · Эспрессо',
+      target: {
+        type: 'menu-item',
+        id: 'crash-item-espresso',
+      },
+      components: [
+        {
+          referenceId: 'crash-ingredient-espresso-beans',
+          grossQuantity: 18,
+          lossPercentage: 3,
+          netQuantity: 17.46,
+        },
+      ],
+    });
+    expect(migrated.warehouses).toEqual(originalWarehouseState);
+    expect(migrated.openingStockBalances).toEqual(originalBalances);
+
+    const secondLoad = await localCoffeeManagerRepositories.loadSnapshot(projectId);
+    expect(secondLoad.recipes).toEqual(migrated.recipes);
   });
 
   it('creates a complete operating-hours profile for a new establishment', async () => {

@@ -7,7 +7,7 @@ export type CoffeePaymentStatus = 'UNPAID' | 'PAID';
 export type CoffeePaymentMethod = 'CASH' | 'CARD';
 export type CoffeePreparationWorkspace = 'BAR' | 'KITCHEN' | 'IMMEDIATE';
 export type CoffeeOrderItemStatus =
-  'DRAFT' | 'NEW' | 'ACCEPTED' | 'PREPARING' | 'READY' | 'CANCELLED';
+  'DRAFT' | 'NEW' | 'PREPARING' | 'READY' | 'CANCELLED';
 export type CoffeeTableOperationalStatus =
   | 'FREE'
   | 'OCCUPIED'
@@ -38,6 +38,8 @@ export interface CoffeeOrderItem {
   readonly preparationWorkspace: CoffeePreparationWorkspace;
   readonly status: CoffeeOrderItemStatus;
   readonly submittedBatchId: string | null;
+  readonly issuedAt: string | null;
+  readonly issuedByEmployeeId: string | null;
 }
 
 export interface CoffeeOrderBatch {
@@ -97,6 +99,7 @@ export interface CoffeeBarAuditEntry {
     | 'BATCH_SENT'
     | 'ITEM_STATUS_CHANGED'
     | 'PAYMENT_RECORDED'
+    | 'ORDER_ISSUED'
     | 'ORDER_COMPLETED'
     | 'ORDER_CANCELLED';
   readonly occurredAt: string;

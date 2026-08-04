@@ -63,19 +63,23 @@ function normalizeItem(value: unknown, legacyBatchId: string): CoffeeOrderItem {
         ? item.preparationWorkspace
         : 'BAR',
     status:
-      status === 'NEW' ||
-      status === 'ACCEPTED' ||
-      status === 'PREPARING' ||
-      status === 'READY' ||
-      status === 'CANCELLED'
-        ? status
-        : 'DRAFT',
+      status === 'ACCEPTED'
+        ? 'PREPARING'
+        : status === 'NEW' ||
+            status === 'PREPARING' ||
+            status === 'READY' ||
+            status === 'CANCELLED'
+          ? status
+          : 'DRAFT',
     submittedBatchId:
       typeof item.submittedBatchId === 'string'
         ? item.submittedBatchId
         : submitted
           ? legacyBatchId
           : null,
+    issuedAt: typeof item.issuedAt === 'string' ? item.issuedAt : null,
+    issuedByEmployeeId:
+      typeof item.issuedByEmployeeId === 'string' ? item.issuedByEmployeeId : null,
   };
 }
 
@@ -176,12 +180,7 @@ function normalizeOrder(value: unknown): CoffeeOrder {
 function normalizeAudit(value: unknown): CoffeeBarAuditEntry | null {
   const entry = objectValue(value);
   if (!entry.id || !entry.orderId) return null;
-  const operation =
-    entry.operation === 'ORDER_SENT'
-      ? 'BATCH_SENT'
-      : entry.operation === 'ORDER_ISSUED'
-        ? 'ORDER_COMPLETED'
-        : entry.operation;
+  const operation = entry.operation === 'ORDER_SENT' ? 'BATCH_SENT' : entry.operation;
   const supported: ReadonlyArray<CoffeeBarAuditEntry['operation']> = [
     'ORDER_CREATED',
     'ORDER_ASSIGNED',
@@ -191,6 +190,7 @@ function normalizeAudit(value: unknown): CoffeeBarAuditEntry | null {
     'BATCH_SENT',
     'ITEM_STATUS_CHANGED',
     'PAYMENT_RECORDED',
+    'ORDER_ISSUED',
     'ORDER_COMPLETED',
     'ORDER_CANCELLED',
   ];

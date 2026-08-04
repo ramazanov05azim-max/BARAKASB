@@ -151,8 +151,7 @@ describe('Coffee Manager setup repository', () => {
     ).toBe(true);
     expect(
       snapshot.recipes.every(
-        (recipe) =>
-          (recipe.ingredientRows?.length ?? 0) > 0 && (recipe.calculatedCost ?? 0) > 0,
+        (recipe) => recipe.components.length > 0 && (recipe.calculatedCost ?? 0) > 0,
       ),
     ).toBe(true);
     const ingredientIds = new Set(
@@ -163,8 +162,13 @@ describe('Coffee Manager setup repository', () => {
     expect(
       snapshot.recipes.every(
         (recipe) =>
-          menuItemIds.has(recipe.menuItemId) &&
-          recipe.ingredientRows?.every((row) => ingredientIds.has(row.ingredientId)),
+          recipe.target.type === 'menu-item' &&
+          menuItemIds.has(recipe.target.id) &&
+          recipe.components.every(
+            (component) =>
+              component.type !== 'ingredient' ||
+              ingredientIds.has(component.referenceId),
+          ),
       ),
     ).toBe(true);
     expect(

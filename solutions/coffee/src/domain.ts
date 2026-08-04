@@ -220,28 +220,37 @@ export interface ModifierGroup extends BaseEntity {
   options: string;
 }
 
+export type RecipeTargetType = 'menu-item' | 'preparation' | 'semi-finished';
+export type RecipeComponentType = 'ingredient' | 'preparation' | 'semi-finished';
+
+export interface RecipeTarget {
+  type: RecipeTargetType;
+  id: string;
+  name: string;
+}
+
+export interface RecipeComponent {
+  id: string;
+  type: RecipeComponentType;
+  referenceId: string;
+  grossQuantity: number;
+  unitId: string;
+  lossPercentage: number;
+  netQuantity: number;
+}
+
 export interface Recipe extends BaseEntity {
-  menuItemId: string;
+  target: RecipeTarget;
   outputQuantity: number;
   outputUnitId: string;
   preparationInstructions: string;
-  ingredientId: string;
-  ingredientQuantity: number;
-  ingredientUnitId: string;
-  wastePercentage: number;
+  components: RecipeComponent[];
   version?: number;
   effectiveDate?: string;
   preparationLocationId?: string;
-  ingredientRows?: RecipeIngredientRow[];
   calculatedCost?: number;
   salePrice?: number;
   grossMargin?: number;
-}
-
-export interface RecipeIngredientRow {
-  ingredientId: string;
-  quantity: number;
-  unitId: string;
 }
 
 export interface Ingredient extends BaseEntity {

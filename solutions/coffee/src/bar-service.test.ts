@@ -436,9 +436,103 @@ describe('Coffee Bar application service', () => {
         context,
         order.orderId,
         order.items[0]!.id,
-        'ACCEPTED',
+        'PREPARING',
       ),
     ).rejects.toMatchObject({ code: 'ITEM_ROUTE_MISMATCH' });
+  });
+
+  it('moves a sent Bar position directly from New to Preparing and then Ready', async () => {
+    let order = await withItem(service);
+    order = await service.sendOrder(context, order.orderId);
+    const itemId = order.items[0]!.id;
+    expect(order.items[0]?.status).toBe('NEW');
+
+    order = await service.updateBarItemStatus(
+      context,
+      order.orderId,
+      itemId,
+      'PREPARING',
+    );
+    expect(order).toMatchObject({ status: 'IN_PREPARATION' });
+    expect(order.items[0]?.status).toBe('PREPARING');
+
+    order = await service.updateBarItemStatus(context, order.orderId, itemId, 'READY');
+    expect(order).toMatchObject({ status: 'READY' });
+    expect(order.items[0]?.status).toBe('READY');
+  });
+
+  it('issues every ready position once in one repository save', async () => {
+    let order = await withItem(service);
+    order = await service.sendOrder(context, order.orderId);
+    order = await service.updateBarItemStatus(
+      context,
+      order.orderId,
+      order.items[0]!.id,
+      'PREPARING',
+    );
+    order = await service.updateBarItemStatus(
+      context,
+      order.orderId,
+      order.items[0]!.id,
+      'READY',
+    );
+
+    order = await service.issueReadyOrder(context, order.orderId);
+    expect(order.issuedAt).toBe(timestamp);
+    expect(order.items).toEqual([
+      expect.objectContaining({
+        issuedAt: timestamp,
+        issuedByEmployeeId: context.employeeId,
+      }),
+    ]);
+    expect(
+      repository.value.audit.filter((entry) => entry.operation === 'ORDER_ISSUED'),
+    ).toHaveLength(1);
+    await expect(service.issueReadyOrder(context, order.orderId)).rejects.toMatchObject(
+      { code: 'ORDER_IMMUTABLE' },
+    );
+  });
+
+  it('keeps an issued unpaid order open, then payment completes it and releases the table', async () => {
+    let order = await withItem(service, 'crash-item-bottled-water');
+    order = await service.sendOrder(context, order.orderId);
+    order = await service.issueReadyOrder(context, order.orderId);
+    expect(order).toMatchObject({ status: 'READY', paymentStatus: 'UNPAID' });
+    let state = await service.load(context);
+    expect(state.tables.find((table) => table.id === order.tableId)?.status).not.toBe(
+      'FREE',
+    );
+
+    order = await service.recordPayment(context, order.orderId, 'CARD');
+    expect(order).toMatchObject({
+      status: 'COMPLETED',
+      paymentStatus: 'PAID',
+      completedByEmployeeId: context.employeeId,
+    });
+    state = await service.load(context);
+    expect(state.tables.find((table) => table.id === order.tableId)?.status).toBe(
+      'FREE',
+    );
+    expect(repository.value.audit.slice(0, 2).map((entry) => entry.operation)).toEqual([
+      'ORDER_COMPLETED',
+      'PAYMENT_RECORDED',
+    ]);
+  });
+
+  it('completes an already paid order immediately when everything is issued', async () => {
+    let order = await withItem(service, 'crash-item-bottled-water');
+    order = await service.sendOrder(context, order.orderId);
+    order = await service.recordPayment(context, order.orderId, 'CASH');
+    order = await service.issueReadyOrder(context, order.orderId);
+    expect(order).toMatchObject({
+      status: 'COMPLETED',
+      issuedAt: timestamp,
+      completedAt: timestamp,
+    });
+    const state = await service.load(context);
+    expect(state.tables.find((table) => table.id === order.tableId)?.status).toBe(
+      'FREE',
+    );
   });
 
   it('records payment separately from preparation', async () => {
@@ -508,6 +602,29 @@ describe('Coffee Bar application service', () => {
     await expect(service.cancelOrder(context, order.orderId)).resolves.toMatchObject({
       status: 'CANCELLED',
     });
+  });
+
+  it('updates table occupancy after transfer and cancellation without reloading data manually', async () => {
+    const order = await tableOrder(service);
+    let state = await service.load(context);
+    expect(
+      state.tables.find((table) => table.id === 'crash-table-01')?.status,
+    ).not.toBe('FREE');
+
+    await service.transferOrder(context, order.orderId, 'crash-table-02');
+    state = await service.load(context);
+    expect(state.tables.find((table) => table.id === 'crash-table-01')?.status).toBe(
+      'FREE',
+    );
+    expect(
+      state.tables.find((table) => table.id === 'crash-table-02')?.status,
+    ).not.toBe('FREE');
+
+    await service.cancelOrder(context, order.orderId);
+    state = await service.load(context);
+    expect(state.tables.find((table) => table.id === 'crash-table-02')?.status).toBe(
+      'FREE',
+    );
   });
 
   it('maps a paid ready table to waiting-for-completion status', async () => {

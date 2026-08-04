@@ -21,9 +21,13 @@ import type {
   CollectionKey,
   EntityStatus,
   FormValues,
+  Recipe,
+  RecipeComponent,
+  RecipeTarget,
   SetupStep,
 } from './domain';
 import type { CoffeeTranslationKey } from './i18n';
+import { recipeNetQuantity, recipeTitle } from './recipe-migration';
 import { localCoffeeManagerRepositories } from './repositories';
 import {
   CoffeeRepositoryError,
@@ -67,6 +71,58 @@ const CoffeeWorkspaceContext = createContext<CoffeeWorkspaceContextValue | null>
 const value = (values: FormValues, key: string): string => values[key]?.trim() ?? '';
 const numeric = (values: FormValues, key: string): number =>
   Number.parseFloat(value(values, key)) || 0;
+
+function recipeTargetFrom(
+  values: FormValues,
+  snapshot: CoffeeSnapshot,
+  existing?: Recipe,
+): RecipeTarget {
+  let parsed: Partial<RecipeTarget>;
+  try {
+    parsed = JSON.parse(value(values, 'target')) as Partial<RecipeTarget>;
+  } catch {
+    throw new CoffeeRepositoryError('invalid-operation');
+  }
+  if (parsed.type === 'menu-item') {
+    const menuItem = snapshot.menuItems.find((item) => item.id === parsed.id);
+    if (!menuItem) throw new CoffeeRepositoryError('invalid-operation');
+    return { type: 'menu-item', id: menuItem.id, name: menuItem.name };
+  }
+  if (parsed.type !== 'preparation' && parsed.type !== 'semi-finished') {
+    throw new CoffeeRepositoryError('invalid-operation');
+  }
+  const name = parsed.name?.trim() ?? '';
+  if (!name) throw new CoffeeRepositoryError('invalid-operation');
+  const existingTargetId =
+    existing?.target.type === parsed.type ? existing.target.id : '';
+  return {
+    type: parsed.type,
+    id:
+      parsed.id?.trim() ||
+      existingTargetId ||
+      `recipe-target-${globalThis.crypto.randomUUID()}`,
+    name,
+  };
+}
+
+function recipeComponentsFrom(values: FormValues): RecipeComponent[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value(values, 'components'));
+  } catch {
+    throw new CoffeeRepositoryError('invalid-operation');
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new CoffeeRepositoryError('invalid-operation');
+  }
+  return (parsed as RecipeComponent[]).map((component) => ({
+    ...component,
+    netQuantity: recipeNetQuantity(
+      Number(component.grossQuantity),
+      Number(component.lossPercentage),
+    ),
+  }));
+}
 
 const mediaAssetId = (values: FormValues, key: string): MediaAssetId | null => {
   const identifier = value(values, key);
@@ -296,17 +352,19 @@ export function CoffeeWorkspaceProvider({
             });
             break;
           case 'recipes':
-            await repositories.recipes.create(projectId, {
-              ...common,
-              menuItemId: value(values, 'menuItemId'),
-              outputQuantity: numeric(values, 'outputQuantity'),
-              outputUnitId: value(values, 'outputUnitId'),
-              preparationInstructions: value(values, 'preparationInstructions'),
-              ingredientId: value(values, 'ingredientId'),
-              ingredientQuantity: numeric(values, 'ingredientQuantity'),
-              ingredientUnitId: value(values, 'ingredientUnitId'),
-              wastePercentage: numeric(values, 'wastePercentage'),
-            });
+            if (!snapshot) throw new CoffeeRepositoryError('not-found');
+            {
+              const target = recipeTargetFrom(values, snapshot);
+              await repositories.recipes.create(projectId, {
+                ...common,
+                name: recipeTitle(target),
+                target,
+                outputQuantity: numeric(values, 'outputQuantity'),
+                outputUnitId: value(values, 'outputUnitId'),
+                preparationInstructions: value(values, 'preparationInstructions'),
+                components: recipeComponentsFrom(values),
+              });
+            }
             break;
           case 'ingredients':
             await repositories.ingredients.create(projectId, {
@@ -494,17 +552,22 @@ export function CoffeeWorkspaceProvider({
             });
             break;
           case 'recipes':
-            await repositories.recipes.update(projectId, id, {
-              ...common,
-              menuItemId: value(values, 'menuItemId'),
-              outputQuantity: numeric(values, 'outputQuantity'),
-              outputUnitId: value(values, 'outputUnitId'),
-              preparationInstructions: value(values, 'preparationInstructions'),
-              ingredientId: value(values, 'ingredientId'),
-              ingredientQuantity: numeric(values, 'ingredientQuantity'),
-              ingredientUnitId: value(values, 'ingredientUnitId'),
-              wastePercentage: numeric(values, 'wastePercentage'),
-            });
+            if (!snapshot || existing.id !== id) {
+              throw new CoffeeRepositoryError('not-found');
+            }
+            {
+              const existingRecipe = existing as Recipe;
+              const target = recipeTargetFrom(values, snapshot, existingRecipe);
+              await repositories.recipes.update(projectId, id, {
+                ...common,
+                name: recipeTitle(target),
+                target,
+                outputQuantity: numeric(values, 'outputQuantity'),
+                outputUnitId: value(values, 'outputUnitId'),
+                preparationInstructions: value(values, 'preparationInstructions'),
+                components: recipeComponentsFrom(values),
+              });
+            }
             break;
           case 'ingredients':
             await repositories.ingredients.update(projectId, id, {
@@ -745,10 +808,16 @@ export function useCoffeeWorkspace(): CoffeeWorkspaceContextValue {
 export function entityToValues(entity: CollectionEntity): FormValues {
   const values: FormValues = {};
   for (const [key, current] of Object.entries(entity)) {
-    if (Array.isArray(current)) values[key] = current.join(',');
-    else if (typeof current === 'boolean') values[key] = String(current);
+    if (Array.isArray(current)) {
+      values[key] = current.some((item) => typeof item === 'object')
+        ? JSON.stringify(current)
+        : current.join(',');
+    } else if (typeof current === 'boolean') values[key] = String(current);
     else if (typeof current === 'number') values[key] = String(current);
     else if (typeof current === 'string') values[key] = current;
+    else if (current && typeof current === 'object') {
+      values[key] = JSON.stringify(current);
+    }
   }
   return values;
 }

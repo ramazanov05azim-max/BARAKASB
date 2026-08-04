@@ -79,8 +79,7 @@ const currency = (value: number): string =>
 function nextBarStatus(
   status: CoffeeOrderItemStatus,
 ): Exclude<CoffeeOrderItemStatus, 'DRAFT' | 'CANCELLED'> | null {
-  if (status === 'NEW') return 'ACCEPTED';
-  if (status === 'ACCEPTED') return 'PREPARING';
+  if (status === 'NEW') return 'PREPARING';
   if (status === 'PREPARING') return 'READY';
   return null;
 }
@@ -342,14 +341,11 @@ export function CoffeeBarWorkspaceScreen({
                         title={`${table.name} · ${coffeeTableStatusRu[table.status]}`}
                         style={style}
                         className={`absolute grid min-h-12 place-items-center border p-1 text-[10px] font-bold shadow-sm transition ${
-                          table.activeOrderId === selectedOrderId
-                            ? 'z-10 border-blue-600 bg-blue-600 text-white ring-4 ring-blue-100'
-                            : table.status === 'FREE'
-                              ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
-                              : table.status === 'READY' ||
-                                  table.status === 'AWAITING_COMPLETION'
-                                ? 'border-amber-300 bg-amber-50 text-amber-900'
-                                : 'border-blue-300 bg-blue-50 text-blue-900'
+                          table.status === 'FREE'
+                            ? 'border-slate-200 bg-white text-slate-800'
+                            : table.activeOrderId === selectedOrderId
+                              ? 'z-10 border-blue-500 bg-rose-100 text-rose-950 ring-4 ring-blue-100'
+                              : 'border-rose-200 bg-rose-50 text-rose-950'
                         }`}
                         onClick={() => {
                           if (table.activeOrderId) {
@@ -503,8 +499,8 @@ export function CoffeeBarWorkspaceScreen({
               onPayment={(method) =>
                 run(() => service.recordPayment(context, selectedOrder.orderId, method))
               }
-              onComplete={() =>
-                run(() => service.completeOrder(context, selectedOrder.orderId))
+              onIssue={() =>
+                run(() => service.issueReadyOrder(context, selectedOrder.orderId))
               }
               onCancel={(reason) =>
                 run(() => service.cancelOrder(context, selectedOrder.orderId, reason))
@@ -716,7 +712,7 @@ function Receipt({
   onSend,
   onStatus,
   onPayment,
-  onComplete,
+  onIssue,
   onCancel,
   onGuests,
   onTransfer,
@@ -736,7 +732,7 @@ function Receipt({
     status: Exclude<CoffeeOrderItemStatus, 'DRAFT' | 'CANCELLED'>,
   ) => Promise<void>;
   onPayment: (method: CoffeePaymentMethod) => Promise<void>;
-  onComplete: () => Promise<void>;
+  onIssue: () => Promise<void>;
   onCancel: (reason: string) => Promise<void>;
   onGuests: (input: CoffeeSeatingInput) => Promise<void>;
   onTransfer: (tableId: string, override: boolean) => Promise<void>;
@@ -750,10 +746,12 @@ function Receipt({
   const [attachOpen, setAttachOpen] = useState(false);
   const submitted = order.items.filter((item) => item.submittedBatchId);
   const drafts = order.items.filter((item) => !item.submittedBatchId);
-  const canComplete =
-    order.paymentStatus === 'PAID' &&
-    order.items.length > 0 &&
-    order.items.every((item) => item.status === 'READY');
+  const canIssue =
+    submitted.length > 0 &&
+    drafts.length === 0 &&
+    submitted.every((item) => item.status === 'READY') &&
+    !order.issuedAt &&
+    !terminal(order);
   const freeTables = state.tables.filter(
     (table) => table.status === 'FREE' && table.id !== order.tableId,
   );
@@ -842,6 +840,16 @@ function Receipt({
             <ChevronRight className="size-4" />
           </button>
         )}
+        {canIssue && (
+          <button
+            className="mb-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-900 hover:bg-emerald-100 disabled:opacity-40"
+            disabled={busy}
+            onClick={() => void onIssue()}
+          >
+            <Check className="size-4" />
+            {coffeeBarRu.allReady}
+          </button>
+        )}
         {order.items.length > 0 &&
           drafts.length === 0 &&
           !terminal(order) &&
@@ -859,18 +867,6 @@ function Receipt({
               ))}
             </div>
           )}
-        {canComplete && !terminal(order) && (
-          <button
-            className={`${primary} mt-2 w-full`}
-            disabled={busy}
-            onClick={() => void onComplete()}
-          >
-            <Check className="size-4" />
-            {order.orderType === 'TABLE'
-              ? coffeeBarRu.completeTable
-              : coffeeBarRu.completeTakeaway}
-          </button>
-        )}
         {!terminal(order) && (
           <div className="mt-2 grid grid-cols-2 gap-2">
             {order.orderType !== 'UNASSIGNED' && (
@@ -1049,11 +1045,15 @@ function ItemGroup({
                 next &&
                 item.preparationWorkspace === 'BAR' && (
                   <button
-                    className={`${secondary} mt-2 w-full`}
+                    className={`mt-2 inline-flex min-h-10 w-full items-center justify-center rounded-xl border px-4 text-sm font-semibold disabled:opacity-40 ${
+                      item.status === 'NEW'
+                        ? 'border-orange-200 bg-orange-50 text-orange-900 hover:bg-orange-100'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+                    }`}
                     disabled={busy}
                     onClick={() => void onStatus(item, next)}
                   >
-                    {coffeeBarRu.nextStatus}: {coffeeOrderItemStatusRu[next]}
+                    {item.status === 'NEW' ? coffeeBarRu.accept : coffeeBarRu.ready}
                   </button>
                 )
               )}

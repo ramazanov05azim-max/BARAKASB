@@ -52,8 +52,10 @@ export function Panel({
 
 export function StatusBadge({
   status,
+  label,
 }: {
   status: 'active' | 'inactive' | 'draft' | 'ready' | 'setup-required';
+  label?: string;
 }) {
   const { t } = useCoffeeTranslation();
   const key: CoffeeTranslationKey =
@@ -76,7 +78,7 @@ export function StatusBadge({
     <span
       className={`inline-flex min-h-7 items-center rounded-full px-2.5 text-xs font-semibold ${tone}`}
     >
-      {t(key)}
+      {label ?? t(key)}
     </span>
   );
 }

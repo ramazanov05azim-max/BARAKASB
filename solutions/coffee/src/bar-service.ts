@@ -80,6 +80,10 @@ export interface CoffeeBarService {
     itemId: string,
     status: Exclude<CoffeeOrderItemStatus, 'DRAFT' | 'CANCELLED'>,
   ): Promise<CoffeeOrder>;
+  issueReadyOrder(
+    context: CoffeeBarRuntimeContext,
+    orderId: string,
+  ): Promise<CoffeeOrder>;
   recordPayment(
     context: CoffeeBarRuntimeContext,
     orderId: string,
@@ -187,9 +191,7 @@ function preparationStatus(order: CoffeeOrder): CoffeeOrder['status'] {
   const submitted = order.items.filter((item) => item.submittedBatchId);
   if (submitted.length === 0) return 'DRAFT';
   if (submitted.every((item) => item.status === 'READY')) return 'READY';
-  if (
-    submitted.some((item) => item.status === 'ACCEPTED' || item.status === 'PREPARING')
-  ) {
+  if (submitted.some((item) => item.status === 'PREPARING')) {
     return 'IN_PREPARATION';
   }
   return 'SENT';
@@ -699,6 +701,8 @@ export function createCoffeeBarService({
         preparationWorkspace: routeFor(snapshot, product.id),
         status: 'DRAFT',
         submittedBatchId: null,
+        issuedAt: null,
+        issuedByEmployeeId: null,
       };
       return persist(
         context,
@@ -829,8 +833,7 @@ export function createCoffeeBarService({
       if (item.preparationWorkspace !== 'BAR')
         throw new CoffeeBarOperationError('ITEM_ROUTE_MISMATCH');
       const transitions: Record<string, ReadonlyArray<CoffeeOrderItemStatus>> = {
-        NEW: ['ACCEPTED'],
-        ACCEPTED: ['PREPARING'],
+        NEW: ['PREPARING'],
         PREPARING: ['READY'],
         READY: ['READY'],
       };
@@ -852,6 +855,53 @@ export function createCoffeeBarService({
         `${itemId}:${status}`,
       );
     },
+    async issueReadyOrder(context, orderId) {
+      await snapshotFor(context);
+      const store = await orders.load(context.projectId);
+      const order = findOrder(store, orderId);
+      assertContext(context, order);
+      if (terminalStatuses.has(order.status) || order.issuedAt) {
+        throw new CoffeeBarOperationError('ORDER_IMMUTABLE');
+      }
+      const submitted = order.items.filter((item) => item.submittedBatchId);
+      if (
+        submitted.length === 0 ||
+        order.items.some((item) => !item.submittedBatchId) ||
+        submitted.some((item) => item.status !== 'READY')
+      ) {
+        throw new CoffeeBarOperationError('ORDER_NOT_READY');
+      }
+      const timestamp = now();
+      const issued: CoffeeOrder = {
+        ...order,
+        status: order.paymentStatus === 'PAID' ? 'COMPLETED' : 'READY',
+        issuedAt: timestamp,
+        completedAt: order.paymentStatus === 'PAID' ? timestamp : null,
+        completedByEmployeeId:
+          order.paymentStatus === 'PAID' ? context.employeeId : null,
+        updatedAt: timestamp,
+        items: order.items.map((item) => ({
+          ...item,
+          issuedAt: timestamp,
+          issuedByEmployeeId: context.employeeId,
+        })),
+      };
+      const replaced = {
+        ...store,
+        orders: store.orders.map((candidate) =>
+          candidate.orderId === orderId ? issued : candidate,
+        ),
+        audit: [
+          ...(order.paymentStatus === 'PAID'
+            ? [auditEntry(context, orderId, 'ORDER_COMPLETED')]
+            : []),
+          auditEntry(context, orderId, 'ORDER_ISSUED'),
+          ...store.audit,
+        ].slice(0, 500),
+      };
+      await orders.save(context.projectId, replaced);
+      return structuredClone(issued);
+    },
     async recordPayment(context, orderId, method) {
       await snapshotFor(context);
       const store = await orders.load(context.projectId);
@@ -865,21 +915,32 @@ export function createCoffeeBarService({
         throw new CoffeeBarOperationError('INVALID_OPERATION');
       }
       const timestamp = now();
-      return persist(
-        context,
-        store,
-        {
-          ...order,
-          paymentStatus: 'PAID',
-          paymentMethod: method,
-          paidAmount: order.total,
-          paidAt: timestamp,
-          paidByEmployeeId: context.employeeId,
-          updatedAt: timestamp,
-        },
-        'PAYMENT_RECORDED',
-        method,
-      );
+      const completed = Boolean(order.issuedAt);
+      const paid: CoffeeOrder = {
+        ...order,
+        status: completed ? 'COMPLETED' : order.status,
+        paymentStatus: 'PAID',
+        paymentMethod: method,
+        paidAmount: order.total,
+        paidAt: timestamp,
+        paidByEmployeeId: context.employeeId,
+        completedAt: completed ? timestamp : order.completedAt,
+        completedByEmployeeId: completed
+          ? context.employeeId
+          : order.completedByEmployeeId,
+        updatedAt: timestamp,
+      };
+      await orders.save(context.projectId, {
+        orders: store.orders.map((candidate) =>
+          candidate.orderId === orderId ? paid : candidate,
+        ),
+        audit: [
+          ...(completed ? [auditEntry(context, orderId, 'ORDER_COMPLETED')] : []),
+          auditEntry(context, orderId, 'PAYMENT_RECORDED', method),
+          ...store.audit,
+        ].slice(0, 500),
+      });
+      return structuredClone(paid);
     },
     async completeOrder(context, orderId) {
       await snapshotFor(context);
@@ -894,19 +955,30 @@ export function createCoffeeBarService({
         throw new CoffeeBarOperationError('ORDER_NOT_READY');
       }
       const timestamp = now();
-      return persist(
-        context,
-        store,
-        {
-          ...order,
-          status: 'COMPLETED',
-          issuedAt: timestamp,
-          completedAt: timestamp,
-          completedByEmployeeId: context.employeeId,
-          updatedAt: timestamp,
-        },
-        'ORDER_COMPLETED',
-      );
+      const completed: CoffeeOrder = {
+        ...order,
+        status: 'COMPLETED',
+        issuedAt: timestamp,
+        completedAt: timestamp,
+        completedByEmployeeId: context.employeeId,
+        updatedAt: timestamp,
+        items: order.items.map((item) => ({
+          ...item,
+          issuedAt: item.issuedAt ?? timestamp,
+          issuedByEmployeeId: item.issuedByEmployeeId ?? context.employeeId,
+        })),
+      };
+      await orders.save(context.projectId, {
+        orders: store.orders.map((candidate) =>
+          candidate.orderId === orderId ? completed : candidate,
+        ),
+        audit: [
+          auditEntry(context, orderId, 'ORDER_COMPLETED'),
+          ...(order.issuedAt ? [] : [auditEntry(context, orderId, 'ORDER_ISSUED')]),
+          ...store.audit,
+        ].slice(0, 500),
+      });
+      return structuredClone(completed);
     },
     async cancelOrder(context, orderId, reason = '') {
       await snapshotFor(context);

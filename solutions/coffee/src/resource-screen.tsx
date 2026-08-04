@@ -19,6 +19,7 @@ import type { CollectionEntity, CollectionKey, FormValues } from './domain';
 import { ImageUploadField, ReadableMultiSelectField } from './form-controls';
 import { useCoffeeTranslation, type CoffeeTranslationKey } from './i18n';
 import { readLegacyMenuImage } from './menu-image-migration';
+import { RecipeComponentsField, RecipeTargetField } from './recipe-form-controls';
 import {
   initialValues,
   resourceDefinitions,
@@ -188,6 +189,54 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
         }
         visited.add(cursor.id);
         cursor = snapshot.units.find((unit) => unit.id === cursor?.conversionTargetId);
+      }
+    }
+    if (kind === 'recipes') {
+      try {
+        const target = JSON.parse(values.target ?? '') as {
+          type?: string;
+          id?: string;
+          name?: string;
+        };
+        const validType =
+          target.type === 'menu-item' ||
+          target.type === 'preparation' ||
+          target.type === 'semi-finished';
+        const validIdentity =
+          target.type === 'menu-item'
+            ? Boolean(target.id?.trim())
+            : Boolean(target.name?.trim());
+        if (!validType || !validIdentity) next.target = 'validation.required';
+      } catch {
+        next.target = 'validation.required';
+      }
+      try {
+        const components = JSON.parse(values.components ?? '') as Array<{
+          type?: string;
+          referenceId?: string;
+          grossQuantity?: number;
+          unitId?: string;
+          lossPercentage?: number;
+        }>;
+        const valid =
+          Array.isArray(components) &&
+          components.length > 0 &&
+          components.every(
+            (component) =>
+              (component.type === 'ingredient' ||
+                component.type === 'preparation' ||
+                component.type === 'semi-finished') &&
+              Boolean(component.referenceId?.trim()) &&
+              Number.isFinite(component.grossQuantity) &&
+              Number(component.grossQuantity) > 0 &&
+              Boolean(component.unitId?.trim()) &&
+              Number.isFinite(component.lossPercentage) &&
+              Number(component.lossPercentage) >= 0 &&
+              Number(component.lossPercentage) <= 100,
+          );
+        if (!valid) next.components = 'validation.required';
+      } catch {
+        next.components = 'validation.required';
       }
     }
     return next;
@@ -360,9 +409,15 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
               className={`${inputClass} min-w-44 pl-10`}
             >
               <option value="all">{t('resource.statusAll')}</option>
-              <option value="active">{t('common.active')}</option>
-              <option value="inactive">{t('common.inactive')}</option>
-              <option value="draft">{t('common.draft')}</option>
+              <option value="active">
+                {t(kind === 'recipes' ? 'options.recipeActive' : 'common.active')}
+              </option>
+              <option value="inactive">
+                {t(kind === 'recipes' ? 'options.recipeInactive' : 'common.inactive')}
+              </option>
+              {kind !== 'recipes' ? (
+                <option value="draft">{t('common.draft')}</option>
+              ) : null}
             </select>
           </label>
           <button
@@ -556,6 +611,26 @@ function ResourceField({
       mediaAssets.resolveDisplayUrl(projectId, assetId as MediaAssetId),
     [mediaAssets, projectId],
   );
+  if (field.type === 'recipe-target') {
+    return (
+      <RecipeTargetField
+        value={value}
+        snapshot={snapshot}
+        error={error}
+        onChange={onChange}
+      />
+    );
+  }
+  if (field.type === 'recipe-components') {
+    return (
+      <RecipeComponentsField
+        value={value}
+        snapshot={snapshot}
+        error={error}
+        onChange={onChange}
+      />
+    );
+  }
   if (field.type === 'image') {
     return (
       <ImageUploadField
@@ -714,7 +789,18 @@ function ResourceTableRow({
         </td>
       ))}
       <td className="px-5 py-4">
-        <StatusBadge status={record.status} />
+        <StatusBadge
+          status={record.status}
+          {...(definition.kind === 'recipes'
+            ? {
+                label: t(
+                  record.status === 'active'
+                    ? 'options.recipeActive'
+                    : 'options.recipeInactive',
+                ),
+              }
+            : {})}
+        />
       </td>
       <td className="px-5 py-4">
         <div className="flex justify-end gap-1">
@@ -786,7 +872,18 @@ function ResourceMobileCard({
             </p>
           ) : null}
         </div>
-        <StatusBadge status={record.status} />
+        <StatusBadge
+          status={record.status}
+          {...(definition.kind === 'recipes'
+            ? {
+                label: t(
+                  record.status === 'active'
+                    ? 'options.recipeActive'
+                    : 'options.recipeInactive',
+                ),
+              }
+            : {})}
+        />
       </div>
       <dl className="mt-4 grid gap-3 text-sm">
         {definition.summaryFields.slice(0, 3).map((fieldName) => {

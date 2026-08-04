@@ -12,6 +12,7 @@ import type {
   UnitOfMeasure,
   Warehouse,
 } from './domain';
+import { recipeNetQuantity } from './recipe-migration';
 
 export const coffeeCrashTestSeedVersion = 5;
 export const coffeeCrashTestSeedId = `coffee-crash-test-v${coffeeCrashTestSeedVersion}`;
@@ -990,25 +991,30 @@ const recipeSpecs = [
 
 function recipes(timestamp: string): Recipe[] {
   return recipeSpecs.map(([id, output, rows, cost]) => {
-    const first = rows[0];
-    const salePrice = productSpecs.find(([productId]) => productId === id)?.[3] ?? 0;
+    const product = productSpecs.find(([productId]) => productId === id);
+    const salePrice = product?.[3] ?? 0;
+    const target = {
+      type: 'menu-item' as const,
+      id: `crash-item-${id}`,
+      name: product?.[1] ?? id,
+    };
     return {
       id: `crash-recipe-${id}`,
-      name: `Техкарта · ${productSpecs.find(([productId]) => productId === id)?.[1] ?? id}`,
-      menuItemId: `crash-item-${id}`,
+      name: `Техкарта · ${target.name}`,
+      target,
       outputQuantity: output,
       outputUnitId: 'unit-portion',
       preparationInstructions:
         'Версия CRASH TEST. Выполнить стандартную последовательность приготовления.',
-      ingredientId: `crash-ingredient-${first?.[0] ?? ''}`,
-      ingredientQuantity: first?.[1] ?? 0,
-      ingredientUnitId: `unit-${first?.[2] ?? 'g'}`,
-      ingredientRows: rows.map(([ingredientId, quantity, unit]) => ({
-        ingredientId: `crash-ingredient-${ingredientId}`,
-        quantity,
+      components: rows.map(([ingredientId, quantity, unit], index) => ({
+        id: `crash-component-${id}-${String(index + 1).padStart(2, '0')}`,
+        type: 'ingredient' as const,
+        referenceId: `crash-ingredient-${ingredientId}`,
+        grossQuantity: quantity,
         unitId: `unit-${unit}`,
+        lossPercentage: index === 0 ? 3 : 0,
+        netQuantity: recipeNetQuantity(quantity, index === 0 ? 3 : 0),
       })),
-      wastePercentage: 3,
       version: 1,
       effectiveDate: '2026-07-31',
       preparationLocationId:
