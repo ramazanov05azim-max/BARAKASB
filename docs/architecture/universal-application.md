@@ -1,160 +1,124 @@
-# Universal Application runtime mode
+# Universal Application
 
 ## Purpose
 
-The Universal BARAKASB Application is the Platform-owned operational entry point for
-employees and devices. It is designed to host any approved Solution Runtime. Coffee is
-the first planned consumer, but does not own the application, its contracts, or its
-shell.
+The Universal Application is the single operational application inside `apps/web`. It
+connects one device to one Operational Workspace and authenticates an employee assigned
+to that workspace.
 
-Stage 7.1 implements this product as a runtime mode inside the existing `apps/web`
-Next.js application. It does not add a deployable, browser composition root, backend, or
-Coffee runtime.
+It never creates Projects, installs Solutions, configures workspaces, manages employees,
+or exposes Manager Platform identity data.
 
-## Architectural placement
+## Canonical flow
 
 ```text
-apps/web /app runtime mode
-        |
-        v
-frontend-extension-host
-        |
-        v
-contracts-platform
+Manager Platform
+  → generate Workspace Code
+  → connect device once
+  → select employee
+  → enter employee password
+  → open assigned Workspace
 ```
 
-The responsibilities remain separated:
+When a valid device binding already exists, `/app` skips code entry and opens employee
+selection. `Сменить сотрудника` clears only the employee session; the device remains
+bound to the same workspace.
 
-- `apps/web` owns the browser shell, namespaced routes, localization, local bootstrap,
-  and PWA metadata.
-- `contracts-platform` owns transport-neutral Solution Runtime manifest contracts.
-- `frontend-extension-host` owns browser registration and future validated UI
-  composition.
-- `core-solutions-runtime` remains the authoritative owner of the Solution catalog,
-  Project installation state, compatibility policy, and lifecycle.
+## Routes
 
-The `/app` feature area does not import Coffee or another Solution implementation.
-Elsewhere, `apps/web` may compose approved administrative Solution screens through their
-public boundary. A future operational Solution UI may be composed only through reviewed
-contracts and the extension host.
+| Route            | Responsibility                                      |
+| ---------------- | --------------------------------------------------- |
+| `/app`           | Validate the saved device binding and choose a flow |
+| `/app/connect`   | Accept one 12-digit Workspace Code on first launch  |
+| `/app/workspace` | Employee login and the bound Workspace screen       |
 
-## Route model
+No Project, Solution Installation, Business Environment, or Workspace identifier is
+present in an operational URL.
 
-| Route                                               | Responsibility                                       |
-| --------------------------------------------------- | ---------------------------------------------------- |
-| `/app`                                              | Run local bootstrap and enter the required state     |
-| `/app/connect`                                      | Resolve a local environment or workspace access code |
-| `/app/runtime/{projectId}`                          | Show the local environment-level operational preview |
-| `/app/runtime/{projectId}/workspaces/{workspaceId}` | Host a generic Operational Workspace placeholder     |
-| `/app/unavailable`                                  | Render a neutral bootstrap failure state             |
-| unknown `/app/*`                                    | Return to the safe `/app` bootstrap entry            |
+## Device binding
 
-These routes form a distinct operational mode while sharing the approved `apps/web`
-build, process, runtime versions, and deployment. The mode does not render Manager
-Platform navigation or Project administration.
+A Workspace Code resolves to exactly one workspace. A successful resolution stores the
+current device binding in `barakasb.operational-workspace.device.v2`.
 
-## Bootstrap model
+On every application bootstrap:
 
-The typed state model reserves the future progression:
+1. retired operational storage records are removed;
+2. the current binding is loaded;
+3. its Workspace Code is revalidated against the Workspace directory;
+4. an absent or invalidated binding returns to `/app/connect`;
+5. a valid binding opens `/app/workspace` at employee selection.
+
+Rotating a Workspace Code invalidates the previous code and disconnects a matching local
+device. Manager Platform can also explicitly disconnect the bound device.
+
+Operational employees cannot disconnect devices, rotate codes, or bind another
+workspace.
+
+## Employee authentication
+
+Workspace Codes identify devices and workspaces, never employees.
+
+Employee authentication always uses:
 
 ```text
-starting
-  -> requires-environment-code
-  -> resolving-environment
-  -> requires-device-authorization
-  -> requires-employee-authentication
-  -> loading-runtime
-  -> ready
+Assigned employee
+  → password
+  → Workspace
 ```
 
-`unavailable` and `error` represent terminal bootstrap outcomes. Stage 7.1 executes only
-the first transition from `starting` to `requires-environment-code`. It performs no fake
-resolution, authorization, authentication, session creation, or runtime loading.
+Only active employees assigned to the bound workspace are selectable. Passwords are
+verified through `OperationalEmployeeAuthenticator`; UI visibility is not treated as a
+security boundary.
 
-## Business Environment Code
+## Information boundary
 
-The Business Environment Code is a permanent identifier of a business environment. In
-future stages it will resolve the relevant Project and Solution Installation. It does
-not contain business configuration and is not:
+Operational UI may display:
 
-- a device enrollment code;
-- an employee password or PIN;
-- a one-time token;
-- a Coffee-specific identifier;
-- the only security factor.
+- workspace name;
+- assigned employee names;
+- current employee;
+- workspace-specific operational functionality.
 
-The local prototype also accepts a twelve-digit Workspace Access Code. The code resolves
-an Installed Solution, Business Environment, and one Operational Workspace. It never
-identifies an employee. Workspace authorization and employee identity remain separate
-concerns.
+Operational UI must not display:
 
-The prototype keeps issued workspace codes in a replaceable local directory adapter and
-the resolved runtime context in `sessionStorage`. Codes are never placed in URLs, logs,
-analytics events, or source-controlled fixtures.
+- Business Environment or its code;
+- Project identity;
+- Solution Installation identity;
+- environment mappings;
+- Workspace Code after device connection.
 
-Device authorization and employee authentication remain separate future security steps.
-Business configuration will be loaded only after authoritative environment resolution.
+Business Environment remains a Manager Platform entity.
 
-## Runtime registry
+## Storage migration
 
-The browser registry starts empty and contains no hard-coded Solution list. It can
-register, retrieve, and check a neutral runtime manifest by `solutionKey`. Duplicate
-registration throws an explicit error rather than silently replacing an entry.
+The startup migration removes these retired operational records from both local and
+session storage when present:
 
-The registry is a browser composition seam only. It does not select a runtime during
-Stage 7.1 and does not supersede `core-solutions-runtime`.
+- `barakasb.local.operational-runtime-session.v1`;
+- `barakasb.operational-workspace.session.v1`.
 
-## PWA boundary
+The migration preserves:
 
-The web manifest is scoped to `/app` and supplies install metadata and an approved
-BARAKASB icon. Stage 7.1 adds no service worker, API cache, runtime cache, background
-sync, push notifications, or offline business database. Authenticated and Project-scoped
-content remains uncached by default.
+- `barakasb.operational-workspace.device.v2`;
+- Coffee Solution project data;
+- employee credential verifiers;
+- Manager-owned configuration and workspace directories.
 
-## Solution Constructor prototype
+Existing Workspace directory records and the saved device binding are upgraded in place
+to the canonical isolation-scope schema. The migration is automatic and idempotent.
 
-The Manager Platform hosts a project-scoped constructor at:
+## Composition and deployment
 
-```text
-/projects/{projectId}/admin/solutions/coffee/constructor
-```
+Universal Application remains a runtime mode of the existing Next.js application in
+`apps/web`. It introduces no browser application, deployable, or composition root.
 
-Coffee owns its module catalog, generated structure, and employee-to-workspace
-assignments. The Platform-owned Universal Application receives only a neutral resolved
-workspace context. It does not import Coffee business behavior or implement Bar,
-Kitchen, Warehouse, delivery, production, sales, payments, or inventory operations.
-
-Only selected module identifiers produce Operational Workspaces. Code issuance is an
-explicit owner action and is idempotent per workspace. Removing a module removes its
-local workspace directory entry; changing employee assignments does not rotate the
-workspace code.
-
-The local directory and session adapters are prototype seams that can be replaced by the
-authoritative Stage 7.2/7.3 control plane without changing the route shell or
-placeholder presentation contract.
-
-## Current exclusions
-
-The foundation intentionally excludes:
-
-- authoritative environment and workspace resolution;
-- backend integration;
-- device authorization or device sessions;
-- employee authentication or employee sessions;
-- runtime selection or dynamic module loading;
-- Coffee and other operational business behavior;
-- offline business operations.
-
-## Governance
-
-This runtime mode is the aligned interpretation recorded in
-[Stage 7.1 architecture alignment](../reviews/2026-07-31-stage-7-1-architecture-alignment.md).
-It preserves the single browser composition root and deployment topology accepted by
-ADR 0032. No ADR is added or changed.
+Solution-specific operational UI remains owned by its Solution package. Platform code
+owns only device binding, employee authentication orchestration, routing, and the
+workspace host boundary.
 
 ## Related decisions
 
 - [ADR 0006: Solution and Plugin contracts](../adr/0006-solution-plugin-contracts.md)
-- [ADR 0014: Authenticated cache isolation](../adr/0014-authenticated-cache-isolation.md)
+- [ADR 0026: Architecture quality gates](../adr/0026-architecture-quality-gates.md)
+- [ADR 0027: Central runtime version policy](../adr/0027-central-runtime-version-policy.md)
 - [ADR 0032: Plane-separated modular deployments](../adr/0032-plane-separated-modular-deployments.md)
-- [ADR 0038: Explicit package taxonomy](../adr/0038-explicit-package-taxonomy.md)

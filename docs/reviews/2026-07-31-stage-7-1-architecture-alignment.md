@@ -64,8 +64,8 @@ The governing interpretation is:
 ### SAC-003 — Root route ownership
 
 - **Specification section:** 17
-- **Conflict:** The preferred Universal routes `/`, `/connect`, and `/unavailable`
-  overlap existing Manager Platform routes, especially the public landing route `/`.
+- **Conflict:** Unnamespaced Universal routes overlap existing Manager Platform routes,
+  especially the public landing route `/`.
 - **Authority:** Frontend Architecture, Route model and State ownership; existing
   approved Platform UX route map.
 - **Reason:** Two runtime modes cannot own the same route without hidden mode state or
@@ -73,8 +73,9 @@ The governing interpretation is:
 - **Possible resolutions:**
   1. Namespace the Universal runtime mode.
   2. Replace existing Manager Platform routes.
-- **Resolution selected:** namespace the routes as `/app`, `/app/connect`, and
-  `/app/unavailable`. Unknown `/app/*` routes return to `/app`.
+- **Resolution selected:** namespace the canonical Workspace routes as `/app`,
+  `/app/connect`, and `/app/workspace`. Unknown `/app/*` routes are not handled by a
+  compatibility fallback.
 
 ### SAC-004 — Runtime Registry ownership
 
@@ -161,7 +162,7 @@ apps/web
 └── /app runtime mode
     ├── /app
     ├── /app/connect
-    └── /app/unavailable
+    └── /app/workspace
              |
              v
 packages/frontend/extension-host
@@ -190,7 +191,7 @@ The following original criteria are replaced:
 | Independent browser entry point           | Namespaced `/app` route layout                               |
 | Independent serve/build/lint/typecheck    | Existing `app-web` targets                                   |
 | Independent test target                   | New `app-web:test` target                                    |
-| `/`, `/connect`, `/unavailable`           | `/app`, `/app/connect`, `/app/unavailable`                   |
+| `/`, `/connect`, `/workspace`             | `/app`, `/app/connect`, `/app/workspace`                     |
 | New generic runtime subsystem             | Contracts Platform plus existing Frontend Extension Host     |
 | Installable application with own artifact | Manifest-scoped PWA foundation inside the existing web build |
 
@@ -204,7 +205,7 @@ registry, and testing requirements remain unchanged.
 3. Add package public surfaces and Nx lint, typecheck, test, and build targets where
    applicable.
 4. Add the Universal Application feature area under `apps/web/src/features`.
-5. Add `/app`, `/app/connect`, `/app/unavailable`, and safe catch-all routes.
+5. Add `/app`, `/app/connect`, and `/app/workspace` routes.
 6. Add manifest-only PWA metadata scoped to `/app/`; do not add a service worker.
 7. Add Russian and English localization keys for every visible string.
 8. Add unit, component, bootstrap, registry, and routing tests.

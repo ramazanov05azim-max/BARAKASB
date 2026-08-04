@@ -42,20 +42,27 @@ const initialState: SolutionConstructorState = {
   },
   employees: [],
   accessCodes: [],
+  connectedWorkspaceId: null,
 };
 
-function service(): SolutionConstructorService {
+function service(
+  state: SolutionConstructorState = initialState,
+): SolutionConstructorService {
   return {
-    load: vi.fn(async () => initialState),
-    generate: vi.fn(async () => initialState),
-    createEmployee: vi.fn(async () => initialState),
-    updateEmployee: vi.fn(async () => initialState),
-    setEmployeeActive: vi.fn(async () => initialState),
-    deleteEmployee: vi.fn(async () => initialState),
-    resetEmployeePassword: vi.fn(async () => initialState),
-    assignEmployee: vi.fn(async () => initialState),
-    issueAccessCode: vi.fn(async () => initialState),
-    rotateAccessCode: vi.fn(async () => initialState),
+    load: vi.fn(async () => state),
+    generate: vi.fn(async () => state),
+    createEmployee: vi.fn(async () => state),
+    updateEmployee: vi.fn(async () => state),
+    setEmployeeActive: vi.fn(async () => state),
+    deleteEmployee: vi.fn(async () => state),
+    resetEmployeePassword: vi.fn(async () => state),
+    assignEmployee: vi.fn(async () => state),
+    issueAccessCode: vi.fn(async () => state),
+    rotateAccessCode: vi.fn(async () => state),
+    disconnectDevice: vi.fn(async () => ({
+      ...state,
+      connectedWorkspaceId: null,
+    })),
   };
 }
 
@@ -115,6 +122,59 @@ describe('SolutionConstructorScreen', () => {
           password: 'Coffee2026',
         },
         expect.objectContaining({ bar: 'Бар', manager: 'Руководитель' }),
+      ),
+    );
+  });
+
+  it('shows device connection and lets the owner disconnect it', async () => {
+    const user = userEvent.setup();
+    const connectedState: SolutionConstructorState = {
+      ...initialState,
+      structure: {
+        selectedModuleIds: ['bar'],
+        workspaces: [
+          {
+            id: 'workspace-bar',
+            moduleId: 'bar',
+            assignedEmployeeIds: [],
+            status: 'active',
+            createdAt: '2026-08-04T10:00:00.000Z',
+            updatedAt: '2026-08-04T10:00:00.000Z',
+          },
+        ],
+        generatedAt: '2026-08-04T10:00:00.000Z',
+        updatedAt: '2026-08-04T10:00:00.000Z',
+      },
+      accessCodes: [
+        {
+          accessCode: '123456789012',
+          projectId: 'coffee-1',
+          solutionId: 'coffee',
+          solutionInstallationId: 'installation-1',
+          isolationScopeId: 'environment-1',
+          workspaceId: 'workspace-bar',
+          workspaceType: 'bar',
+          workspaceName: 'Бар',
+          assignedEmployees: [],
+          createdAt: '2026-08-04T10:00:00.000Z',
+        },
+      ],
+      connectedWorkspaceId: 'workspace-bar',
+    };
+    const constructorService = service(connectedState);
+    render(
+      <I18nProvider>
+        <SolutionConstructorScreen projectId="coffee-1" service={constructorService} />
+      </I18nProvider>,
+    );
+
+    expect(await screen.findByText('Устройство подключено')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Отключить устройство' }));
+
+    await waitFor(() =>
+      expect(constructorService.disconnectDevice).toHaveBeenCalledWith(
+        'coffee-1',
+        'workspace-bar',
       ),
     );
   });

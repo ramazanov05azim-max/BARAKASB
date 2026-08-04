@@ -6,8 +6,7 @@ const bar: OperationalWorkspaceAccessInput = {
   projectId: 'coffee-1',
   solutionId: 'coffee',
   solutionInstallationId: 'installation-1',
-  businessEnvironmentId: 'environment-1',
-  environmentDisplayName: 'Север',
+  isolationScopeId: 'environment-1',
   workspaceId: 'workspace-bar',
   workspaceType: 'bar',
   workspaceName: 'Бар',
@@ -57,7 +56,7 @@ describe('local Operational Workspace directory', () => {
     const second = await directory.issuer.issue({
       ...bar,
       projectId: 'coffee-2',
-      businessEnvironmentId: 'environment-2',
+      isolationScopeId: 'environment-2',
     });
     await directory.issuer.removeUnavailable(
       'coffee-1',

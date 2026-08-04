@@ -3,7 +3,7 @@ import {
   localCoffeeOperationalReadRepository,
 } from '@barakasb/solution-coffee';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createLocalBusinessEnvironmentDirectory } from '@/features/universal-application/infrastructure/local-business-environment-directory';
+import { createLocalBusinessEnvironmentDirectory } from './local-business-environment-directory';
 import type { ProjectSummary } from '@/lib/mock-repository';
 import {
   coffeeCrashTestEnvironmentId,

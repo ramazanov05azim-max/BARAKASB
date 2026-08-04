@@ -21,19 +21,23 @@ The prototype supports:
 
 ```text
 /projects/{projectId}/admin/solutions/coffee/constructor
+/app
 /app/connect
-/app/runtime/{projectId}/workspaces/{workspaceId}
+/app/workspace
 ```
 
 ## Ownership
 
 - Coffee Solution owns the module identifiers, generated structure, and assignments.
 - Manager Platform composes the owner workflow and local prototype adapters.
-- Universal Application owns generic code resolution and its runtime session.
+- Universal Application owns Workspace Code resolution, device binding, and employee
+  authentication orchestration.
 - Coffee Solution owns Bar orders, order rules, preparation routing, tables, and the Bar
   screen exposed through its existing public solution boundary.
-- A Workspace Access Code identifies the Installed Solution, Business Environment, and
-  Operational Workspace. It never identifies an employee.
+- A Workspace Access Code binds a device to exactly one Operational Workspace. It never
+  identifies an employee.
+- Operational URLs and screens expose no Project, Solution Installation, or Business
+  Environment identity.
 
 ## Explicit exclusions
 

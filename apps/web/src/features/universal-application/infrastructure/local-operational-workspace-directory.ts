@@ -44,8 +44,8 @@ function isWorkspace(value: unknown): value is ResolvedOperationalWorkspace {
     typeof value.projectId === 'string' &&
     'solutionInstallationId' in value &&
     typeof value.solutionInstallationId === 'string' &&
-    'businessEnvironmentId' in value &&
-    typeof value.businessEnvironmentId === 'string' &&
+    'isolationScopeId' in value &&
+    typeof value.isolationScopeId === 'string' &&
     'workspaceId' in value &&
     typeof value.workspaceId === 'string' &&
     'workspaceName' in value &&
@@ -96,7 +96,7 @@ function generateCode(
   const occupied = new Set(entries.map((entry) => entry.accessCode));
   const baseSeed = [
     input.solutionInstallationId,
-    input.businessEnvironmentId,
+    input.isolationScopeId,
     input.workspaceId,
   ].join('|');
   const seed = rotationSeed ? `${baseSeed}|${rotationSeed}` : baseSeed;

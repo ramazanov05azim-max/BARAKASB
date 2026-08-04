@@ -4,19 +4,19 @@ import { forwardRef, useId } from 'react';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n/i18n-provider';
 import {
-  formatBusinessEnvironmentCode,
-  normalizeBusinessEnvironmentCode,
-} from '../domain/business-environment-code';
+  formatWorkspaceAccessCode,
+  normalizeWorkspaceAccessCode,
+} from '../domain/workspace-access-code';
 
-export interface BusinessEnvironmentCodeInputProps {
+export interface WorkspaceAccessCodeInputProps {
   value: string;
   onChange: (normalizedValue: string) => void;
   invalid?: boolean;
 }
 
-export const BusinessEnvironmentCodeInput = forwardRef<
+export const WorkspaceAccessCodeInput = forwardRef<
   HTMLInputElement,
-  BusinessEnvironmentCodeInputProps
+  WorkspaceAccessCodeInputProps
 >(({ value, onChange, invalid = false }, ref) => {
   const { t } = useTranslation();
   const inputId = useId();
@@ -31,18 +31,16 @@ export const BusinessEnvironmentCodeInput = forwardRef<
       <Input
         ref={ref}
         id={inputId}
-        name="business-environment-code"
+        name="workspace-access-code"
         type="text"
         inputMode="numeric"
         enterKeyHint="go"
         autoComplete="off"
         autoCapitalize="off"
         spellCheck={false}
-        maxLength={19}
-        value={formatBusinessEnvironmentCode(value)}
-        onChange={(event) =>
-          onChange(normalizeBusinessEnvironmentCode(event.target.value))
-        }
+        maxLength={14}
+        value={formatWorkspaceAccessCode(value)}
+        onChange={(event) => onChange(normalizeWorkspaceAccessCode(event.target.value))}
         aria-invalid={invalid}
         aria-describedby={`${descriptionId}${invalid ? ` ${errorId}` : ''}`}
         placeholder={t('universal.codePlaceholder')}
@@ -64,4 +62,4 @@ export const BusinessEnvironmentCodeInput = forwardRef<
   );
 });
 
-BusinessEnvironmentCodeInput.displayName = 'BusinessEnvironmentCodeInput';
+WorkspaceAccessCodeInput.displayName = 'WorkspaceAccessCodeInput';

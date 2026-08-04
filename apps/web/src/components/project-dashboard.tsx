@@ -19,7 +19,7 @@ import {
   localCoffeeManagerSetupRepository,
   type CoffeeManagerSetupRecord,
 } from '@/features/manager-coffee-setup/coffee-manager-setup-repository';
-import { formatBusinessEnvironmentCode } from '@/features/universal-application/domain/business-environment-code';
+import { formatBusinessEnvironmentCode } from '@/features/manager-coffee-setup/business-environment-code';
 import { PageHeading } from './page-heading';
 import { Badge } from './ui/badge';
 import { buttonVariants } from './ui/button';
@@ -117,7 +117,7 @@ export function ProjectDashboard({ projectId }: { projectId: string }) {
                   </span>
                 </div>
                 <p className="mt-4 text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
-                  {t('universal.codeLabel')}
+                  {t('coffeeOnboarding.businessEnvironmentCodeLabel')}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-3">
                   <code className="text-lg font-semibold tracking-[0.08em]">

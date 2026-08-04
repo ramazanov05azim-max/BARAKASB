@@ -34,9 +34,7 @@ Universal Application routes are namespaced separately:
 ```text
 /app
 /app/connect
-/app/runtime/{projectId}
-/app/runtime/{projectId}/workspaces/{workspaceId}
-/app/unavailable
+/app/workspace
 ```
 
 The namespace prevents the operational bootstrap flow from competing with the public,

@@ -1,47 +1,82 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import UniversalApplicationConnectPage from '@/app/app/connect/page';
-import InvalidUniversalApplicationRoute from '@/app/app/[...invalidUniversalPath]/page';
-import UniversalApplicationUnavailablePage from '@/app/app/unavailable/page';
-import OperationalRuntimePage from '@/app/app/runtime/[projectId]/page';
-import OperationalWorkspacePage from '@/app/app/runtime/[projectId]/workspaces/[workspaceId]/page';
+import OperationalWorkspacePage from '@/app/app/workspace/page';
 import { I18nProvider } from '@/i18n/i18n-provider';
+import type {
+  OperationalWorkspaceAccessResolver,
+  OperationalWorkspaceSessionStore,
+  ResolvedOperationalWorkspace,
+} from './application/workspace-access';
 import { UniversalBootstrapRoute } from './presentation/bootstrap-route';
 import { universalApplicationRoutes, universalApplicationRouteValues } from './routes';
-import type { OperationalWorkspaceSessionStore } from './application/workspace-access';
 
-const { redirectSpy, replaceSpy } = vi.hoisted(() => ({
-  redirectSpy: vi.fn(),
+const { replaceSpy } = vi.hoisted(() => ({
   replaceSpy: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
-  redirect: redirectSpy,
-  useRouter: () => ({ replace: replaceSpy }),
+  useRouter: () => ({ push: vi.fn(), replace: replaceSpy }),
 }));
+
+const workspace: ResolvedOperationalWorkspace = {
+  accessCode: '123456789012',
+  projectId: 'coffee-1',
+  solutionId: 'coffee',
+  solutionInstallationId: 'installation-1',
+  isolationScopeId: 'environment-1',
+  workspaceId: 'workspace-bar',
+  workspaceType: 'bar',
+  workspaceName: 'Бар',
+  assignedEmployees: [],
+  createdAt: '2026-08-04T10:00:00.000Z',
+};
+
+function session(connected: boolean): OperationalWorkspaceSessionStore {
+  return {
+    authorize: vi.fn(),
+    readConnected: vi.fn(() =>
+      connected ? { workspace, currentEmployeeId: null } : null,
+    ),
+    authenticateEmployee: vi.fn(() => null),
+    logoutEmployee: vi.fn(() => null),
+    disconnect: vi.fn(() => false),
+    clear: vi.fn(),
+  };
+}
+
+function resolver(
+  resolved: ResolvedOperationalWorkspace | null,
+): OperationalWorkspaceAccessResolver {
+  return { resolve: vi.fn(async () => resolved) };
+}
 
 describe('Universal Application routing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    window.sessionStorage.clear();
   });
 
-  it('uses namespaced routes inside the single apps/web shell', () => {
+  it('contains only the canonical Workspace routes in apps/web', () => {
     expect(universalApplicationRoutes).toEqual({
       root: '/app',
       connect: '/app/connect',
-      runtime: '/app/runtime',
-      unavailable: '/app/unavailable',
+      workspace: '/app/workspace',
     });
     expect(
       universalApplicationRouteValues.every((route) => !route.includes('coffee')),
     ).toBe(true);
   });
 
-  it('starts bootstrap and redirects to the environment-code route', async () => {
+  it('redirects an unbound device to Workspace Code entry', async () => {
     render(
       <I18nProvider>
-        <UniversalBootstrapRoute />
+        <UniversalBootstrapRoute
+          workspaceSession={session(false)}
+          workspaceResolver={resolver(null)}
+          migrateStorage={vi.fn()}
+        />
       </I18nProvider>,
     );
 
@@ -53,92 +88,57 @@ describe('Universal Application routing', () => {
     );
   });
 
-  it('returns a previously connected device directly to its workspace', async () => {
-    const workspaceSession: OperationalWorkspaceSessionStore = {
-      authorize: vi.fn(),
-      readConnected: vi.fn(() => ({
-        workspace: {
-          accessCode: '123456789012',
-          projectId: 'coffee-1',
-          solutionId: 'coffee',
-          solutionInstallationId: 'installation-1',
-          businessEnvironmentId: 'environment-1',
-          environmentDisplayName: 'Север',
-          workspaceId: 'workspace-bar',
-          workspaceType: 'bar',
-          workspaceName: 'Бар',
-          assignedEmployees: [],
-          createdAt: '2026-08-04T10:00:00.000Z',
-        },
-        currentEmployeeId: null,
-      })),
-      read: vi.fn(() => null),
-      authenticateEmployee: vi.fn(() => null),
-      logoutEmployee: vi.fn(() => null),
-      clear: vi.fn(),
-    };
-
+  it('returns a valid bound device directly to employee login', async () => {
+    const workspaceSession = session(true);
     render(
       <I18nProvider>
-        <UniversalBootstrapRoute workspaceSession={workspaceSession} />
+        <UniversalBootstrapRoute
+          workspaceSession={workspaceSession}
+          workspaceResolver={resolver(workspace)}
+          migrateStorage={vi.fn()}
+        />
       </I18nProvider>,
     );
 
     await waitFor(() =>
-      expect(replaceSpy).toHaveBeenCalledWith(
-        '/app/runtime/coffee-1/workspaces/workspace-bar',
-      ),
+      expect(replaceSpy).toHaveBeenCalledWith(universalApplicationRoutes.workspace),
     );
+    expect(workspaceSession.authorize).toHaveBeenCalledWith(workspace);
   });
 
-  it('renders the connection route', () => {
+  it('invalidates a stale binding instead of opening a fallback runtime', async () => {
+    const workspaceSession = session(true);
+    render(
+      <I18nProvider>
+        <UniversalBootstrapRoute
+          workspaceSession={workspaceSession}
+          workspaceResolver={resolver(null)}
+          migrateStorage={vi.fn()}
+        />
+      </I18nProvider>,
+    );
+
+    await waitFor(() =>
+      expect(replaceSpy).toHaveBeenCalledWith(universalApplicationRoutes.connect),
+    );
+    expect(workspaceSession.clear).toHaveBeenCalledOnce();
+  });
+
+  it('renders the Workspace Code connection route', () => {
     const page = UniversalApplicationConnectPage();
     render(<I18nProvider>{page}</I18nProvider>);
 
     expect(
-      screen.getByRole('heading', { name: 'Подключение к бизнес-среде' }),
+      screen.getByRole('heading', { name: 'Подключение рабочего пространства' }),
     ).toBeInTheDocument();
   });
 
-  it('renders a project-scoped operational route safely without a session', async () => {
-    const page = await OperationalRuntimePage({
-      params: Promise.resolve({ projectId: 'coffee-1' }),
-    });
+  it('renders the canonical workspace route without URL identifiers', async () => {
+    const page = OperationalWorkspacePage();
     render(<I18nProvider>{page}</I18nProvider>);
 
-    expect(
-      await screen.findByRole('heading', { name: 'Введите код бизнес-среды' }),
-    ).toBeInTheDocument();
-  });
-
-  it('renders a workspace-scoped route safely without a session', async () => {
-    const page = await OperationalWorkspacePage({
-      params: Promise.resolve({
-        projectId: 'coffee-1',
-        workspaceId: 'workspace-bar',
-      }),
-    });
-    render(<I18nProvider>{page}</I18nProvider>);
-
-    expect(
-      screen.getByRole('heading', { name: 'Рабочее пространство недоступно' }),
-    ).toBeInTheDocument();
-  });
-
-  it('renders a neutral unavailable route', () => {
-    render(
-      <I18nProvider>
-        <UniversalApplicationUnavailablePage />
-      </I18nProvider>,
+    await waitFor(() =>
+      expect(replaceSpy).toHaveBeenCalledWith(universalApplicationRoutes.connect),
     );
-
-    expect(
-      screen.getByRole('heading', { name: 'Приложение временно недоступно' }),
-    ).toBeInTheDocument();
-  });
-
-  it('returns an unknown Universal Application route to the safe root', () => {
-    InvalidUniversalApplicationRoute();
-    expect(redirectSpy).toHaveBeenCalledWith(universalApplicationRoutes.root);
   });
 });

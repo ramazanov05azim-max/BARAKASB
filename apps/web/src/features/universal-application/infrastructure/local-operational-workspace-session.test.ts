@@ -20,8 +20,7 @@ const workspace: ResolvedOperationalWorkspace = {
   projectId: 'coffee-1',
   solutionId: 'coffee',
   solutionInstallationId: 'installation-1',
-  businessEnvironmentId: 'environment-1',
-  environmentDisplayName: 'Север',
+  isolationScopeId: 'environment-1',
   workspaceId: 'workspace-bar',
   workspaceType: 'bar',
   workspaceName: 'Бар',
@@ -36,21 +35,18 @@ describe('local operational workspace device session', () => {
 
     const refreshed = createOperationalWorkspaceSessionStore(deviceStorage);
     expect(refreshed.readConnected()?.workspace.workspaceId).toBe('workspace-bar');
-    expect(refreshed.read('coffee-1', 'workspace-bar')?.currentEmployeeId).toBeNull();
+    expect(refreshed.readConnected()?.currentEmployeeId).toBeNull();
   });
 
   it('changes employee without deleting the saved workspace connection', () => {
     const deviceStorage = storage();
     const session = createOperationalWorkspaceSessionStore(deviceStorage);
     session.authorize(workspace);
-    expect(
-      session.authenticateEmployee('coffee-1', 'workspace-bar', 'employee-1')
-        ?.currentEmployeeId,
-    ).toBe('employee-1');
+    expect(session.authenticateEmployee('employee-1')?.currentEmployeeId).toBe(
+      'employee-1',
+    );
 
-    expect(
-      session.logoutEmployee('coffee-1', 'workspace-bar')?.currentEmployeeId,
-    ).toBeNull();
+    expect(session.logoutEmployee()?.currentEmployeeId).toBeNull();
     expect(session.readConnected()?.workspace.accessCode).toBe('123456789012');
 
     session.clear();
@@ -60,8 +56,17 @@ describe('local operational workspace device session', () => {
   it('does not authenticate an employee who is not assigned', () => {
     const session = createOperationalWorkspaceSessionStore(storage());
     session.authorize(workspace);
-    expect(
-      session.authenticateEmployee('coffee-1', 'workspace-bar', 'employee-2'),
-    ).toBeNull();
+    expect(session.authenticateEmployee('employee-2')).toBeNull();
+  });
+
+  it('allows Manager Platform to disconnect only the matching workspace', () => {
+    const deviceStorage = storage();
+    const session = createOperationalWorkspaceSessionStore(deviceStorage);
+    session.authorize(workspace);
+
+    expect(session.disconnect('coffee-2', 'workspace-bar')).toBe(false);
+    expect(session.readConnected()).not.toBeNull();
+    expect(session.disconnect('coffee-1', 'workspace-bar')).toBe(true);
+    expect(session.readConnected()).toBeNull();
   });
 });

@@ -2,52 +2,51 @@
 
 import { ArrowRight, Check, CircleDashed, KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/i18n-provider';
-import { localBusinessEnvironmentResolver } from '../infrastructure/local-business-environment-directory';
-import { localOperationalRuntimeSession } from '../infrastructure/local-operational-runtime-session';
 import { localOperationalWorkspaceResolver } from '../infrastructure/local-operational-workspace-directory';
 import { localOperationalWorkspaceSession } from '../infrastructure/local-operational-workspace-session';
-import type {
-  BusinessEnvironmentResolver,
-  OperationalRuntimeSessionStore,
-} from '../application/business-environment-resolution';
+import { migrateLegacyOperationalStorage } from '../infrastructure/local-operational-storage-migration';
 import type {
   OperationalWorkspaceAccessResolver,
   OperationalWorkspaceSessionStore,
 } from '../application/workspace-access';
 import {
-  isBusinessEnvironmentCodeComplete,
-  normalizeBusinessEnvironmentCode,
-} from '../domain/business-environment-code';
-import { isWorkspaceAccessCodeComplete } from '../domain/workspace-access-code';
-import { BusinessEnvironmentCodeInput } from './business-environment-code-input';
+  isWorkspaceAccessCodeComplete,
+  normalizeWorkspaceAccessCode,
+} from '../domain/workspace-access-code';
+import { universalApplicationRoutes } from '../routes';
+import { WorkspaceAccessCodeInput } from './workspace-access-code-input';
 
 type SubmissionState = 'idle' | 'resolving' | 'invalid' | 'error';
 
 export function ConnectionScreen({
-  resolver = localBusinessEnvironmentResolver,
-  session = localOperationalRuntimeSession,
   workspaceResolver = localOperationalWorkspaceResolver,
   workspaceSession = localOperationalWorkspaceSession,
+  migrateStorage = migrateLegacyOperationalStorage,
 }: {
-  resolver?: BusinessEnvironmentResolver;
-  session?: OperationalRuntimeSessionStore;
   workspaceResolver?: OperationalWorkspaceAccessResolver;
   workspaceSession?: OperationalWorkspaceSessionStore;
+  migrateStorage?: () => void;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [code, setCode] = useState('');
   const [hasInteracted, setHasInteracted] = useState(false);
   const [submissionState, setSubmissionState] = useState<SubmissionState>('idle');
-  const isWorkspaceCode = isWorkspaceAccessCodeComplete(code);
-  const isComplete = isWorkspaceCode || isBusinessEnvironmentCodeComplete(code);
+  const isComplete = isWorkspaceAccessCodeComplete(code);
   const isInvalid = hasInteracted && code.length > 0 && !isComplete;
 
+  useEffect(() => {
+    migrateStorage();
+    if (workspaceSession.readConnected()) {
+      router.replace(universalApplicationRoutes.workspace);
+    }
+  }, [migrateStorage, router, workspaceSession]);
+
   function handleCodeChange(value: string): void {
-    setCode(normalizeBusinessEnvironmentCode(value));
+    setCode(normalizeWorkspaceAccessCode(value));
     setHasInteracted(true);
     setSubmissionState('idle');
   }
@@ -58,27 +57,13 @@ export function ConnectionScreen({
     if (!isComplete) return;
     setSubmissionState('resolving');
     try {
-      if (isWorkspaceCode) {
-        const workspace = await workspaceResolver.resolve(code);
-        if (!workspace) {
-          setSubmissionState('invalid');
-          return;
-        }
-        workspaceSession.authorize(workspace);
-        session.clear();
-        router.push(
-          `/app/runtime/${workspace.projectId}/workspaces/${workspace.workspaceId}`,
-        );
-        return;
-      }
-      const environment = await resolver.resolve(code);
-      if (!environment) {
+      const workspace = await workspaceResolver.resolve(code);
+      if (!workspace) {
         setSubmissionState('invalid');
         return;
       }
-      session.authorize(environment);
-      workspaceSession.clear();
-      router.push(`/app/runtime/${environment.projectId}`);
+      workspaceSession.authorize(workspace);
+      router.push(universalApplicationRoutes.workspace);
     } catch {
       setSubmissionState('error');
     }
@@ -109,7 +94,7 @@ export function ConnectionScreen({
         className="glass-panel rounded-[28px] p-5 sm:p-7"
         noValidate
       >
-        <BusinessEnvironmentCodeInput
+        <WorkspaceAccessCodeInput
           value={code}
           onChange={handleCodeChange}
           invalid={isInvalid}

@@ -4,25 +4,38 @@ import { describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '@/i18n/i18n-provider';
 import type {
   OperationalEmployeeAuthenticator,
+  OperationalWorkspaceAccessResolver,
   OperationalWorkspaceSession,
   OperationalWorkspaceSessionStore,
+  ResolvedOperationalWorkspace,
 } from '../application/workspace-access';
+import { universalApplicationRoutes } from '../routes';
 import { OperationalWorkspaceScreen } from './operational-workspace-screen';
 
+const { replaceSpy, routerMock } = vi.hoisted(() => {
+  const replace = vi.fn();
+  return { replaceSpy: replace, routerMock: { replace } };
+});
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => routerMock,
+}));
+
+const workspace: ResolvedOperationalWorkspace = {
+  accessCode: '123456789012',
+  projectId: 'coffee-1',
+  solutionId: 'coffee',
+  solutionInstallationId: 'installation-1',
+  isolationScopeId: 'environment-1',
+  workspaceId: 'workspace-manager',
+  workspaceType: 'manager',
+  workspaceName: 'Руководитель',
+  assignedEmployees: [{ employeeId: 'employee-1', displayName: 'Анна Петрова' }],
+  createdAt: '2026-07-31T10:00:00.000Z',
+};
+
 const activeSession: OperationalWorkspaceSession = {
-  workspace: {
-    accessCode: '123456789012',
-    projectId: 'coffee-1',
-    solutionId: 'coffee',
-    solutionInstallationId: 'installation-1',
-    businessEnvironmentId: 'environment-1',
-    environmentDisplayName: 'Север',
-    workspaceId: 'workspace-manager',
-    workspaceType: 'manager',
-    workspaceName: 'Руководитель',
-    assignedEmployees: [{ employeeId: 'employee-1', displayName: 'Анна Петрова' }],
-    createdAt: '2026-07-31T10:00:00.000Z',
-  },
+  workspace,
   currentEmployeeId: null,
 };
 
@@ -31,10 +44,11 @@ function createSession(
 ): OperationalWorkspaceSessionStore {
   let current = value;
   return {
-    authorize: vi.fn(),
+    authorize: vi.fn((resolved) => {
+      current = { workspace: resolved, currentEmployeeId: null };
+    }),
     readConnected: vi.fn(() => current),
-    read: vi.fn(() => current),
-    authenticateEmployee: vi.fn((_projectId, _workspaceId, employeeId) => {
+    authenticateEmployee: vi.fn((employeeId) => {
       current = current ? { ...current, currentEmployeeId: employeeId } : null;
       return current;
     }),
@@ -42,34 +56,51 @@ function createSession(
       current = current ? { ...current, currentEmployeeId: null } : null;
       return current;
     }),
+    disconnect: vi.fn(() => false),
     clear: vi.fn(),
   };
+}
+
+function resolver(
+  value: ResolvedOperationalWorkspace | null = workspace,
+): OperationalWorkspaceAccessResolver {
+  return { resolve: vi.fn(async () => value) };
 }
 
 function authenticator(valid: boolean): OperationalEmployeeAuthenticator {
   return { verify: vi.fn(async () => valid) };
 }
 
+function renderWorkspace(
+  session: OperationalWorkspaceSessionStore,
+  employeeAuthenticator: OperationalEmployeeAuthenticator = authenticator(true),
+  workspaceResolver: OperationalWorkspaceAccessResolver = resolver(),
+) {
+  return render(
+    <I18nProvider>
+      <OperationalWorkspaceScreen
+        session={session}
+        authenticator={employeeAuthenticator}
+        workspaceResolver={workspaceResolver}
+        migrateStorage={vi.fn()}
+      />
+    </I18nProvider>,
+  );
+}
+
 describe('OperationalWorkspaceScreen', () => {
-  it('authenticates an assigned employee without exposing the workspace code', async () => {
+  it('authenticates an assigned employee and opens the workspace directly', async () => {
     const user = userEvent.setup();
     const session = createSession(activeSession);
     const employeeAuthenticator = authenticator(true);
-    render(
-      <I18nProvider>
-        <OperationalWorkspaceScreen
-          projectId="coffee-1"
-          workspaceId="workspace-manager"
-          session={session}
-          authenticator={employeeAuthenticator}
-        />
-      </I18nProvider>,
-    );
+    renderWorkspace(session, employeeAuthenticator);
 
     expect(
       await screen.findByRole('heading', { name: 'Выберите сотрудника' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('1234 5678 9012')).not.toBeInTheDocument();
+    expect(screen.queryByText(/бизнес-сред/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/проект/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Анна Петрова' }));
     await user.type(screen.getByLabelText('Пароль'), 'Coffee2026');
@@ -82,31 +113,24 @@ describe('OperationalWorkspaceScreen', () => {
         employeeId: 'employee-1',
         password: 'Coffee2026',
       });
-      expect(session.authenticateEmployee).toHaveBeenCalledWith(
-        'coffee-1',
-        'workspace-manager',
-        'employee-1',
-      );
+      expect(session.authenticateEmployee).toHaveBeenCalledWith('employee-1');
     });
     expect(
-      screen.getByRole('button', { name: 'Сменить сотрудника' }),
+      await screen.findByRole('button', { name: 'Сменить сотрудника' }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('1234 5678 9012')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Сменить сотрудника' }));
+    expect(session.logoutEmployee).toHaveBeenCalledOnce();
+    expect(
+      screen.getByRole('heading', { name: 'Выберите сотрудника' }),
+    ).toBeInTheDocument();
+    expect(session.clear).not.toHaveBeenCalled();
   });
 
   it('rejects an invalid employee password without opening the workspace', async () => {
     const user = userEvent.setup();
     const session = createSession(activeSession);
-    render(
-      <I18nProvider>
-        <OperationalWorkspaceScreen
-          projectId="coffee-1"
-          workspaceId="workspace-manager"
-          session={session}
-          authenticator={authenticator(false)}
-        />
-      </I18nProvider>,
-    );
+    renderWorkspace(session, authenticator(false));
 
     await user.click(await screen.findByRole('button', { name: 'Анна Петрова' }));
     await user.type(screen.getByLabelText('Пароль'), 'wrong');
@@ -118,50 +142,25 @@ describe('OperationalWorkspaceScreen', () => {
     expect(session.authenticateEmployee).not.toHaveBeenCalled();
   });
 
-  it('changes the employee without disconnecting the device', async () => {
-    const user = userEvent.setup();
-    const authenticated: OperationalWorkspaceSession = {
-      ...activeSession,
-      currentEmployeeId: 'employee-1',
-    };
-    const session = createSession(authenticated);
-    render(
-      <I18nProvider>
-        <OperationalWorkspaceScreen
-          projectId="coffee-1"
-          workspaceId="workspace-manager"
-          session={session}
-        />
-      </I18nProvider>,
-    );
+  it('redirects an unbound device to Workspace Code entry without a fallback UI', async () => {
+    const session = createSession(null);
+    renderWorkspace(session);
 
-    await user.click(await screen.findByRole('button', { name: 'Сменить сотрудника' }));
-
-    expect(session.logoutEmployee).toHaveBeenCalledWith(
-      'coffee-1',
-      'workspace-manager',
+    await waitFor(() =>
+      expect(replaceSpy).toHaveBeenCalledWith(universalApplicationRoutes.connect),
     );
     expect(
-      screen.getByRole('heading', { name: 'Выберите сотрудника' }),
-    ).toBeInTheDocument();
-    expect(session.clear).not.toHaveBeenCalled();
+      screen.queryByRole('heading', { name: 'Рабочее пространство недоступно' }),
+    ).not.toBeInTheDocument();
   });
 
-  it('rejects a deep link without an authorized workspace session', async () => {
-    render(
-      <I18nProvider>
-        <OperationalWorkspaceScreen
-          projectId="coffee-1"
-          workspaceId="workspace-manager"
-          session={createSession(null)}
-        />
-      </I18nProvider>,
-    );
+  it('invalidates a device binding after its Workspace Code is rotated', async () => {
+    const session = createSession(activeSession);
+    renderWorkspace(session, authenticator(true), resolver(null));
 
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Рабочее пространство недоступно',
-      }),
-    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(replaceSpy).toHaveBeenCalledWith(universalApplicationRoutes.connect),
+    );
+    expect(session.clear).toHaveBeenCalledOnce();
   });
 });

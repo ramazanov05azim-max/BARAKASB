@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { formatBusinessEnvironmentCode } from '@/features/universal-application/domain/business-environment-code';
+import { formatBusinessEnvironmentCode } from './business-environment-code';
 import { useTranslation } from '@/i18n/i18n-provider';
 import {
   coffeeCrashTestDisplayName,
@@ -107,7 +107,7 @@ export function CoffeeCrashTestScreen({
                 <Badge>{t('crashTest.marker')}</Badge>
               </div>
               <p className="mt-6 text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
-                {t('universal.codeLabel')}
+                {t('coffeeOnboarding.businessEnvironmentCodeLabel')}
               </p>
               <p className="mt-2 font-mono text-2xl font-semibold tracking-[0.08em]">
                 {formatBusinessEnvironmentCode(code)}
@@ -131,10 +131,7 @@ export function CoffeeCrashTestScreen({
                 >
                   {t('crashTest.openSetup')}
                 </Link>
-                <Link
-                  href="/app/connect"
-                  className={buttonVariants({ variant: 'secondary' })}
-                >
+                <Link href="/app" className={buttonVariants({ variant: 'secondary' })}>
                   {t('crashTest.openOperational')}
                 </Link>
                 <Button

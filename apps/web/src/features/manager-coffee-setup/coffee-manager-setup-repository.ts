@@ -9,8 +9,8 @@ import {
 import type {
   BusinessEnvironmentDirectoryWriter,
   ResolvedBusinessEnvironment,
-} from '@/features/universal-application/application/business-environment-resolution';
-import { localBusinessEnvironmentDirectoryWriter } from '@/features/universal-application/infrastructure/local-business-environment-directory';
+} from './business-environment-directory';
+import { localBusinessEnvironmentDirectoryWriter } from './local-business-environment-directory';
 import {
   mockRepository,
   type MockRepository,

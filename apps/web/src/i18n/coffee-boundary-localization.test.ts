@@ -7,8 +7,8 @@ const boundaryKeys = [
   'coffeeOnboarding.save',
   'universal.connectTitle',
   'universal.invalidCode',
-  'operational.readinessTitle',
-  'operational.unavailable',
+  'workspace.employeeLoginTitle',
+  'workspace.changeEmployee',
 ] as const;
 
 describe('Coffee responsibility-boundary localization', () => {

@@ -1,7 +1,7 @@
 'use client';
 
-import { LockKeyhole, LogOut, UserRound, UsersRound } from 'lucide-react';
-import Link from 'next/link';
+import { LoaderCircle, LockKeyhole, LogOut, UserRound, UsersRound } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { CoffeeBarWorkspaceScreen } from '@barakasb/solution-coffee';
 import { Badge } from '@/components/ui/badge';
@@ -11,27 +11,34 @@ import { useTranslation } from '@/i18n/i18n-provider';
 import type {
   OperationalWorkspaceSession,
   OperationalEmployeeAuthenticator,
+  OperationalWorkspaceAccessResolver,
   OperationalWorkspaceSessionStore,
 } from '../application/workspace-access';
 import { localCoffeeEmployeeAuthenticator } from '../infrastructure/local-coffee-employee-authenticator';
+import { migrateLegacyOperationalStorage } from '../infrastructure/local-operational-storage-migration';
+import { localOperationalWorkspaceResolver } from '../infrastructure/local-operational-workspace-directory';
 import { localOperationalWorkspaceSession } from '../infrastructure/local-operational-workspace-session';
+import { universalApplicationRoutes } from '../routes';
 
 const selectClassName =
   'h-12 w-full rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-raised)] px-4 text-[15px] text-[var(--text)] outline-none transition focus:border-[var(--action)] focus:ring-4 focus:ring-[var(--focus-soft)]';
 
 export function OperationalWorkspaceScreen({
-  projectId,
-  workspaceId,
   session = localOperationalWorkspaceSession,
   authenticator = localCoffeeEmployeeAuthenticator,
+  workspaceResolver = localOperationalWorkspaceResolver,
+  migrateStorage = migrateLegacyOperationalStorage,
 }: {
-  projectId: string;
-  workspaceId: string;
   session?: OperationalWorkspaceSessionStore;
   authenticator?: OperationalEmployeeAuthenticator;
+  workspaceResolver?: OperationalWorkspaceAccessResolver;
+  migrateStorage?: () => void;
 }) {
   const { t } = useTranslation();
-  const [current, setCurrent] = useState<OperationalWorkspaceSession | null>(null);
+  const router = useRouter();
+  const [current, setCurrent] = useState<
+    OperationalWorkspaceSession | null | undefined
+  >(undefined);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [password, setPassword] = useState('');
   const [loginState, setLoginState] = useState<
@@ -39,29 +46,53 @@ export function OperationalWorkspaceScreen({
   >('idle');
 
   useEffect(() => {
-    const readSession = window.setTimeout(() => {
-      setCurrent(session.read(projectId, workspaceId));
-    }, 0);
-    return () => window.clearTimeout(readSession);
-  }, [projectId, session, workspaceId]);
+    let active = true;
+    migrateStorage();
+    void (async () => {
+      const connected = session.readConnected();
+      if (!connected) {
+        if (active) {
+          setCurrent(null);
+          router.replace(universalApplicationRoutes.connect);
+        }
+        return;
+      }
+      const resolved = await workspaceResolver.resolve(connected.workspace.accessCode);
+      if (!resolved || resolved.workspaceId !== connected.workspace.workspaceId) {
+        session.clear();
+        if (active) {
+          setCurrent(null);
+          router.replace(universalApplicationRoutes.connect);
+        }
+        return;
+      }
+      session.authorize(resolved);
+      if (active) {
+        setCurrent({ workspace: resolved, currentEmployeeId: null });
+      }
+    })().catch(() => {
+      session.clear();
+      if (active) {
+        setCurrent(null);
+        router.replace(universalApplicationRoutes.connect);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [migrateStorage, router, session, workspaceResolver]);
 
   if (!current) {
     return (
-      <section className="w-full max-w-xl text-center">
-        <h1 className="text-3xl font-semibold tracking-[-0.04em]">
-          {t('workspace.accessDeniedTitle')}
-        </h1>
-        <p className="mt-4 text-sm leading-6 text-[var(--text-secondary)]">
-          {t('workspace.accessDeniedDescription')}
-        </p>
-        <Link href="/app/connect" className={`${buttonVariants()} mt-7`}>
-          {t('operational.enterCode')}
-        </Link>
+      <section className="text-center" aria-live="polite">
+        <LoaderCircle className="mx-auto size-7 animate-spin text-[var(--action)]" />
+        <h1 className="mt-5 text-xl font-semibold">{t('universal.starting')}</h1>
       </section>
     );
   }
 
-  const selectedEmployee = current.workspace.assignedEmployees.find(
+  const connectedWorkspace = current.workspace;
+  const selectedEmployee = connectedWorkspace.assignedEmployees.find(
     (employee) => employee.employeeId === current.currentEmployeeId,
   );
 
@@ -71,8 +102,8 @@ export function OperationalWorkspaceScreen({
     setLoginState('submitting');
     try {
       const valid = await authenticator.verify({
-        projectId,
-        workspaceId,
+        projectId: connectedWorkspace.projectId,
+        workspaceId: connectedWorkspace.workspaceId,
         employeeId: selectedEmployeeId,
         password,
       });
@@ -80,9 +111,7 @@ export function OperationalWorkspaceScreen({
         setLoginState('invalid');
         return;
       }
-      setCurrent(
-        session.authenticateEmployee(projectId, workspaceId, selectedEmployeeId),
-      );
+      setCurrent(session.authenticateEmployee(selectedEmployeeId));
       setPassword('');
       setLoginState('idle');
     } catch {
@@ -91,7 +120,7 @@ export function OperationalWorkspaceScreen({
   }
 
   function logoutEmployee(): void {
-    setCurrent(session.logoutEmployee(projectId, workspaceId));
+    setCurrent(session.logoutEmployee());
     setSelectedEmployeeId('');
     setPassword('');
     setLoginState('idle');
@@ -106,7 +135,7 @@ export function OperationalWorkspaceScreen({
       <CoffeeBarWorkspaceScreen
         context={{
           projectId: current.workspace.projectId,
-          businessEnvironmentId: current.workspace.businessEnvironmentId,
+          businessEnvironmentId: current.workspace.isolationScopeId,
           workspaceId: current.workspace.workspaceId,
           employeeId: selectedEmployee.employeeId,
         }}
@@ -257,10 +286,6 @@ export function OperationalWorkspaceScreen({
         <Card>
           <CardContent className="p-6 sm:p-8">
             <dl className="grid gap-5 sm:grid-cols-2">
-              <ReadOnlyValue
-                label={t('workspace.environment')}
-                value={current.workspace.environmentDisplayName}
-              />
               <ReadOnlyValue
                 label={t('workspace.currentEmployee')}
                 value={

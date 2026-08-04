@@ -12,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n/i18n-provider';
-import { formatBusinessEnvironmentCode } from '@/features/universal-application/domain/business-environment-code';
+import { formatBusinessEnvironmentCode } from './business-environment-code';
 import {
   localCoffeeManagerSetupRepository,
   type CoffeeEstablishmentInput,
@@ -180,7 +180,7 @@ export function CoffeeManagerSetupScreen({
 
             <div className="mx-auto mt-8 max-w-xl rounded-[22px] border border-blue-200/70 bg-[var(--action-soft)] p-5 sm:p-7">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                {t('universal.codeLabel')}
+                {t('coffeeOnboarding.businessEnvironmentCodeLabel')}
               </p>
               <p
                 className="mt-3 font-mono text-2xl font-semibold tracking-[0.08em] text-[var(--text)] sm:text-3xl"
@@ -222,7 +222,7 @@ export function CoffeeManagerSetupScreen({
               {createdRecord.project.developmentLabel === 'crash-test' && (
                 <>
                   <Link
-                    href="/app/connect"
+                    href="/app"
                     className={buttonVariants({
                       variant: 'secondary',
                       size: 'lg',

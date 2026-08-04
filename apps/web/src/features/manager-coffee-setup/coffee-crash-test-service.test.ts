@@ -5,7 +5,7 @@ import {
 } from '@barakasb/solution-coffee';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { verifyPasswordCredential } from '@/features/universal-application/domain/employee-password';
-import { createLocalBusinessEnvironmentDirectory } from '@/features/universal-application/infrastructure/local-business-environment-directory';
+import { createLocalBusinessEnvironmentDirectory } from './local-business-environment-directory';
 import { createLocalOperationalWorkspaceDirectory } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
 import { userLocalePreferenceStorageKey } from '@/i18n/user-locale-preference';
 import {

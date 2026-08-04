@@ -8,24 +8,21 @@ import {
 import type {
   BusinessEnvironmentDirectoryMaintenance,
   BusinessEnvironmentResolver,
-} from '@/features/universal-application/application/business-environment-resolution';
+} from './business-environment-directory';
 import {
   directoryStorageKey,
   legacyCoffeeStorageKey,
   localBusinessEnvironmentDirectoryMaintenance,
   localBusinessEnvironmentResolver,
-} from '@/features/universal-application/infrastructure/local-business-environment-directory';
+} from './local-business-environment-directory';
 import {
-  localOperationalRuntimeSession,
-  operationalRuntimeSessionKey,
-} from '@/features/universal-application/infrastructure/local-operational-runtime-session';
+  legacyOperationalRuntimeStorageKeys,
+  migrateLegacyOperationalStorage,
+} from '@/features/universal-application/infrastructure/local-operational-storage-migration';
 import { operationalWorkspaceDirectoryStorageKey } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
 import { localOperationalWorkspaceAccessIssuer } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
 import type { OperationalWorkspaceAccessIssuer } from '@/features/universal-application/application/workspace-access';
-import {
-  localOperationalWorkspaceSession,
-  operationalWorkspaceSessionStorageKey,
-} from '@/features/universal-application/infrastructure/local-operational-workspace-session';
+import { localOperationalWorkspaceSession } from '@/features/universal-application/infrastructure/local-operational-workspace-session';
 import {
   mockRepository,
   projectStorageKey,
@@ -236,8 +233,7 @@ export function createCoffeeCrashTestService(
         projectId: record.project.id,
         solutionId: record.installation.solutionId,
         solutionInstallationId: record.installation.id,
-        businessEnvironmentId: record.businessEnvironmentId,
-        environmentDisplayName: record.project.displayName ?? record.project.name,
+        isolationScopeId: record.businessEnvironmentId,
         workspaceId: barWorkspace.id,
         workspaceType: barWorkspace.moduleId,
         workspaceName: 'Бар',
@@ -286,7 +282,7 @@ function browserService(): CoffeeCrashTestService {
     coffee: localCoffeeManagerRepositories,
     workspaceAccess: localOperationalWorkspaceAccessIssuer,
     clearOperationalSession: () => {
-      localOperationalRuntimeSession.clear();
+      migrateLegacyOperationalStorage();
       localOperationalWorkspaceSession.clear();
     },
     enabled: process.env.NODE_ENV === 'development',
@@ -303,8 +299,5 @@ export const developmentStorageAudit = {
   canonicalLocalStorageKeys,
   obsoleteLocalStorageKeys,
   obsoleteStoragePrefixes,
-  sessionStorageKeys: [
-    operationalRuntimeSessionKey,
-    operationalWorkspaceSessionStorageKey,
-  ],
+  legacyOperationalStorageKeys: legacyOperationalRuntimeStorageKeys,
 } as const;

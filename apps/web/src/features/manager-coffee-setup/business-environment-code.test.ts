@@ -5,7 +5,7 @@ import {
   normalizeBusinessEnvironmentCode,
 } from './business-environment-code';
 
-describe('normalizeBusinessEnvironmentCode', () => {
+describe('Manager normalizeBusinessEnvironmentCode', () => {
   it.each([
     ['', ''],
     ['1', '1'],

@@ -175,6 +175,22 @@ export function SolutionConstructorScreen({
     }
   }
 
+  async function disconnectDevice(workspaceId: string): Promise<void> {
+    setPendingAction(`disconnect:${workspaceId}`);
+    setFeedback(null);
+    try {
+      setState(await service.disconnectDevice(projectId, workspaceId));
+      setFeedback({
+        tone: 'success',
+        message: t('constructor.deviceDisconnected'),
+      });
+    } catch {
+      setFeedback({ tone: 'error', message: t('constructor.operationError') });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   async function assignEmployee(
     workspaceId: string,
     employeeId: string,
@@ -258,7 +274,7 @@ export function SolutionConstructorScreen({
             {t('constructor.description')}
           </p>
         </div>
-        <Link href="/app/connect" className={buttonVariants({ variant: 'secondary' })}>
+        <Link href="/app" className={buttonVariants({ variant: 'secondary' })}>
           <KeyRound className="size-4" />
           {t('constructor.openUniversal')}
         </Link>
@@ -381,6 +397,11 @@ export function SolutionConstructorScreen({
                     <div className="mt-5 rounded-[16px] bg-[var(--subtle)] p-4">
                       {access ? (
                         <>
+                          {state.connectedWorkspaceId === workspace.id && (
+                            <Badge tone="success" className="mb-3">
+                              {t('constructor.deviceConnected')}
+                            </Badge>
+                          )}
                           <p className="font-mono text-lg font-semibold tracking-[0.08em]">
                             {formatWorkspaceAccessCode(access.accessCode)}
                           </p>
@@ -402,6 +423,19 @@ export function SolutionConstructorScreen({
                                 : 'constructor.copyCode',
                             )}
                           </Button>
+                          {state.connectedWorkspaceId === workspace.id && (
+                            <Button
+                              type="button"
+                              variant="quiet"
+                              size="sm"
+                              className="mt-2 text-[var(--danger)]"
+                              onClick={() => void disconnectDevice(workspace.id)}
+                              disabled={pendingAction !== null}
+                            >
+                              <Power className="size-4" />
+                              {t('constructor.disconnectDevice')}
+                            </Button>
+                          )}
                           <Button
                             type="button"
                             variant="quiet"

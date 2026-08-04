@@ -24,9 +24,3 @@ export interface BusinessEnvironmentDirectoryMaintenance {
   clear(): Promise<void>;
   count(): Promise<number>;
 }
-
-export interface OperationalRuntimeSessionStore {
-  authorize(environment: ResolvedBusinessEnvironment): void;
-  read(projectId: string): ResolvedBusinessEnvironment | null;
-  clear(): void;
-}

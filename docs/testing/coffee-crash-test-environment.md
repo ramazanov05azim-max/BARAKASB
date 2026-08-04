@@ -8,10 +8,9 @@ operational-module development. It is a local prototype, not a production Stage 
 installation.
 
 The environment is installed through Manager Platform ownership boundaries. The
-Universal Application resolves generated codes. The Business Environment preview remains
-read-only, while the generated `Бар` workspace owns local operational order data through
-replaceable Coffee repository contracts. It cannot create, edit, or regenerate a Coffee
-environment.
+Universal Application accepts only Workspace Codes and opens the bound workspace after
+employee authentication. The generated `Бар` workspace owns local operational order data
+through replaceable Coffee repository contracts.
 
 ## Canonical identity
 
@@ -27,8 +26,9 @@ environment.
 | Seed ID                    | `coffee-crash-test-v5`                              |
 | Seed schema version        | `5`                                                 |
 
-The 16-digit code is deterministic, immutable after creation, and resolves only the
-canonical project in the current browser.
+The 16-digit code is a deterministic, immutable Manager Platform identifier. It is never
+accepted by the Universal Application. Operational device binding uses only the 12-digit
+Bar Workspace Access Code.
 
 ## Explicit installation
 
@@ -89,9 +89,9 @@ localStorage.
 | Coffee administration           | `/projects/barakasb-coffee-crash-test-v2/coffee`                             |
 | Manager floor-plan editor       | `/projects/barakasb-coffee-crash-test-v2/coffee/floor-plan`                  |
 | Solution Constructor            | `/projects/barakasb-coffee-crash-test-v2/admin/solutions/coffee/constructor` |
-| Universal code entry            | `/app/connect`                                                               |
-| Resolved operational preview    | `/app/runtime/barakasb-coffee-crash-test-v2`                                 |
-| Bar operational workspace       | `/app/runtime/barakasb-coffee-crash-test-v2/workspaces/workspace-bar`        |
+| Universal Application entry     | `/app`                                                                       |
+| Workspace Code entry            | `/app/connect`                                                               |
+| Bound operational workspace     | `/app/workspace`                                                             |
 
 ## Dataset coverage
 
@@ -144,9 +144,9 @@ selection markers required by the test environment.
 5. Open Coffee setup and verify the read-only generated code.
 6. Open the Solution Constructor and verify that `Бар` has the immutable code
    `6728 0175 1693` and the assigned employees Иван Беляев and Анна Лукина.
-7. Open `/app/connect`, enter `6728 0175 1693`, and continue.
-8. Select Иван Беляев as the current employee. The access code identifies the workspace,
-   while the explicit selection establishes the current local employee context.
+7. Open `/app`, enter `6728 0175 1693`, and continue. Verify the device is bound and the
+   code is not requested again.
+8. Select Иван Беляев, enter `Coffee2026`, and verify the Bar workspace opens directly.
 9. In Coffee Administration open the business profile. Verify Monday–Friday default to
    `08:00–22:00`, Saturday–Sunday default to `09:00–21:00`, and the time zone plus
    operating-day boundaries can be saved.
@@ -155,8 +155,9 @@ selection markers required by the test environment.
     Zone dimensions must be displayed in metres and table dimensions in centimetres.
     Drag `Стол 1`, change its dimensions, save, and reload. The position and size must
     persist. Verify that an active-order table cannot be disabled or deleted.
-11. Return to `/app/connect`, enter `6728 0175 1693`, select Иван Беляев, and verify the
-    Bar opens with the Manager-owned read-only floor plan and Russian catalog.
+11. Return to `/app`. Verify code entry is skipped, employee selection opens
+    immediately, and Иван Беляев can open Bar with the Manager-owned read-only floor
+    plan and Russian catalog.
 12. Verify the top navigation contains only `Зал`, `Меню`, and `Заказы`. In `Зал`, each
     table must appear exactly once and no order list may be duplicated under the plan.
 13. Select free `Стол 1`. A one-guest draft order must open immediately and the
@@ -198,8 +199,8 @@ selection markers required by the test environment.
     retained in history. Verify an empty unsent table can be released.
 27. Verify identity, active location, catalog, recipe, stock, supplier, and employee
     summaries appear while unfinished transactional modules stay disabled.
-28. Reload the page and verify the selected workspace, orders, and completed history
-    remain readable.
+28. Reload the page and verify employee login is required before the bound workspace,
+    orders, and completed history become readable.
 29. Repeat at 1024 × 768 and 1280 × 800. Each operational screen must use internal
     scrolling where needed and the document must not overflow horizontally.
 
@@ -221,7 +222,7 @@ Browser-check evidence captured at a 1280-pixel tablet/landscape viewport:
 - [Manager project switcher](coffee-crash-test-project-switcher.jpg);
 - [Coffee setup and generated code](coffee-crash-test-setup-code.jpg);
 - [Coffee administration](coffee-crash-test-coffee-admin.jpg);
-- [Universal Application read-only preview](coffee-crash-test-operational-preview.jpg).
+- [Universal Application workspace](coffee-crash-test-operational-preview.jpg).
 
 ## Production boundary
 

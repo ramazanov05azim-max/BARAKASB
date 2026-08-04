@@ -1,3 +1,4 @@
+// Manager-only identifier formatting. Operational access uses Workspace Codes.
 const maximumCodeLength = 16;
 const codeGroupSize = 4;
 

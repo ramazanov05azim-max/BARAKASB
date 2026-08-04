@@ -11,9 +11,11 @@ import {
 import type {
   OperationalWorkspaceAccessInput,
   OperationalWorkspaceAccessIssuer,
+  OperationalWorkspaceSessionStore,
   ResolvedOperationalWorkspace,
 } from '@/features/universal-application/application/workspace-access';
 import { localOperationalWorkspaceAccessIssuer } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
+import { localOperationalWorkspaceSession } from '@/features/universal-application/infrastructure/local-operational-workspace-session';
 import { createPasswordCredential } from '@/features/universal-application/domain/employee-password';
 import {
   localCoffeeManagerSetupRepository,
@@ -47,6 +49,7 @@ export interface SolutionConstructorState {
   readonly structure: CoffeeSolutionStructure;
   readonly employees: ReadonlyArray<Employee>;
   readonly accessCodes: ReadonlyArray<ResolvedOperationalWorkspace>;
+  readonly connectedWorkspaceId: string | null;
 }
 
 export interface SolutionConstructorService {
@@ -99,6 +102,10 @@ export interface SolutionConstructorService {
     workspaceId: string,
     names: CoffeeModuleNames,
   ): Promise<SolutionConstructorState>;
+  disconnectDevice(
+    projectId: string,
+    workspaceId: string,
+  ): Promise<SolutionConstructorState>;
 }
 
 interface Dependencies {
@@ -108,6 +115,7 @@ interface Dependencies {
     'solutionConstructor' | 'employees' | 'employeeCredentials' | 'loadSnapshot'
   >;
   access: OperationalWorkspaceAccessIssuer;
+  deviceSession: OperationalWorkspaceSessionStore;
   today?: () => string;
 }
 
@@ -135,11 +143,7 @@ function toAccessInput(
     projectId: setup.project.id,
     solutionId: setup.installation.solutionId,
     solutionInstallationId: setup.installation.id,
-    businessEnvironmentId: setup.businessEnvironmentId,
-    environmentDisplayName:
-      setup.project.displayName ??
-      setup.establishment?.establishmentName ??
-      setup.project.name,
+    isolationScopeId: setup.businessEnvironmentId,
     workspaceId: workspace.id,
     workspaceType: workspace.moduleId,
     workspaceName: names[workspace.moduleId],
@@ -161,6 +165,7 @@ export function createSolutionConstructorService({
   setup,
   coffee,
   access,
+  deviceSession,
   today = () => new Date().toISOString().slice(0, 10),
 }: Dependencies): SolutionConstructorService {
   async function load(projectId: string): Promise<SolutionConstructorState> {
@@ -169,11 +174,16 @@ export function createSolutionConstructorService({
       coffee.loadSnapshot(projectId),
       access.listByProject(projectId),
     ]);
+    const connected = deviceSession.readConnected();
     return {
       setup: requireSetup(setupRecord),
       structure: snapshot.solutionStructure,
       employees: snapshot.employees,
       accessCodes,
+      connectedWorkspaceId:
+        connected?.workspace.projectId === projectId
+          ? connected.workspace.workspaceId
+          : null,
     };
   }
 
@@ -187,6 +197,15 @@ export function createSolutionConstructorService({
       setupRecord.project.id,
       new Set(structure.workspaces.map((workspace) => workspace.id)),
     );
+    const connected = deviceSession.readConnected();
+    if (
+      connected?.workspace.projectId === setupRecord.project.id &&
+      !structure.workspaces.some(
+        (workspace) => workspace.id === connected.workspace.workspaceId,
+      )
+    ) {
+      deviceSession.disconnect(setupRecord.project.id, connected.workspace.workspaceId);
+    }
     await Promise.all(
       structure.workspaces.map((workspace) =>
         access.sync(toAccessInput(setupRecord, workspace, employees, names)),
@@ -353,6 +372,12 @@ export function createSolutionConstructorService({
       await access.rotate(
         toAccessInput(setupRecord, workspace, snapshot.employees, names),
       );
+      deviceSession.disconnect(projectId, workspaceId);
+      return load(projectId);
+    },
+    async disconnectDevice(projectId, workspaceId) {
+      requireSetup(await setup.get(projectId));
+      deviceSession.disconnect(projectId, workspaceId);
       return load(projectId);
     },
   };
@@ -362,4 +387,5 @@ export const localSolutionConstructorService = createSolutionConstructorService(
   setup: localCoffeeManagerSetupRepository,
   coffee: localCoffeeManagerRepositories,
   access: localOperationalWorkspaceAccessIssuer,
+  deviceSession: localOperationalWorkspaceSession,
 });

@@ -5,11 +5,11 @@ import type {
   BusinessEnvironmentDirectoryMaintenance,
   BusinessEnvironmentResolver,
   ResolvedBusinessEnvironment,
-} from '../application/business-environment-resolution';
+} from './business-environment-directory';
 import {
   isBusinessEnvironmentCodeComplete,
   normalizeBusinessEnvironmentCode,
-} from '../domain/business-environment-code';
+} from './business-environment-code';
 
 export const directoryStorageKey = 'barakasb.local.business-environment.directory.v1';
 export const legacyCoffeeStorageKey = 'barakasb.local.coffee.environments.v1';
@@ -61,55 +61,6 @@ function readEntries(storage: Storage): DirectoryEntry[] {
   }
 }
 
-function readLegacyEnvironment(
-  storage: Storage,
-  normalizedCode: string,
-): ResolvedBusinessEnvironment | null {
-  const value = storage.getItem(legacyCoffeeStorageKey);
-  if (!value) return null;
-  try {
-    const parsed: unknown = JSON.parse(value);
-    if (!Array.isArray(parsed)) return null;
-    const record = parsed.find(
-      (candidate) =>
-        typeof candidate === 'object' &&
-        candidate !== null &&
-        'businessEnvironmentCode' in candidate &&
-        candidate.businessEnvironmentCode === normalizedCode,
-    );
-    if (
-      typeof record !== 'object' ||
-      record === null ||
-      !('project' in record) ||
-      typeof record.project !== 'object' ||
-      record.project === null ||
-      !('id' in record.project) ||
-      typeof record.project.id !== 'string'
-    ) {
-      return null;
-    }
-    const projectName =
-      'name' in record.project && typeof record.project.name === 'string'
-        ? record.project.name
-        : 'Coffee';
-    const createdAt =
-      'createdAt' in record && typeof record.createdAt === 'string'
-        ? record.createdAt
-        : new Date(0).toISOString();
-    return {
-      businessEnvironmentId: `legacy-${record.project.id}`,
-      projectId: record.project.id,
-      solutionId: 'coffee',
-      displayName: projectName,
-      status: 'active',
-      createdAt,
-      developmentDemo: false,
-    };
-  } catch {
-    return null;
-  }
-}
-
 export function createLocalBusinessEnvironmentDirectory(
   storage: Storage,
 ): LocalBusinessEnvironmentDirectory {
@@ -121,9 +72,7 @@ export function createLocalBusinessEnvironmentDirectory(
         const entry = readEntries(storage).find(
           (candidate) => candidate.code === normalizedCode,
         );
-        return entry
-          ? structuredClone(entry.environment)
-          : readLegacyEnvironment(storage, normalizedCode);
+        return entry ? structuredClone(entry.environment) : null;
       },
     },
     writer: {

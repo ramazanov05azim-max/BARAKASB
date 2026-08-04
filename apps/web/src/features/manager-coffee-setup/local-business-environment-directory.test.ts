@@ -11,7 +11,7 @@ const environment = {
   developmentDemo: false,
 };
 
-describe('local Business Environment directory', () => {
+describe('Manager-local Business Environment directory', () => {
   beforeEach(() => window.localStorage.clear());
 
   it('resolves a registered environment after adapter recreation', async () => {

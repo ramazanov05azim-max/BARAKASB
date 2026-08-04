@@ -23,6 +23,8 @@ function isWorkspace(value: unknown): value is ResolvedOperationalWorkspace {
     value !== null &&
     'projectId' in value &&
     typeof value.projectId === 'string' &&
+    'isolationScopeId' in value &&
+    typeof value.isolationScopeId === 'string' &&
     'workspaceId' in value &&
     typeof value.workspaceId === 'string' &&
     'assignedEmployees' in value &&
@@ -63,26 +65,13 @@ export function createOperationalWorkspaceSessionStore(
       };
       storage.setItem(operationalWorkspaceSessionStorageKey, JSON.stringify(session));
     },
-    read(projectId, workspaceId) {
-      const session = readSession(storage);
-      return session?.workspace.projectId === projectId &&
-        session.workspace.workspaceId === workspaceId
-        ? structuredClone(session)
-        : null;
-    },
     readConnected() {
       const session = readSession(storage);
       return session ? structuredClone(session) : null;
     },
-    authenticateEmployee(projectId, workspaceId, employeeId) {
+    authenticateEmployee(employeeId) {
       const session = readSession(storage);
-      if (
-        !session ||
-        session.workspace.projectId !== projectId ||
-        session.workspace.workspaceId !== workspaceId
-      ) {
-        return null;
-      }
+      if (!session) return null;
       if (
         !session.workspace.assignedEmployees.some(
           (employee) => employee.employeeId === employeeId,
@@ -97,21 +86,27 @@ export function createOperationalWorkspaceSessionStore(
       storage.setItem(operationalWorkspaceSessionStorageKey, JSON.stringify(updated));
       return structuredClone(updated);
     },
-    logoutEmployee(projectId, workspaceId) {
+    logoutEmployee() {
       const session = readSession(storage);
-      if (
-        !session ||
-        session.workspace.projectId !== projectId ||
-        session.workspace.workspaceId !== workspaceId
-      ) {
-        return null;
-      }
+      if (!session) return null;
       const updated: OperationalWorkspaceSession = {
         ...session,
         currentEmployeeId: null,
       };
       storage.setItem(operationalWorkspaceSessionStorageKey, JSON.stringify(updated));
       return structuredClone(updated);
+    },
+    disconnect(projectId, workspaceId) {
+      const session = readSession(storage);
+      if (
+        !session ||
+        session.workspace.projectId !== projectId ||
+        session.workspace.workspaceId !== workspaceId
+      ) {
+        return false;
+      }
+      storage.removeItem(operationalWorkspaceSessionStorageKey);
+      return true;
     },
     clear() {
       storage.removeItem(operationalWorkspaceSessionStorageKey);
@@ -130,10 +125,10 @@ function browserSession(): OperationalWorkspaceSessionStore {
 export const localOperationalWorkspaceSession: OperationalWorkspaceSessionStore = {
   authorize: (workspace) => browserSession().authorize(workspace),
   readConnected: () => browserSession().readConnected(),
-  read: (projectId, workspaceId) => browserSession().read(projectId, workspaceId),
-  authenticateEmployee: (projectId, workspaceId, employeeId) =>
-    browserSession().authenticateEmployee(projectId, workspaceId, employeeId),
-  logoutEmployee: (projectId, workspaceId) =>
-    browserSession().logoutEmployee(projectId, workspaceId),
+  authenticateEmployee: (employeeId) =>
+    browserSession().authenticateEmployee(employeeId),
+  logoutEmployee: () => browserSession().logoutEmployee(),
+  disconnect: (projectId, workspaceId) =>
+    browserSession().disconnect(projectId, workspaceId),
   clear: () => browserSession().clear(),
 };

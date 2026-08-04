@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { localCoffeeManagerRepositories } from '@barakasb/solution-coffee';
 import type { CoffeeManagerSetupRecord } from '@/features/manager-coffee-setup/coffee-manager-setup-repository';
 import { createLocalOperationalWorkspaceDirectory } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
+import { createOperationalWorkspaceSessionStore } from '@/features/universal-application/infrastructure/local-operational-workspace-session';
 import { verifyPasswordCredential } from '@/features/universal-application/domain/employee-password';
 import { localCoffeeEmployeeAuthenticator } from '@/features/universal-application/infrastructure/local-coffee-employee-authenticator';
 import {
@@ -62,6 +63,7 @@ describe('Solution Constructor service', () => {
       setup: { get: async () => setup },
       coffee: localCoffeeManagerRepositories,
       access: access.issuer,
+      deviceSession: createOperationalWorkspaceSessionStore(window.localStorage),
     });
 
     const generated = await service.generate(
@@ -88,7 +90,7 @@ describe('Solution Constructor service', () => {
     expect(withCode.accessCodes[0]).toMatchObject({
       projectId: setup.project.id,
       solutionInstallationId: setup.installation.id,
-      businessEnvironmentId: setup.businessEnvironmentId,
+      isolationScopeId: setup.businessEnvironmentId,
       workspaceId: bar?.id,
       workspaceName: 'Бар',
     });
@@ -100,6 +102,7 @@ describe('Solution Constructor service', () => {
       setup: { get: async () => setup },
       coffee: localCoffeeManagerRepositories,
       access: access.issuer,
+      deviceSession: createOperationalWorkspaceSessionStore(window.localStorage),
       today: () => '2026-07-31',
     });
     const generated = await service.generate(setup.project.id, ['kitchen'], names);
@@ -162,6 +165,7 @@ describe('Solution Constructor service', () => {
       setup: { get: async () => setup },
       coffee: localCoffeeManagerRepositories,
       access: access.issuer,
+      deviceSession: createOperationalWorkspaceSessionStore(window.localStorage),
       today: () => '2026-08-04',
     });
     const generated = await service.generate(setup.project.id, ['bar'], names);
@@ -257,15 +261,18 @@ describe('Solution Constructor service', () => {
 
   it('rotates a workspace code only after an explicit owner action', async () => {
     const access = createLocalOperationalWorkspaceDirectory(window.localStorage);
+    const deviceSession = createOperationalWorkspaceSessionStore(window.localStorage);
     const service = createSolutionConstructorService({
       setup: { get: async () => setup },
       coffee: localCoffeeManagerRepositories,
       access: access.issuer,
+      deviceSession,
     });
     const generated = await service.generate(setup.project.id, ['bar'], names);
     const workspace = generated.structure.workspaces[0]!;
     const issued = await service.issueAccessCode(setup.project.id, workspace.id, names);
     const originalCode = issued.accessCodes[0]!.accessCode;
+    deviceSession.authorize(issued.accessCodes[0]!);
 
     const rotated = await service.rotateAccessCode(
       setup.project.id,
@@ -279,5 +286,28 @@ describe('Solution Constructor service', () => {
     await expect(access.resolver.resolve(nextCode)).resolves.toMatchObject({
       workspaceId: workspace.id,
     });
+    expect(deviceSession.readConnected()).toBeNull();
+  });
+
+  it('lets Manager Platform disconnect the currently bound device', async () => {
+    const access = createLocalOperationalWorkspaceDirectory(window.localStorage);
+    const deviceSession = createOperationalWorkspaceSessionStore(window.localStorage);
+    const service = createSolutionConstructorService({
+      setup: { get: async () => setup },
+      coffee: localCoffeeManagerRepositories,
+      access: access.issuer,
+      deviceSession,
+    });
+    const generated = await service.generate(setup.project.id, ['bar'], names);
+    const workspace = generated.structure.workspaces[0]!;
+    const issued = await service.issueAccessCode(setup.project.id, workspace.id, names);
+    deviceSession.authorize(issued.accessCodes[0]!);
+
+    const connected = await service.load(setup.project.id);
+    expect(connected.connectedWorkspaceId).toBe(workspace.id);
+
+    const disconnected = await service.disconnectDevice(setup.project.id, workspace.id);
+    expect(disconnected.connectedWorkspaceId).toBeNull();
+    expect(deviceSession.readConnected()).toBeNull();
   });
 });
