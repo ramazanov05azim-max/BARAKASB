@@ -15,12 +15,23 @@ export interface FieldOption {
 export interface FieldDefinition {
   name: string;
   labelKey: CoffeeTranslationKey;
-  type: 'text' | 'email' | 'tel' | 'number' | 'textarea' | 'select' | 'date';
+  type:
+    | 'text'
+    | 'email'
+    | 'tel'
+    | 'number'
+    | 'textarea'
+    | 'select'
+    | 'date'
+    | 'image'
+    | 'multi-select';
   required?: boolean;
   min?: number;
   options?: FieldOption[];
   optionsFrom?: (snapshot: CoffeeSnapshot) => FieldOption[];
+  visibleWhen?: (snapshot: CoffeeSnapshot) => boolean;
   defaultValue?: string;
+  helperKey?: CoffeeTranslationKey;
 }
 
 export interface ResourceDefinition {
@@ -67,6 +78,12 @@ const recipeOptions = (snapshot: CoffeeSnapshot): FieldOption[] => [
   { value: '', labelKey: 'common.none' },
   ...snapshot.recipes.map((recipe) => ({ value: recipe.id, label: recipe.name })),
 ];
+
+const modifierGroupOptions = (snapshot: CoffeeSnapshot): FieldOption[] =>
+  snapshot.modifiers.map((group) => ({
+    value: group.id,
+    label: group.name,
+  }));
 
 const ingredientOptions = (snapshot: CoffeeSnapshot): FieldOption[] =>
   snapshot.ingredients.map((ingredient) => ({
@@ -249,10 +266,9 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
     addKey: 'categories.add',
     readCapability: 'menu.read',
     manageCapability: 'menu.manage',
-    summaryFields: ['displayOrder', 'locationAvailability', 'description'],
+    summaryFields: ['displayOrder'],
     fields: [
       { name: 'name', labelKey: 'fields.name', type: 'text', required: true },
-      { name: 'description', labelKey: 'fields.description', type: 'textarea' },
       {
         name: 'displayOrder',
         labelKey: 'fields.displayOrder',
@@ -264,12 +280,18 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
       {
         name: 'locationAvailability',
         labelKey: 'fields.locationAvailability',
-        type: 'text',
+        type: 'multi-select',
         required: true,
-        defaultValue: 'All',
+        optionsFrom: locationOptions,
+        visibleWhen: (snapshot) => snapshot.locations.length > 1,
       },
-      { name: 'imagePlaceholder', labelKey: 'fields.imagePlaceholder', type: 'text' },
-      statusField,
+      {
+        ...statusField,
+        options: [
+          { value: 'active', labelKey: 'options.categoryActive' },
+          { value: 'inactive', labelKey: 'options.categoryInactive' },
+        ],
+      },
     ],
   },
   menuItems: {
@@ -279,7 +301,7 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
     addKey: 'items.add',
     readCapability: 'menu.read',
     manageCapability: 'menu.manage',
-    summaryFields: ['sku', 'sellingPrice', 'categoryId'],
+    summaryFields: ['sellingPrice'],
     duplicate: true,
     fields: [
       { name: 'name', labelKey: 'fields.name', type: 'text', required: true },
@@ -290,9 +312,6 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
         required: true,
         optionsFrom: categoryOptions,
       },
-      { name: 'description', labelKey: 'fields.description', type: 'textarea' },
-      { name: 'sku', labelKey: 'fields.sku', type: 'text', required: true },
-      { name: 'barcode', labelKey: 'fields.barcode', type: 'text' },
       {
         name: 'sellingPrice',
         labelKey: 'fields.sellingPrice',
@@ -301,20 +320,10 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
         min: 0,
       },
       {
-        name: 'taxCategory',
-        labelKey: 'fields.taxCategory',
-        type: 'text',
-        required: true,
-        defaultValue: 'standard',
+        name: 'imagePlaceholder',
+        labelKey: 'fields.imagePlaceholder',
+        type: 'image',
       },
-      {
-        name: 'locationAvailability',
-        labelKey: 'fields.locationAvailability',
-        type: 'text',
-        required: true,
-        defaultValue: 'All',
-      },
-      { name: 'imagePlaceholder', labelKey: 'fields.imagePlaceholder', type: 'text' },
       {
         name: 'recipeId',
         labelKey: 'fields.recipe',
@@ -324,9 +333,22 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
       {
         name: 'modifierGroupIds',
         labelKey: 'fields.modifierGroups',
-        type: 'text',
+        type: 'multi-select',
+        optionsFrom: modifierGroupOptions,
       },
-      statusField,
+      {
+        name: 'barcode',
+        labelKey: 'fields.barcode',
+        type: 'text',
+        helperKey: 'fields.barcodeHelp',
+      },
+      {
+        ...statusField,
+        options: [
+          { value: 'active', labelKey: 'options.active' },
+          { value: 'inactive', labelKey: 'options.inactive' },
+        ],
+      },
     ],
   },
   modifiers: {

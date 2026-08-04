@@ -80,6 +80,23 @@ function createName(values: FormValues): string {
   return value(values, 'name') || value(values, 'fullName');
 }
 
+export function generateMenuItemSku(existingSkus: readonly string[]): string {
+  const occupied = new Set(existingSkus.map((sku) => sku.trim().toUpperCase()));
+  let sequence = 1;
+  while (occupied.has(`MENU-${String(sequence).padStart(4, '0')}`)) {
+    sequence += 1;
+  }
+  return `MENU-${String(sequence).padStart(4, '0')}`;
+}
+
+function inheritedTaxCategory(snapshot: CoffeeSnapshot): string {
+  return snapshot.businessProfile.taxMode || snapshot.settings.taxMode;
+}
+
+function currentLocationId(snapshot: CoffeeSnapshot): string {
+  return snapshot.project.defaultLocationId ?? snapshot.locations[0]?.id ?? '';
+}
+
 export function CoffeeWorkspaceProvider({
   projectId,
   projectName,
@@ -204,30 +221,37 @@ export function CoffeeWorkspaceProvider({
             });
             break;
           }
-          case 'menuCategories':
+          case 'menuCategories': {
+            if (!snapshot) throw new CoffeeRepositoryError('not-found');
             await repositories.menuCategories.create(projectId, {
               ...common,
               description: value(values, 'description'),
               displayOrder: numeric(values, 'displayOrder'),
-              locationAvailability: value(values, 'locationAvailability'),
+              locationAvailability:
+                snapshot.locations.length === 1
+                  ? (snapshot.locations[0]?.id ?? '')
+                  : value(values, 'locationAvailability'),
               imagePlaceholder: value(values, 'imagePlaceholder'),
             });
             break;
-          case 'menuItems':
+          }
+          case 'menuItems': {
+            if (!snapshot) throw new CoffeeRepositoryError('not-found');
             await repositories.menuItems.create(projectId, {
               ...common,
               categoryId: value(values, 'categoryId'),
               description: value(values, 'description'),
-              sku: value(values, 'sku'),
+              sku: generateMenuItemSku(snapshot.menuItems.map((item) => item.sku)),
               barcode: value(values, 'barcode'),
               sellingPrice: numeric(values, 'sellingPrice'),
-              taxCategory: value(values, 'taxCategory'),
-              locationAvailability: value(values, 'locationAvailability'),
+              taxCategory: inheritedTaxCategory(snapshot),
+              locationAvailability: currentLocationId(snapshot),
               imagePlaceholder: value(values, 'imagePlaceholder'),
               recipeId: value(values, 'recipeId'),
               modifierGroupIds: arrayValue(values, 'modifierGroupIds'),
             });
             break;
+          }
           case 'modifiers':
             await repositories.modifiers.create(projectId, {
               ...common,
@@ -329,7 +353,7 @@ export function CoffeeWorkspaceProvider({
         }
       }, 'resource.successCreated');
     },
-    [projectId, refreshAfter, repositories, snapshot?.locations.length],
+    [projectId, refreshAfter, repositories, snapshot],
   );
 
   const updateResource = useCallback(
@@ -381,30 +405,40 @@ export function CoffeeWorkspaceProvider({
             });
             break;
           }
-          case 'menuCategories':
+          case 'menuCategories': {
+            const existingCategory = snapshot?.menuCategories.find(
+              (category) => category.id === id,
+            );
+            if (!existingCategory) throw new CoffeeRepositoryError('not-found');
             await repositories.menuCategories.update(projectId, id, {
               ...common,
-              description: value(values, 'description'),
+              description: existingCategory.description,
               displayOrder: numeric(values, 'displayOrder'),
               locationAvailability: value(values, 'locationAvailability'),
-              imagePlaceholder: value(values, 'imagePlaceholder'),
+              imagePlaceholder: existingCategory.imagePlaceholder,
             });
             break;
-          case 'menuItems':
+          }
+          case 'menuItems': {
+            const existingMenuItem = snapshot?.menuItems.find((item) => item.id === id);
+            if (!snapshot || !existingMenuItem) {
+              throw new CoffeeRepositoryError('not-found');
+            }
             await repositories.menuItems.update(projectId, id, {
               ...common,
               categoryId: value(values, 'categoryId'),
-              description: value(values, 'description'),
-              sku: value(values, 'sku'),
+              description: existingMenuItem.description,
+              sku: existingMenuItem.sku,
               barcode: value(values, 'barcode'),
               sellingPrice: numeric(values, 'sellingPrice'),
-              taxCategory: value(values, 'taxCategory'),
-              locationAvailability: value(values, 'locationAvailability'),
+              taxCategory: inheritedTaxCategory(snapshot),
+              locationAvailability: existingMenuItem.locationAvailability,
               imagePlaceholder: value(values, 'imagePlaceholder'),
               recipeId: value(values, 'recipeId'),
               modifierGroupIds: arrayValue(values, 'modifierGroupIds'),
             });
             break;
+          }
           case 'modifiers':
             await repositories.modifiers.update(projectId, id, {
               ...common,

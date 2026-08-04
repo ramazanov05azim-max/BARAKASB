@@ -13,8 +13,9 @@ import {
   SlidersHorizontal,
   X,
 } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useId, useMemo, useState, type FormEvent } from 'react';
 import type { CollectionEntity, CollectionKey, FormValues } from './domain';
+import { ImageUploadField, ReadableMultiSelectField } from './form-controls';
 import { useCoffeeTranslation, type CoffeeTranslationKey } from './i18n';
 import {
   initialValues,
@@ -123,7 +124,9 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
 
   const validate = (values: FormValues): ValidationErrors => {
     const next: ValidationErrors = {};
-    for (const field of definition.fields) {
+    for (const field of definition.fields.filter(
+      (candidate) => candidate.visibleWhen?.(snapshot) ?? true,
+    )) {
       const current = values[field.name]?.trim() ?? '';
       if (field.required && !current) {
         next[field.name] = 'validation.required';
@@ -242,26 +245,28 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
           </div>
           <form onSubmit={(event) => void handleSubmit(event)} noValidate>
             <div className="grid gap-5 sm:grid-cols-2">
-              {definition.fields.map((field) => (
-                <ResourceField
-                  key={field.name}
-                  field={field}
-                  value={formValues[field.name] ?? ''}
-                  error={errors[field.name]}
-                  snapshot={snapshot}
-                  onChange={(nextValue) => {
-                    setFormValues({ ...formValues, [field.name]: nextValue });
-                    setDirty(true);
-                    if (errors[field.name]) {
-                      setErrors((current) => {
-                        const next = { ...current };
-                        delete next[field.name];
-                        return next;
-                      });
-                    }
-                  }}
-                />
-              ))}
+              {definition.fields
+                .filter((field) => field.visibleWhen?.(snapshot) ?? true)
+                .map((field) => (
+                  <ResourceField
+                    key={field.name}
+                    field={field}
+                    value={formValues[field.name] ?? ''}
+                    error={errors[field.name]}
+                    snapshot={snapshot}
+                    onChange={(nextValue) => {
+                      setFormValues({ ...formValues, [field.name]: nextValue });
+                      setDirty(true);
+                      if (errors[field.name]) {
+                        setErrors((current) => {
+                          const next = { ...current };
+                          delete next[field.name];
+                          return next;
+                        });
+                      }
+                    }}
+                  />
+                ))}
             </div>
 
             {discardPrompt ? (
@@ -499,7 +504,58 @@ function ResourceField({
   onChange: (value: string) => void;
 }) {
   const { t } = useCoffeeTranslation();
+  const inputId = useId();
   const options = field.optionsFrom?.(snapshot) ?? field.options;
+  if (field.type === 'image') {
+    return (
+      <ImageUploadField
+        label={t(field.labelKey)}
+        value={value}
+        uploadLabel={t('form.imageUpload')}
+        replaceLabel={t('form.imageReplace')}
+        removeLabel={t('form.imageRemove')}
+        previewLabel={t('form.imagePreview')}
+        onChange={onChange}
+      />
+    );
+  }
+  if (field.type === 'multi-select') {
+    const normalizedValue =
+      field.name === 'locationAvailability'
+        ? value
+            .split(',')
+            .map((token) => token.trim())
+            .filter(Boolean)
+            .map(
+              (token) =>
+                snapshot.locations.find(
+                  (location) => location.id === token || location.name === token,
+                )?.id ?? token,
+            )
+            .join(',')
+        : value;
+    return (
+      <ReadableMultiSelectField
+        label={t(field.labelKey)}
+        value={normalizedValue}
+        options={(options ?? []).map((option) => ({
+          ...option,
+          label: option.labelKey ? t(option.labelKey) : (option.label ?? ''),
+        }))}
+        selectedLabel={t('form.selectedValues')}
+        emptyLabel={t('form.noValuesSelected')}
+        onChange={onChange}
+      />
+    );
+  }
+  const selectOptions =
+    field.name === 'status' &&
+    value === 'draft' &&
+    !options?.some((option) => option.value === 'draft')
+      ? options?.map((option) =>
+          option.value === 'inactive' ? { ...option, value: 'draft' } : option,
+        )
+      : options;
   return (
     <label className={field.type === 'textarea' ? 'sm:col-span-2' : ''}>
       <span className="mb-2 block text-sm font-semibold">
@@ -512,6 +568,8 @@ function ResourceField({
       </span>
       {field.type === 'textarea' ? (
         <textarea
+          id={inputId}
+          aria-label={t(field.labelKey)}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           className={textareaClass}
@@ -519,13 +577,15 @@ function ResourceField({
         />
       ) : field.type === 'select' ? (
         <select
+          id={inputId}
+          aria-label={t(field.labelKey)}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           className={inputClass}
           aria-invalid={Boolean(error)}
         >
           {!value ? <option value="">{t('common.notConfigured')}</option> : null}
-          {options?.map((option) => (
+          {selectOptions?.map((option) => (
             <option key={option.value} value={option.value}>
               {option.labelKey ? t(option.labelKey) : option.label}
             </option>
@@ -533,6 +593,8 @@ function ResourceField({
         </select>
       ) : (
         <input
+          id={inputId}
+          aria-label={t(field.labelKey)}
           type={field.type}
           min={field.min}
           value={value}
@@ -544,6 +606,11 @@ function ResourceField({
       {error ? (
         <span className="mt-1.5 block text-xs font-medium text-red-600">
           {t(error)}
+        </span>
+      ) : null}
+      {field.helperKey && !error ? (
+        <span className="mt-1.5 block text-xs leading-5 text-[var(--muted)]">
+          {t(field.helperKey)}
         </span>
       ) : null}
     </label>
