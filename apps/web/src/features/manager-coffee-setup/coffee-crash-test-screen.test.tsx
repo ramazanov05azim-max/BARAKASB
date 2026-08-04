@@ -44,7 +44,7 @@ const record: CoffeeManagerSetupRecord = {
   businessEnvironmentId: coffeeCrashTestEnvironmentId,
   configuredAt: '2026-07-31T00:00:00.000Z',
   isDevelopmentDemo: true,
-  crashTestSeedVersion: 2,
+  crashTestSeedVersion: 5,
 };
 
 function state(status: CoffeeCrashTestState['status']): CoffeeCrashTestState {
@@ -103,7 +103,7 @@ describe('CoffeeCrashTestScreen', () => {
 
     await user.click(
       await screen.findByRole('button', {
-        name: 'Сбросить и установить crash-test',
+        name: 'Обновить тестовое окружение',
       }),
     );
 

@@ -386,6 +386,7 @@ export const en = {
   'crashTest.openSetup': 'Open Coffee setup',
   'crashTest.openOperational': 'Open application with code',
   'crashTest.reinstall': 'Reinstall environment',
+  'crashTest.updateEnvironment': 'Refresh test environment',
   'crashTest.delete': 'Delete crash-test',
   'crashTest.notInstalled': 'Crash-test environment is not installed',
   'crashTest.resetRequired': 'Local test data reset required',

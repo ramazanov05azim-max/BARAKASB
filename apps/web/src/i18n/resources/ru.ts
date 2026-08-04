@@ -389,6 +389,7 @@ export const ru = {
   'crashTest.openSetup': 'Открыть настройку Coffee',
   'crashTest.openOperational': 'Открыть приложение по коду',
   'crashTest.reinstall': 'Переустановить стенд',
+  'crashTest.updateEnvironment': 'Обновить тестовое окружение',
   'crashTest.delete': 'Удалить crash-test',
   'crashTest.notInstalled': 'Crash-test окружение не установлено',
   'crashTest.resetRequired': 'Нужен сброс локальных тестовых данных',

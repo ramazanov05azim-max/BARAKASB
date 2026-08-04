@@ -32,13 +32,24 @@ canonical project in the current browser.
 
 ## Explicit installation
 
-Open:
+Start the application in development mode:
 
-`/projects/dev/coffee-crash-test`
+```bash
+pnpm dev:web
+```
 
-The route is available only in development, unless the explicit
-`NEXT_PUBLIC_ENABLE_COFFEE_CRASH_TEST=true` build flag is present. Installation never
-runs during application startup and deleted data is never silently recreated.
+Then open the canonical bootstrap URL:
+
+`http://localhost:3000/projects/dev/coffee-crash-test`
+
+The route is available only while `NODE_ENV=development`. A production build always
+returns `404` for this route and never exposes the destructive reset action.
+Installation never runs during application startup and deleted data is never silently
+recreated.
+
+Manager Platform also displays the development-only action `Обновить тестовое окружение`
+on `/projects`. It performs the same canonical reset and navigates directly to the
+installed project.
 
 When stale local test data exists, the page shows `reset-required`. The action requires
 this destructive confirmation:
@@ -58,9 +69,15 @@ After a successful reset, the invariants are:
 - the selected project is the canonical crash-test project;
 - no recognized legacy keys or Coffee project records remain;
 - the schema marker is version `2`.
+- the Coffee development seed is exactly version `5`;
 - `Бар` and `Руководитель` are selected in the Solution Constructor;
+- all five canonical employees exist with PBKDF2 password verifiers;
 - Иван Беляев and Анна Лукина are assigned to `Бар`;
 - the immutable Bar Workspace Access Code is `6728 0175 1693`.
+
+The development fixture password for every canonical employee is `Coffee2026`. Only
+PBKDF2-SHA256 verifier records are persisted; the plain password is never written to
+localStorage.
 
 ## Routes
 
@@ -109,13 +126,16 @@ Canonical browser-local keys:
 - `barakasb.mock.coffee.project.v1.<projectId>`;
 - `barakasb.mock.coffee.bar-orders.v1.<projectId>`.
 
-The typed cleanup service also removes recognized legacy Manager, onboarding, directory,
-selected-project, and Coffee namespaces before installation. Locale preference is not
-business test data and is intentionally preserved.
+Before installation, the reset removes every existing localStorage value, including
+unknown and stale prototype keys. The only previous value preserved is the UI language
+preference (`barakasb.mock.user.preferences.v1`). The installer then writes only the
+canonical version 5 project, workspaces, employees, password verifiers, directories, and
+selection markers required by the test environment.
 
 ## Manual Safari and tablet check
 
-1. Start the web application and open the DEV lifecycle route in Safari.
+1. Run `pnpm dev:web` and open `http://localhost:3000/projects/dev/coffee-crash-test` in
+   Safari. Verify it does not return `404`.
 2. Confirm the warning and install the environment.
 3. Verify the project overview shows the exact establishment name, `DEV DEMO` marker,
    success message, and formatted code.

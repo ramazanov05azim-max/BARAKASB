@@ -1,7 +1,13 @@
-import { localCoffeeManagerRepositories } from '@barakasb/solution-coffee';
+import {
+  coffeeCrashTestSeedId,
+  coffeeEmployeeCredentialStoragePrefix,
+  localCoffeeManagerRepositories,
+} from '@barakasb/solution-coffee';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { verifyPasswordCredential } from '@/features/universal-application/domain/employee-password';
 import { createLocalBusinessEnvironmentDirectory } from '@/features/universal-application/infrastructure/local-business-environment-directory';
 import { createLocalOperationalWorkspaceDirectory } from '@/features/universal-application/infrastructure/local-operational-workspace-directory';
+import { userLocalePreferenceStorageKey } from '@/i18n/user-locale-preference';
 import {
   mockRepository,
   projectStorageKey,
@@ -13,6 +19,7 @@ import {
 } from './coffee-manager-setup-repository';
 import {
   coffeeCrashTestSchemaKey,
+  coffeeCrashTestEmployeePassword,
   createCoffeeCrashTestService,
   obsoleteLocalStorageKeys,
   selectedProjectStorageKey,
@@ -85,6 +92,11 @@ describe('Coffee crash-test DEV lifecycle', () => {
       'barakasb.mock.coffee.project.v1.legacy-coffee-project',
       '{"legacy":true}',
     );
+    window.localStorage.setItem('unrelated-stale-data', 'remove-me');
+    window.localStorage.setItem(
+      userLocalePreferenceStorageKey,
+      JSON.stringify({ locale: 'en' }),
+    );
     const { service, clearOperationalSession } = createHarness();
 
     const state = await service.resetAndInstall();
@@ -104,12 +116,38 @@ describe('Coffee crash-test DEV lifecycle', () => {
     expect(window.localStorage.getItem(selectedProjectStorageKey)).toBe(
       coffeeCrashTestProjectId,
     );
+    expect(window.localStorage.getItem('unrelated-stale-data')).toBeNull();
+    expect(window.localStorage.getItem(userLocalePreferenceStorageKey)).toBe(
+      JSON.stringify({ locale: 'en' }),
+    );
     expect(
       window.localStorage.getItem(
         'barakasb.mock.coffee.project.v1.legacy-coffee-project',
       ),
     ).toBeNull();
     expect(clearOperationalSession).toHaveBeenCalled();
+    const snapshot = await localCoffeeManagerRepositories.loadSnapshot(
+      coffeeCrashTestProjectId,
+    );
+    expect(snapshot.developmentSeedId).toBe(coffeeCrashTestSeedId);
+    expect(snapshot.solutionStructure.workspaces).toHaveLength(2);
+    expect(snapshot.employees).toHaveLength(5);
+    for (const employee of snapshot.employees) {
+      const credential = await localCoffeeManagerRepositories.employeeCredentials.get(
+        coffeeCrashTestProjectId,
+        employee.id,
+      );
+      expect(credential).not.toBeNull();
+      await expect(
+        verifyPasswordCredential(coffeeCrashTestEmployeePassword, credential!),
+      ).resolves.toBe(true);
+    }
+    const storedCredentials = window.localStorage.getItem(
+      `${coffeeEmployeeCredentialStoragePrefix}.${encodeURIComponent(
+        coffeeCrashTestProjectId,
+      )}`,
+    );
+    expect(storedCredentials).not.toContain(coffeeCrashTestEmployeePassword);
     await expect(
       createLocalOperationalWorkspaceDirectory(window.localStorage).resolver.resolve(
         '672801751693',
@@ -142,5 +180,5 @@ describe('Coffee crash-test DEV lifecycle', () => {
     const inspectedAgain = await service.inspect();
     expect(inspectedAgain.status).toBe('not-installed');
     expect(inspectedAgain.record).toBeNull();
-  }, 10_000);
+  }, 20_000);
 });

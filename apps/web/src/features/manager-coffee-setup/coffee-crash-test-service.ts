@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  clearLocalCoffeeDevelopmentStorage,
   coffeeCrashTestSeedVersion,
   localCoffeeManagerRepositories,
   type CoffeeManagerRepositories,
@@ -32,6 +31,8 @@ import {
   projectStorageKey,
   type MockRepository,
 } from '@/lib/mock-repository';
+import { userLocalePreferenceStorageKey } from '@/i18n/user-locale-preference';
+import { createPasswordCredential } from '@/features/universal-application/domain/employee-password';
 import {
   coffeeCrashTestProjectId,
   coffeeManagerStorageKey,
@@ -44,6 +45,7 @@ import {
 
 export const coffeeCrashTestSchemaKey = 'barakasb.dev.coffee-crash-test.schema.v2';
 export const selectedProjectStorageKey = 'barakasb.manager.selected-project.v1';
+export const coffeeCrashTestEmployeePassword = 'Coffee2026';
 
 export const obsoleteLocalStorageKeys = [
   'barakasb.mock.projects.v1',
@@ -96,7 +98,7 @@ interface CoffeeCrashTestDependencies {
   manager: CoffeeManagerSetupRepository;
   directory: BusinessEnvironmentDirectoryMaintenance;
   resolver: BusinessEnvironmentResolver;
-  coffee: Pick<CoffeeManagerRepositories, 'loadSnapshot'>;
+  coffee: Pick<CoffeeManagerRepositories, 'employeeCredentials' | 'loadSnapshot'>;
   workspaceAccess: OperationalWorkspaceAccessIssuer;
   clearOperationalSession(): void;
   enabled: boolean;
@@ -179,13 +181,15 @@ export function createCoffeeCrashTestService(
     await dependencies.platformProjects.clearProjects();
     await dependencies.directory.clear();
     dependencies.clearOperationalSession();
-    clearLocalCoffeeDevelopmentStorage(dependencies.localStorage);
-    dependencies.localStorage.removeItem(coffeeManagerStorageKey);
-    dependencies.localStorage.removeItem(selectedProjectStorageKey);
-    dependencies.localStorage.removeItem(coffeeCrashTestSchemaKey);
-    dependencies.localStorage.removeItem(operationalWorkspaceDirectoryStorageKey);
-    for (const key of obsoleteKeys(dependencies.localStorage)) {
-      dependencies.localStorage.removeItem(key);
+    const localePreference = dependencies.localStorage.getItem(
+      userLocalePreferenceStorageKey,
+    );
+    dependencies.localStorage.clear();
+    if (localePreference !== null) {
+      dependencies.localStorage.setItem(
+        userLocalePreferenceStorageKey,
+        localePreference,
+      );
     }
   }
 
@@ -196,6 +200,31 @@ export function createCoffeeCrashTestService(
       await clearAllLocalTestData();
       const record = await dependencies.manager.installCrashTest();
       const snapshot = await dependencies.coffee.loadSnapshot(coffeeCrashTestProjectId);
+      await Promise.all(
+        snapshot.employees.map(async (employee) => {
+          const credential = await createPasswordCredential(
+            coffeeCrashTestEmployeePassword,
+          );
+          await dependencies.coffee.employeeCredentials.set(
+            coffeeCrashTestProjectId,
+            employee.id,
+            credential,
+          );
+        }),
+      );
+      const credentialCount = (
+        await Promise.all(
+          snapshot.employees.map((employee) =>
+            dependencies.coffee.employeeCredentials.get(
+              coffeeCrashTestProjectId,
+              employee.id,
+            ),
+          ),
+        )
+      ).filter(Boolean).length;
+      if (credentialCount !== snapshot.employees.length) {
+        throw new Error('coffee-crash-test-employee-credentials-missing');
+      }
       const barWorkspace = snapshot.solutionStructure.workspaces.find(
         (workspace) => workspace.moduleId === 'bar',
       );
@@ -260,9 +289,7 @@ function browserService(): CoffeeCrashTestService {
       localOperationalRuntimeSession.clear();
       localOperationalWorkspaceSession.clear();
     },
-    enabled:
-      process.env.NODE_ENV === 'development' ||
-      process.env.NEXT_PUBLIC_ENABLE_COFFEE_CRASH_TEST === 'true',
+    enabled: process.env.NODE_ENV === 'development',
   });
 }
 

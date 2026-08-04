@@ -144,7 +144,7 @@ export function CoffeeCrashTestScreen({
                   onClick={() => void resetAndInstall()}
                 >
                   <RefreshCw className="size-4" />
-                  {t('crashTest.reinstall')}
+                  {t('crashTest.updateEnvironment')}
                 </Button>
               </div>
               <Button
@@ -187,7 +187,7 @@ export function CoffeeCrashTestScreen({
                 ) : (
                   <Check className="size-4" />
                 )}
-                {t('crashTest.resetAndInstall')}
+                {t('crashTest.updateEnvironment')}
               </Button>
             </>
           )}
