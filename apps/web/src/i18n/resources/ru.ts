@@ -43,7 +43,7 @@ export const ru = {
   'common.commandShortcut': '⌘K',
   'language.label': 'Язык интерфейса',
   'language.russian': 'Русский',
-  'language.english': 'English',
+  'language.english': 'Английский',
   'language.shortRussian': 'RU',
   'language.shortEnglish': 'EN',
   'nav.public': 'Публичная навигация',
@@ -74,7 +74,7 @@ export const ru = {
   'nav.notificationsFuture':
     'Уведомления появятся на следующем этапе развития платформы.',
   'nav.platformPrototype': 'Прототип платформы',
-  'nav.mockNoBackend': 'Тестовые данные · backend не подключён',
+  'nav.mockNoBackend': 'Тестовые данные · сервер не подключён',
   'landing.badge': 'Операционная система для независимого бизнеса',
   'landing.titleLine1': 'Ваш бизнес —',
   'landing.titleLine2': 'предельно ясно.',
@@ -182,7 +182,7 @@ export const ru = {
   'wizard.retailDescription': 'Магазины и независимые торговые точки.',
   'wizard.servicesDescription': 'Запись клиентов и профессиональные услуги.',
   'wizard.coffeeDescription':
-    'Создайте Coffee Project с отдельным пространством настройки меню, рецептур, склада, команды и рабочих мест.',
+    'Создайте проект Coffee с отдельным пространством настройки меню, рецептур, склада, команды и рабочих мест.',
   'wizard.projectName': 'Название проекта',
   'wizard.projectPlaceholder': 'Например, Северная звезда',
   'wizard.renameLater': 'Название можно изменить позже в настройках проекта.',
@@ -191,7 +191,7 @@ export const ru = {
   'wizard.summarySolution': 'Решение',
   'wizard.summaryRole': 'Ваша роль',
   'wizard.summaryNotice':
-    'Будет создан изолированный Coffee Project. После создания откроется пошаговая настройка кофейни на тестовых данных.',
+    'Будет создан изолированный проект Coffee. После создания откроется пошаговая настройка кофейни на тестовых данных.',
   'wizard.cancel': 'Отмена',
   'wizard.back': 'Назад',
   'wizard.continue': 'Продолжить',
@@ -205,7 +205,7 @@ export const ru = {
   'coffeeOnboarding.eyebrow': 'Локальный прототип Coffee',
   'coffeeOnboarding.title': 'Создайте кофейню',
   'coffeeOnboarding.description':
-    'Заполните данные заведения. Мы создадим изолированный Coffee Project и внутреннюю бизнес-среду Manager Platform.',
+    'Заполните данные заведения. Мы создадим изолированный проект Coffee и внутреннюю среду управления.',
   'coffeeOnboarding.establishmentName': 'Название заведения',
   'coffeeOnboarding.establishmentNamePlaceholder': 'Например, Северная звезда',
   'coffeeOnboarding.legalName': 'Юридическое название',
@@ -231,10 +231,10 @@ export const ru = {
   'coffeeOnboarding.phone': 'Телефон',
   'coffeeOnboarding.phonePlaceholder': '+7 999 123-45-67',
   'coffeeOnboarding.email': 'Электронная почта',
-  'coffeeOnboarding.create': 'Создать Coffee Project',
-  'coffeeOnboarding.creating': 'Создаём Coffee Project…',
+  'coffeeOnboarding.create': 'Создать проект Coffee',
+  'coffeeOnboarding.creating': 'Создаём проект Coffee…',
   'coffeeOnboarding.errorCreate':
-    'Не удалось создать локальный Coffee Project. Проверьте доступ к хранилищу браузера и попробуйте снова.',
+    'Не удалось создать локальный проект Coffee. Проверьте доступ к хранилищу браузера и попробуйте снова.',
   'coffeeOnboarding.validation.establishmentName':
     'Введите название заведения — не менее 2 символов.',
   'coffeeOnboarding.validation.ownerName':
@@ -252,14 +252,14 @@ export const ru = {
   'coffeeOnboarding.copyCode': 'Скопировать код',
   'coffeeOnboarding.copied': 'Код скопирован',
   'coffeeOnboarding.backToProjects': 'К моим проектам',
-  'coffeeOnboarding.managerEyebrow': 'Manager Platform · Coffee Solution',
+  'coffeeOnboarding.managerEyebrow': 'Управление проектом · Решение Coffee',
   'coffeeOnboarding.managerTitle': 'Настройте заведение',
   'coffeeOnboarding.managerDescription':
-    'Укажите сведения о заведении. После сохранения Manager Platform создаст неизменяемый локальный код бизнес-среды.',
-  'coffeeOnboarding.save': 'Сохранить и создать код',
+    'Укажите сведения о заведении. Их можно изменить позже без пересоздания проекта и рабочих пространств.',
+  'coffeeOnboarding.save': 'Сохранить',
   'coffeeOnboarding.saving': 'Сохраняем конфигурацию…',
-  'coffeeOnboarding.notInstalled': 'Coffee Solution не установлено для этого проекта.',
-  'coffeeOnboarding.errorLoad': 'Не удалось загрузить установку Coffee Solution.',
+  'coffeeOnboarding.notInstalled': 'Решение Coffee не установлено для этого проекта.',
+  'coffeeOnboarding.errorLoad': 'Не удалось загрузить установленное решение Coffee.',
   'dashboard.notFound': 'Проект не найден',
   'dashboard.notFoundDescription':
     'Возможно, проект удалён или ваши права доступа изменились.',
@@ -281,6 +281,53 @@ export const ru = {
   'dashboard.configureCoffee': 'Настроить Coffee',
   'dashboard.solutionConstructor': 'Собрать рабочие пространства',
   'dashboard.openCoffeeAdmin': 'Открыть администрирование',
+  'ownerOverview.description':
+    'Настройте решение Coffee, команду и рабочие пространства одного проекта.',
+  'ownerOverview.configured': 'Заведение настроено',
+  'ownerOverview.setupRequired': 'Требуется настройка',
+  'ownerOverview.configurationTitle': 'Настройка решения',
+  'ownerOverview.configurationDescription':
+    'Выполните основные настройки заведения и подготовьте рабочие пространства для команды.',
+  'ownerOverview.configureEstablishment': 'Настроить заведение',
+  'ownerOverview.buildWorkspaces': 'Собрать рабочие пространства',
+  'ownerOverview.employees': 'Сотрудники',
+  'ownerOverview.menu': 'Настроить меню',
+  'ownerOverview.floorPlan': 'План зала',
+  'ownerOverview.hours': 'Часы работы',
+  'ownerOverview.solutionEyebrow': 'Решение Coffee',
+  'ownerOverview.workspacesTitle': 'Рабочие пространства',
+  'ownerOverview.workspacesDescription':
+    'Открывайте конкретное рабочее пространство напрямую или меняйте его настройки.',
+  'ownerOverview.noWorkspaces': 'Рабочие пространства ещё не созданы',
+  'ownerOverview.noWorkspacesDescription':
+    'Выберите нужные модули в конструкторе, чтобы сформировать структуру бизнеса.',
+  'ownerOverview.employeeCount': 'Сотрудников: {count}',
+  'ownerOverview.deviceConnected': 'Устройство подключено',
+  'ownerOverview.deviceNotConnected': 'Устройство не подключено',
+  'ownerOverview.open': 'Открыть',
+  'ownerOverview.configure': 'Настроить',
+  'ownerOverview.technicalSettings': 'Дополнительно',
+  'ownerPreview.title': 'Предпросмотр владельца',
+  'ownerPreview.description':
+    'Вы открыли рабочее пространство проекта «{project}» напрямую из управления.',
+  'ownerPreview.return': 'Вернуться в управление',
+  'ownerPreview.placeholder':
+    'Рабочее пространство создано и доступно для проверки. Операционные функции этого модуля будут добавлены позже.',
+  'ownerPreview.inactiveTitle': 'Рабочее пространство неактивно',
+  'ownerPreview.inactiveDescription':
+    'Активируйте рабочее пространство в настройках, прежде чем открывать его.',
+  'ownerPreview.unavailableTitle': 'Рабочее пространство недоступно',
+  'ownerPreview.unavailableDescription':
+    'Оно не принадлежит выбранному проекту, было удалено или у вас нет доступа.',
+  'technicalSettings.eyebrow': 'Настройки проекта · Дополнительно',
+  'technicalSettings.title': 'Техническая информация',
+  'technicalSettings.description':
+    'Системные сведения проекта доступны только владельцу и не участвуют в ежедневной работе.',
+  'technicalSettings.internalIdentifier': 'Внутренний идентификатор бизнес-среды',
+  'technicalSettings.identifierExplanation':
+    'Внутренний системный идентификатор. Не используется для входа сотрудников и подключения устройств.',
+  'technicalSettings.notConfigured': 'Ещё не создан',
+  'technicalSettings.back': 'Вернуться к решению Coffee',
   'solutions.eyebrow': 'Решения',
   'solutions.title': 'Выберите, как будет работать проект',
   'solutions.description':
@@ -431,7 +478,7 @@ export const ru = {
   'universal.resolveError':
     'Не удалось прочитать локальные данные. Проверьте доступ к хранилищу браузера.',
   'universal.whereCode':
-    'Код создаётся владельцем в Manager Platform. На этом устройстве он вводится только при первом подключении.',
+    'Код создаётся владельцем в разделе управления проектом. На этом устройстве он вводится только при первом подключении.',
   'universal.starting': 'Запуск приложения',
   'universal.startingDescription': 'Проверяем привязку рабочего пространства.',
   'universal.footerVersion': 'Версия',
@@ -517,7 +564,7 @@ export const ru = {
   'constructor.resultDescription':
     'Созданы только выбранные рабочие пространства. Теперь назначьте сотрудников и создайте коды доступа.',
   'constructor.loadError':
-    'Не удалось загрузить конструктор. Сначала завершите настройку заведения и создание бизнес-среды.',
+    'Не удалось загрузить конструктор. Сначала завершите настройку заведения.',
   'constructor.operationError':
     'Операция не завершена. Проверьте локальные данные и попробуйте снова.',
   'constructor.successGenerated': 'Структура бизнеса обновлена.',

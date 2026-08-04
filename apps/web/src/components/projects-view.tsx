@@ -8,7 +8,6 @@ import {
   roleLabelKeys,
   solutionLabelKeys,
 } from '@/i18n/entity-labels';
-import { CoffeeCrashTestRefreshAction } from '@/features/manager-coffee-setup/coffee-crash-test-refresh-action';
 import { useTranslation } from '@/i18n/i18n-provider';
 import { mockRepository, type ProjectSummary } from '@/lib/mock-repository';
 import { PageHeading } from './page-heading';
@@ -49,15 +48,12 @@ export function ProjectsView() {
         title={t('projects.title')}
         description={t('projects.description')}
         action={
-          <div className="flex flex-wrap gap-2">
-            {process.env.NODE_ENV === 'development' && <CoffeeCrashTestRefreshAction />}
-            <Link
-              href="/projects/new?category=food&solution=coffee"
-              className={buttonVariants({ size: 'lg' })}
-            >
-              <Plus className="size-4" /> {t('projects.createCoffee')}
-            </Link>
-          </div>
+          <Link
+            href="/projects/new?category=food&solution=coffee"
+            className={buttonVariants({ size: 'lg' })}
+          >
+            <Plus className="size-4" /> {t('projects.createCoffee')}
+          </Link>
         }
       />
       <div className="relative mb-6 max-w-md">

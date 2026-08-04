@@ -8,6 +8,12 @@ import type {
 } from './coffee-manager-setup-repository';
 import { CoffeeManagerSetupScreen } from './coffee-manager-setup-screen';
 
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+}));
+
 const record: CoffeeManagerSetupRecord = {
   schemaVersion: 2,
   project: {
@@ -52,7 +58,8 @@ function repository(): CoffeeManagerSetupRepository {
 }
 
 describe('CoffeeManagerSetupScreen', () => {
-  it('creates establishment configuration and code in Manager Platform', async () => {
+  it('saves establishment configuration and returns to the Coffee overview', async () => {
+    push.mockClear();
     const managerRepository = repository();
     const user = userEvent.setup();
     render(
@@ -72,17 +79,49 @@ describe('CoffeeManagerSetupScreen', () => {
       screen.getByLabelText('Электронная почта'),
       'owner@north-star.test',
     );
-    await user.click(screen.getByRole('button', { name: 'Сохранить и создать код' }));
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
 
     expect(managerRepository.configure).toHaveBeenCalledWith(
       'coffee-1',
       expect.objectContaining({ establishmentName: 'North Star' }),
     );
-    expect(
-      await screen.findByTestId('generated-business-environment-code'),
-    ).toHaveTextContent('1234 5678 9012 3456');
-    expect(
-      screen.queryByRole('link', { name: /Войти по коду/ }),
-    ).not.toBeInTheDocument();
+    expect(push).toHaveBeenCalledWith('/projects/coffee-1');
+    expect(screen.queryByText('Ваш код бизнес-среды готов')).not.toBeInTheDocument();
+    expect(screen.queryByText('1234 5678 9012 3456')).not.toBeInTheDocument();
+  });
+
+  it('opens the editable setup form for an existing project without the old code screen', async () => {
+    const configuredRepository = repository();
+    configuredRepository.get = vi.fn(async () => ({
+      ...record,
+      establishment: {
+        establishmentName: 'Север',
+        legalName: '',
+        ownerName: 'Анна',
+        country: 'RU',
+        city: 'Москва',
+        address: 'Тверская, 12',
+        timezone: 'Europe/Moscow',
+        currency: 'RUB',
+        language: 'ru' as const,
+        phone: '+7 999 111-22-33',
+        email: 'owner@example.test',
+      },
+      businessEnvironmentCode: '1234567890123456',
+      businessEnvironmentId: 'environment-1',
+    }));
+
+    render(
+      <I18nProvider>
+        <CoffeeManagerSetupScreen
+          projectId="coffee-1"
+          repository={configuredRepository}
+        />
+      </I18nProvider>,
+    );
+
+    expect(await screen.findByDisplayValue('Север')).toBeInTheDocument();
+    expect(screen.queryByText('Ваш код бизнес-среды готов')).not.toBeInTheDocument();
+    expect(screen.queryByText('1234 5678 9012 3456')).not.toBeInTheDocument();
   });
 });

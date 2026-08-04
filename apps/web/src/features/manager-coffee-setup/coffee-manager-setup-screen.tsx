@@ -1,22 +1,20 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Check, Coffee, Copy, Layers3 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Coffee } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/i18n/i18n-provider';
-import { formatBusinessEnvironmentCode } from './business-environment-code';
 import {
   localCoffeeManagerSetupRepository,
   type CoffeeEstablishmentInput,
-  type CoffeeManagerSetupRecord,
   type CoffeeManagerSetupRepository,
 } from './coffee-manager-setup-repository';
 
@@ -33,11 +31,8 @@ export function CoffeeManagerSetupScreen({
   repository?: CoffeeManagerSetupRepository;
 }) {
   const { t, locale } = useTranslation();
-  const [createdRecord, setCreatedRecord] = useState<CoffeeManagerSetupRecord | null>(
-    null,
-  );
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
 
   const schema = useMemo(
     () =>
@@ -118,7 +113,6 @@ export function CoffeeManagerSetupScreen({
         if (record.establishment) reset(record.establishment);
         else
           reset((current) => ({ ...current, establishmentName: record.project.name }));
-        if (record.businessEnvironmentCode) setCreatedRecord(record);
       })
       .catch(() => {
         if (active) {
@@ -135,117 +129,11 @@ export function CoffeeManagerSetupScreen({
 
   async function submit(values: FormValues): Promise<void> {
     try {
-      const record = await repository.configure(projectId, values);
-      setCreatedRecord(record);
+      await repository.configure(projectId, values);
+      router.push(`/projects/${projectId}`);
     } catch {
       setError('root', { message: t('coffeeOnboarding.errorCreate') });
     }
-  }
-
-  async function copyCode(): Promise<void> {
-    if (!createdRecord?.businessEnvironmentCode) return;
-    await navigator.clipboard.writeText(createdRecord.businessEnvironmentCode);
-    setCopied(true);
-  }
-
-  if (createdRecord) {
-    return (
-      <div className="mx-auto max-w-3xl">
-        <Card>
-          <CardContent className="py-10 text-center sm:px-12 sm:py-14">
-            <span className="soft-icon-tile mx-auto grid size-16 place-items-center rounded-[20px]">
-              <Check className="size-7 text-[var(--success)]" aria-hidden="true" />
-            </span>
-            <p className="mt-7 text-xs font-bold uppercase tracking-[0.18em] text-[var(--action)]">
-              {t('coffeeOnboarding.successEyebrow')}
-            </p>
-            <h1 className="mt-3 text-balance text-3xl font-semibold tracking-[-0.045em] sm:text-5xl">
-              {t('coffeeOnboarding.successTitle')}
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[var(--text-secondary)] sm:text-[15px]">
-              {t('coffeeOnboarding.successDescription')}
-            </p>
-            {createdRecord.project.developmentLabel === 'crash-test' && (
-              <div className="mt-5">
-                <Badge tone="warning">{t('crashTest.marker')}</Badge>
-                <p className="mt-2 text-lg font-semibold">
-                  {createdRecord.project.displayName ??
-                    createdRecord.establishment?.establishmentName}
-                </p>
-                <p className="mt-1 text-xs text-[var(--muted)]">
-                  {createdRecord.project.name}
-                </p>
-              </div>
-            )}
-
-            <div className="mx-auto mt-8 max-w-xl rounded-[22px] border border-blue-200/70 bg-[var(--action-soft)] p-5 sm:p-7">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                {t('coffeeOnboarding.businessEnvironmentCodeLabel')}
-              </p>
-              <p
-                className="mt-3 font-mono text-2xl font-semibold tracking-[0.08em] text-[var(--text)] sm:text-3xl"
-                data-testid="generated-business-environment-code"
-              >
-                {formatBusinessEnvironmentCode(
-                  createdRecord.businessEnvironmentCode ?? '',
-                )}
-              </p>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="mt-5"
-                onClick={() => void copyCode()}
-              >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                {t(copied ? 'coffeeOnboarding.copied' : 'coffeeOnboarding.copyCode')}
-              </Button>
-              <p className="mt-4 text-xs text-[var(--muted)]">
-                {t('crashTest.immutableCode')}
-              </p>
-            </div>
-
-            <div className="mt-8 flex flex-col-reverse justify-center gap-3 sm:flex-row">
-              <Link
-                href={`/projects/${projectId}/admin/solutions/coffee/constructor`}
-                className={buttonVariants({ size: 'lg' })}
-              >
-                <Layers3 className="size-4" />
-                {t('dashboard.solutionConstructor')}
-              </Link>
-              <Link
-                href={`/projects/${projectId}`}
-                className={buttonVariants({ variant: 'secondary', size: 'lg' })}
-              >
-                {t('coffeeOnboarding.backToProjects')}
-              </Link>
-              {createdRecord.project.developmentLabel === 'crash-test' && (
-                <>
-                  <Link
-                    href="/app"
-                    className={buttonVariants({
-                      variant: 'secondary',
-                      size: 'lg',
-                    })}
-                  >
-                    {t('crashTest.openOperational')}
-                  </Link>
-                  <Link
-                    href="/projects/dev/coffee-crash-test"
-                    className={buttonVariants({
-                      variant: 'secondary',
-                      size: 'lg',
-                    })}
-                  >
-                    {t('crashTest.manageEnvironment')}
-                  </Link>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
   }
 
   if (loading) {

@@ -254,8 +254,8 @@ export const en = {
   'coffeeOnboarding.managerEyebrow': 'Manager Platform · Coffee Solution',
   'coffeeOnboarding.managerTitle': 'Configure the establishment',
   'coffeeOnboarding.managerDescription':
-    'Enter establishment details. After saving, Manager Platform will create an immutable local Business Environment Code.',
-  'coffeeOnboarding.save': 'Save and generate code',
+    'Enter establishment details. You can edit them later without recreating the Project or its workspaces.',
+  'coffeeOnboarding.save': 'Save',
   'coffeeOnboarding.saving': 'Saving configuration…',
   'coffeeOnboarding.notInstalled': 'Coffee Solution is not installed for this Project.',
   'coffeeOnboarding.errorLoad': 'The Coffee Solution installation could not be loaded.',
@@ -279,6 +279,53 @@ export const en = {
   'dashboard.configureCoffee': 'Configure Coffee',
   'dashboard.solutionConstructor': 'Собрать рабочие пространства',
   'dashboard.openCoffeeAdmin': 'Open administration',
+  'ownerOverview.description':
+    'Configure the Coffee Solution, team, and workspaces for this Project.',
+  'ownerOverview.configured': 'Establishment configured',
+  'ownerOverview.setupRequired': 'Setup required',
+  'ownerOverview.configurationTitle': 'Solution setup',
+  'ownerOverview.configurationDescription':
+    'Complete the core establishment setup and prepare team workspaces.',
+  'ownerOverview.configureEstablishment': 'Configure establishment',
+  'ownerOverview.buildWorkspaces': 'Build workspaces',
+  'ownerOverview.employees': 'Employees',
+  'ownerOverview.menu': 'Configure menu',
+  'ownerOverview.floorPlan': 'Floor plan',
+  'ownerOverview.hours': 'Operating hours',
+  'ownerOverview.solutionEyebrow': 'Coffee Solution',
+  'ownerOverview.workspacesTitle': 'Workspaces',
+  'ownerOverview.workspacesDescription':
+    'Open a specific workspace directly or adjust its configuration.',
+  'ownerOverview.noWorkspaces': 'No workspaces yet',
+  'ownerOverview.noWorkspacesDescription':
+    'Select the required modules in the constructor to create the business structure.',
+  'ownerOverview.employeeCount': 'Employees: {count}',
+  'ownerOverview.deviceConnected': 'Device connected',
+  'ownerOverview.deviceNotConnected': 'Device not connected',
+  'ownerOverview.open': 'Open',
+  'ownerOverview.configure': 'Configure',
+  'ownerOverview.technicalSettings': 'Advanced',
+  'ownerPreview.title': 'Owner preview',
+  'ownerPreview.description':
+    'You opened the “{project}” Project workspace directly from management.',
+  'ownerPreview.return': 'Return to management',
+  'ownerPreview.placeholder':
+    'The workspace is configured and available for review. Operational functionality for this module will be added later.',
+  'ownerPreview.inactiveTitle': 'Workspace inactive',
+  'ownerPreview.inactiveDescription':
+    'Activate the workspace in settings before opening it.',
+  'ownerPreview.unavailableTitle': 'Workspace unavailable',
+  'ownerPreview.unavailableDescription':
+    'It does not belong to the selected Project, was removed, or you do not have access.',
+  'technicalSettings.eyebrow': 'Project settings · Advanced',
+  'technicalSettings.title': 'Technical information',
+  'technicalSettings.description':
+    'System information is available only to the owner and is not part of daily operations.',
+  'technicalSettings.internalIdentifier': 'Internal Business Environment identifier',
+  'technicalSettings.identifierExplanation':
+    'Internal system identifier. It is not used for employee sign-in or device connection.',
+  'technicalSettings.notConfigured': 'Not created yet',
+  'technicalSettings.back': 'Return to Coffee Solution',
   'solutions.eyebrow': 'Solutions',
   'solutions.title': 'Choose how your Project works',
   'solutions.description':

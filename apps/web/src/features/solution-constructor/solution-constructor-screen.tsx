@@ -274,10 +274,6 @@ export function SolutionConstructorScreen({
             {t('constructor.description')}
           </p>
         </div>
-        <Link href="/app" className={buttonVariants({ variant: 'secondary' })}>
-          <KeyRound className="size-4" />
-          {t('constructor.openUniversal')}
-        </Link>
       </div>
 
       {feedback && (
@@ -539,6 +535,23 @@ export function SolutionConstructorScreen({
                         </div>
                       )}
                     </div>
+                    <div className="mt-5 flex flex-wrap gap-2 border-t border-[var(--border)] pt-5">
+                      <Link
+                        href={`/projects/${projectId}/admin/solutions/coffee/workspaces/${workspace.id}/open`}
+                        className={buttonVariants({ size: 'sm' })}
+                      >
+                        {t('ownerOverview.open')}
+                      </Link>
+                      <Link
+                        href={`/projects/${projectId}/admin/solutions/coffee/constructor`}
+                        className={buttonVariants({
+                          variant: 'secondary',
+                          size: 'sm',
+                        })}
+                      >
+                        {t('ownerOverview.configure')}
+                      </Link>
+                    </div>
                   </article>
                 );
               })}
@@ -739,7 +752,7 @@ function EmployeeSection({
   }
 
   return (
-    <Card className="mt-5">
+    <Card id="employees" className="mt-5 scroll-mt-28">
       <CardContent className="p-6 sm:p-8">
         <SectionHeading
           title={t('constructor.employeesTitle')}
