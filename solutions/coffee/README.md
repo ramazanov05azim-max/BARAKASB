@@ -7,10 +7,13 @@ local browser mock adapter used before backend integration. It receives the acti
 Project identity, locale and platform-owned UI slots from `apps/web`.
 
 `CoffeeProjectEnvironment` accepts an optional `CoffeeManagerRepositories` adapter. The
-current composition uses the package-local `localStorage` implementation. A future
-production adapter must be supplied by the existing `apps/web` composition root after
-the platform API and Stage 7.2 runtime contracts exist; Coffee screens must not import
-platform persistence, messaging, identity, or runtime internals.
+current composition uses the package-local `localStorage` implementation for Coffee
+entities. Image binaries are not part of that JSON: menu items contain only
+`imageAssetId`, while `@barakasb/frontend-media` stores metadata and normalized Blobs in
+project-isolated IndexedDB stores. A future production adapter must be supplied by the
+existing `apps/web` composition root after the platform API and Stage 7.2 runtime
+contracts exist; Coffee screens must not import platform persistence, messaging,
+identity, or runtime internals.
 
 The package does not own platform identity, Project lifecycle, subscriptions,
 authentication or authoritative authorization. UI permission checks are usability

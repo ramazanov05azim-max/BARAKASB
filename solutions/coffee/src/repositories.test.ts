@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import type { MediaAssetId } from '@barakasb/contracts-platform';
+import type { MediaAssetService } from '@barakasb/frontend-media';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  createLocalCoffeeManagerRepositories,
   localCoffeeManagerRepositories,
   localCoffeeOperationalReadRepository,
 } from './repositories';
@@ -235,5 +238,46 @@ describe('local Coffee repository adapter', () => {
         workspace.assignedEmployeeIds.includes(employee.id),
       ),
     ).toBe(true);
+  });
+
+  it('deletes an image only after the last menu-item reference is removed', async () => {
+    const remove = vi.fn();
+    const mediaAssets = {
+      remove,
+      removeProject: vi.fn(),
+    } as unknown as MediaAssetService;
+    const repositories = createLocalCoffeeManagerRepositories(mediaAssets);
+    const projectId = 'project-shared-media';
+    const sharedImage = 'media-shared' as MediaAssetId;
+    await repositories.coffeeProject.initialize(projectId, 'Shared Media Coffee');
+
+    const common = {
+      categoryId: 'category-1',
+      description: '',
+      barcode: '',
+      sellingPrice: 350,
+      taxCategory: 'standard',
+      locationAvailability: '',
+      imageAssetId: sharedImage,
+      recipeId: '',
+      modifierGroupIds: [],
+      status: 'active' as const,
+    };
+    const first = await repositories.menuItems.create(projectId, {
+      ...common,
+      name: 'Капучино',
+      sku: 'MENU-0001',
+    });
+    const second = await repositories.menuItems.create(projectId, {
+      ...common,
+      name: 'Латте',
+      sku: 'MENU-0002',
+    });
+
+    await repositories.menuItems.remove(projectId, first.id);
+    expect(remove).not.toHaveBeenCalled();
+    await repositories.menuItems.remove(projectId, second.id);
+    expect(remove).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledWith(projectId, sharedImage);
   });
 });

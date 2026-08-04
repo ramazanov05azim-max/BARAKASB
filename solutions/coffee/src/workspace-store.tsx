@@ -1,5 +1,7 @@
 'use client';
 
+import type { MediaAssetId } from '@barakasb/contracts-platform';
+import type { MediaAssetService } from '@barakasb/frontend-media';
 import {
   createContext,
   useCallback,
@@ -30,6 +32,8 @@ import {
 
 interface CoffeeWorkspaceContextValue {
   projectId: string;
+  mediaAssets: MediaAssetService;
+  removeMediaIfUnreferenced: (assetId: MediaAssetId) => Promise<boolean>;
   snapshot: CoffeeSnapshot | null;
   loading: boolean;
   error: CoffeeRepositoryError | null;
@@ -64,6 +68,11 @@ const value = (values: FormValues, key: string): string => values[key]?.trim() ?
 const numeric = (values: FormValues, key: string): number =>
   Number.parseFloat(value(values, key)) || 0;
 
+const mediaAssetId = (values: FormValues, key: string): MediaAssetId | null => {
+  const identifier = value(values, key);
+  return identifier ? (identifier as MediaAssetId) : null;
+};
+
 function statusFrom(values: FormValues, fallback: EntityStatus): EntityStatus {
   const next = value(values, 'status');
   return next === 'active' || next === 'inactive' || next === 'draft' ? next : fallback;
@@ -87,6 +96,25 @@ export function generateMenuItemSku(existingSkus: readonly string[]): string {
     sequence += 1;
   }
   return `MENU-${String(sequence).padStart(4, '0')}`;
+}
+
+export async function removeCoffeeMediaIfUnreferenced(
+  repositories: CoffeeManagerRepositories,
+  projectId: string,
+  assetId: MediaAssetId,
+): Promise<boolean> {
+  const [menuItems, menuCategories] = await Promise.all([
+    repositories.menuItems.list(projectId),
+    repositories.menuCategories.list(projectId),
+  ]);
+  if (
+    menuItems.some((item) => item.imageAssetId === assetId) ||
+    menuCategories.some((category) => category.imageAssetId === assetId)
+  ) {
+    return false;
+  }
+  await repositories.mediaAssets.remove(projectId, assetId);
+  return true;
 }
 
 function inheritedTaxCategory(snapshot: CoffeeSnapshot): string {
@@ -231,7 +259,7 @@ export function CoffeeWorkspaceProvider({
                 snapshot.locations.length === 1
                   ? (snapshot.locations[0]?.id ?? '')
                   : value(values, 'locationAvailability'),
-              imagePlaceholder: value(values, 'imagePlaceholder'),
+              imageAssetId: null,
             });
             break;
           }
@@ -246,7 +274,7 @@ export function CoffeeWorkspaceProvider({
               sellingPrice: numeric(values, 'sellingPrice'),
               taxCategory: inheritedTaxCategory(snapshot),
               locationAvailability: currentLocationId(snapshot),
-              imagePlaceholder: value(values, 'imagePlaceholder'),
+              imageAssetId: mediaAssetId(values, 'imageAssetId'),
               recipeId: value(values, 'recipeId'),
               modifierGroupIds: arrayValue(values, 'modifierGroupIds'),
             });
@@ -415,7 +443,7 @@ export function CoffeeWorkspaceProvider({
               description: existingCategory.description,
               displayOrder: numeric(values, 'displayOrder'),
               locationAvailability: value(values, 'locationAvailability'),
-              imagePlaceholder: existingCategory.imagePlaceholder,
+              imageAssetId: existingCategory.imageAssetId,
             });
             break;
           }
@@ -424,6 +452,7 @@ export function CoffeeWorkspaceProvider({
             if (!snapshot || !existingMenuItem) {
               throw new CoffeeRepositoryError('not-found');
             }
+            const nextImageAssetId = mediaAssetId(values, 'imageAssetId');
             await repositories.menuItems.update(projectId, id, {
               ...common,
               categoryId: value(values, 'categoryId'),
@@ -433,10 +462,20 @@ export function CoffeeWorkspaceProvider({
               sellingPrice: numeric(values, 'sellingPrice'),
               taxCategory: inheritedTaxCategory(snapshot),
               locationAvailability: existingMenuItem.locationAvailability,
-              imagePlaceholder: value(values, 'imagePlaceholder'),
+              imageAssetId: nextImageAssetId,
               recipeId: value(values, 'recipeId'),
               modifierGroupIds: arrayValue(values, 'modifierGroupIds'),
             });
+            if (
+              existingMenuItem.imageAssetId &&
+              existingMenuItem.imageAssetId !== nextImageAssetId
+            ) {
+              await removeCoffeeMediaIfUnreferenced(
+                repositories,
+                projectId,
+                existingMenuItem.imageAssetId,
+              );
+            }
             break;
           }
           case 'modifiers':
@@ -626,6 +665,12 @@ export function CoffeeWorkspaceProvider({
     [projectId, refreshAfter, repositories],
   );
 
+  const removeMediaIfUnreferenced = useCallback(
+    (assetId: MediaAssetId) =>
+      removeCoffeeMediaIfUnreferenced(repositories, projectId, assetId),
+    [projectId, repositories],
+  );
+
   const can = useCallback(
     (capability: CoffeeCapability): boolean => {
       const role = snapshot?.roles.find((item) => item.id === snapshot.currentRoleId);
@@ -637,6 +682,8 @@ export function CoffeeWorkspaceProvider({
   const contextValue = useMemo<CoffeeWorkspaceContextValue>(
     () => ({
       projectId,
+      mediaAssets: repositories.mediaAssets,
+      removeMediaIfUnreferenced,
       snapshot,
       loading,
       error,
@@ -658,6 +705,8 @@ export function CoffeeWorkspaceProvider({
     }),
     [
       projectId,
+      repositories.mediaAssets,
+      removeMediaIfUnreferenced,
       snapshot,
       loading,
       error,

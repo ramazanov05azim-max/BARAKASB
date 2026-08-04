@@ -1,3 +1,4 @@
+import type { MediaAssetService } from '@barakasb/frontend-media';
 import type {
   BusinessProfile,
   CoffeeCapability,
@@ -108,6 +109,7 @@ export interface CoffeeDevelopmentSeedRepository {
 }
 
 export interface CoffeeManagerRepositories {
+  mediaAssets: MediaAssetService;
   coffeeProject: CoffeeProjectRepository;
   businessProfile: BusinessProfileRepository;
   settings: CoffeeSettingsRepository;

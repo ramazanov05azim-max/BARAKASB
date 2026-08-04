@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "name": "frontend-media",
+  "projectType": "library",
+  "root": "packages/frontend/media",
+  "tags": ["type:frontend", "scope:platform", "runtime:browser"],
+  "targets": {
+    "build": {
+      "command": "pnpm exec tsc -p packages/frontend/media/tsconfig.build.json --incremental false",
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "lint": {
+      "command": "pnpm --dir packages/frontend/media exec eslint ."
+    },
+    "test": {
+      "command": "pnpm exec vitest run packages/frontend/media/src"
+    },
+    "typecheck": {
+      "command": "pnpm exec tsc -p packages/frontend/media/tsconfig.json --noEmit --incremental false"
+    }
+  }
+}

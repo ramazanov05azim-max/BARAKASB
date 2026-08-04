@@ -320,8 +320,8 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
         min: 0,
       },
       {
-        name: 'imagePlaceholder',
-        labelKey: 'fields.imagePlaceholder',
+        name: 'imageAssetId',
+        labelKey: 'fields.image',
         type: 'image',
       },
       {

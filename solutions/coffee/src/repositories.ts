@@ -1,5 +1,9 @@
 'use client';
 
+import {
+  getBrowserMediaAssetService,
+  type MediaAssetService,
+} from '@barakasb/frontend-media';
 import type {
   CoffeeCapability,
   CoffeeDevelopmentSeed,
@@ -27,6 +31,7 @@ import {
   coffeeEmployeeCredentialStoragePrefix,
   localCoffeeEmployeeCredentialRepository,
 } from './employee-credential-repository';
+import { migrateLegacyMenuImages } from './menu-image-migration';
 
 const storagePrefix = 'barakasb.mock.coffee.project.v1';
 
@@ -38,6 +43,36 @@ const now = (): string => new Date().toISOString();
 
 const createId = (prefix: string): string =>
   `${prefix}-${globalThis.crypto?.randomUUID?.().slice(0, 8) ?? Date.now().toString(36)}`;
+
+function browserMediaAssetsAvailable(): boolean {
+  return typeof window !== 'undefined' && Boolean(window.indexedDB);
+}
+
+const localBrowserMediaAssets: MediaAssetService = {
+  uploadImage: (input) => getBrowserMediaAssetService().uploadImage(input),
+  importExternalImage: (input) =>
+    getBrowserMediaAssetService().importExternalImage(input),
+  get: (projectId, assetId) =>
+    browserMediaAssetsAvailable()
+      ? getBrowserMediaAssetService().get(projectId, assetId)
+      : Promise.resolve(null),
+  list: (projectId) =>
+    browserMediaAssetsAvailable()
+      ? getBrowserMediaAssetService().list(projectId)
+      : Promise.resolve([]),
+  resolveDisplayUrl: (projectId, assetId) =>
+    browserMediaAssetsAvailable()
+      ? getBrowserMediaAssetService().resolveDisplayUrl(projectId, assetId)
+      : Promise.resolve(null),
+  remove: (projectId, assetId) =>
+    browserMediaAssetsAvailable()
+      ? getBrowserMediaAssetService().remove(projectId, assetId)
+      : Promise.resolve(),
+  removeProject: (projectId) =>
+    browserMediaAssetsAvailable()
+      ? getBrowserMediaAssetService().removeProject(projectId)
+      : Promise.resolve(),
+};
 
 const allCapabilities: CoffeeCapability[] = [
   'project.manage',
@@ -377,6 +412,14 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
   }
   try {
     const parsed = JSON.parse(stored) as CoffeeSnapshot;
+    parsed.menuItems = parsed.menuItems.map((item) => ({
+      ...item,
+      imageAssetId: item.imageAssetId ?? null,
+    }));
+    parsed.menuCategories = parsed.menuCategories.map((category) => ({
+      ...category,
+      imageAssetId: category.imageAssetId ?? null,
+    }));
     if (!parsed.settings) {
       parsed.settings = initialSnapshot(projectId, parsed.project.name).settings;
       writeSnapshot(projectId, parsed);
@@ -493,6 +536,24 @@ function writeSnapshot(projectId: string, snapshot: CoffeeSnapshot): void {
   window.localStorage.setItem(storageKey(projectId), JSON.stringify(snapshot));
 }
 
+async function readSnapshotWithMediaMigration(
+  projectId: string,
+  mediaAssets: MediaAssetService,
+): Promise<CoffeeSnapshot> {
+  const snapshot = readSnapshot(projectId);
+  try {
+    const result = await migrateLegacyMenuImages({
+      projectId,
+      snapshot,
+      mediaAssets,
+      persist: (migrated) => writeSnapshot(projectId, migrated),
+    });
+    return result.snapshot;
+  } catch {
+    return snapshot;
+  }
+}
+
 function appendActivity(
   snapshot: CoffeeSnapshot,
   actionKey: string,
@@ -574,6 +635,21 @@ function collectionRepository<K extends CollectionKey>(
         id,
         updatedAt: now(),
       } as CollectionEntityMap[K];
+      if (
+        (key === 'menuItems' || key === 'menuCategories') &&
+        (
+          updated as
+            CollectionEntityMap['menuItems'] | CollectionEntityMap['menuCategories']
+        ).imageAssetId
+      ) {
+        delete (
+          updated as (
+            CollectionEntityMap['menuItems'] | CollectionEntityMap['menuCategories']
+          ) & {
+            imagePlaceholder?: unknown;
+          }
+        ).imagePlaceholder;
+      }
       list[index] = updated;
       appendActivity(snapshot, 'activity.updated', updated.name);
       writeSnapshot(projectId, snapshot);
@@ -593,340 +669,415 @@ function collectionRepository<K extends CollectionKey>(
   };
 }
 
-export const localCoffeeManagerRepositories: CoffeeManagerRepositories = {
-  coffeeProject: {
-    async initialize(projectId, projectName) {
-      await wait(80);
-      const snapshot = readSnapshot(projectId, projectName);
-      if (snapshot.project.name === 'Coffee Project' && projectName) {
-        snapshot.project.name = projectName;
+export function createLocalCoffeeManagerRepositories(
+  mediaAssets: MediaAssetService = localBrowserMediaAssets,
+): CoffeeManagerRepositories {
+  const menuItems = collectionRepository('menuItems');
+  const menuCategories = collectionRepository('menuCategories');
+  async function removeUnreferencedAsset(
+    projectId: string,
+    assetId: NonNullable<CollectionEntityMap['menuItems']['imageAssetId']>,
+  ): Promise<void> {
+    const [items, categories] = await Promise.all([
+      menuItems.list(projectId),
+      menuCategories.list(projectId),
+    ]);
+    if (
+      items.some((item) => item.imageAssetId === assetId) ||
+      categories.some((category) => category.imageAssetId === assetId)
+    ) {
+      return;
+    }
+    await mediaAssets.remove(projectId, assetId);
+  }
+  const mediaAwareMenuItems: CollectionRepository<CollectionEntityMap['menuItems']> = {
+    list: (projectId) => menuItems.list(projectId),
+    create: (projectId, input) => menuItems.create(projectId, input),
+    async update(projectId, id, input) {
+      const previous = (await menuItems.list(projectId)).find((item) => item.id === id);
+      const updated = await menuItems.update(projectId, id, input);
+      if (previous?.imageAssetId && previous.imageAssetId !== updated.imageAssetId) {
+        await removeUnreferencedAsset(projectId, previous.imageAssetId);
+      }
+      return updated;
+    },
+    async remove(projectId, id) {
+      const previous = (await menuItems.list(projectId)).find((item) => item.id === id);
+      await menuItems.remove(projectId, id);
+      if (previous?.imageAssetId) {
+        await removeUnreferencedAsset(projectId, previous.imageAssetId);
+      }
+    },
+  };
+  const mediaAwareMenuCategories: CollectionRepository<
+    CollectionEntityMap['menuCategories']
+  > = {
+    list: (projectId) => menuCategories.list(projectId),
+    create: (projectId, input) => menuCategories.create(projectId, input),
+    async update(projectId, id, input) {
+      const previous = (await menuCategories.list(projectId)).find(
+        (category) => category.id === id,
+      );
+      const updated = await menuCategories.update(projectId, id, input);
+      if (previous?.imageAssetId && previous.imageAssetId !== updated.imageAssetId) {
+        await removeUnreferencedAsset(projectId, previous.imageAssetId);
+      }
+      return updated;
+    },
+    async remove(projectId, id) {
+      const previous = (await menuCategories.list(projectId)).find(
+        (category) => category.id === id,
+      );
+      await menuCategories.remove(projectId, id);
+      if (previous?.imageAssetId) {
+        await removeUnreferencedAsset(projectId, previous.imageAssetId);
+      }
+    },
+  };
+  return {
+    mediaAssets,
+    coffeeProject: {
+      async initialize(projectId, projectName) {
+        await wait(80);
+        const snapshot = readSnapshot(projectId, projectName);
+        if (snapshot.project.name === 'Coffee Project' && projectName) {
+          snapshot.project.name = projectName;
+          snapshot.project.updatedAt = now();
+          writeSnapshot(projectId, snapshot);
+        }
+        return structuredClone(snapshot.project);
+      },
+      async get(projectId) {
+        await wait();
+        return structuredClone(readSnapshot(projectId).project);
+      },
+      async setDefaultLocation(projectId, locationId) {
+        await wait(120);
+        const snapshot = readSnapshot(projectId);
+        if (!snapshot.locations.some((location) => location.id === locationId)) {
+          throw new CoffeeRepositoryError('not-found');
+        }
+        snapshot.project.defaultLocationId = locationId;
+        snapshot.locations = snapshot.locations.map((location) => ({
+          ...location,
+          isDefault: location.id === locationId,
+        }));
         snapshot.project.updatedAt = now();
-        writeSnapshot(projectId, snapshot);
-      }
-      return structuredClone(snapshot.project);
-    },
-    async get(projectId) {
-      await wait();
-      return structuredClone(readSnapshot(projectId).project);
-    },
-    async setDefaultLocation(projectId, locationId) {
-      await wait(120);
-      const snapshot = readSnapshot(projectId);
-      if (!snapshot.locations.some((location) => location.id === locationId)) {
-        throw new CoffeeRepositoryError('not-found');
-      }
-      snapshot.project.defaultLocationId = locationId;
-      snapshot.locations = snapshot.locations.map((location) => ({
-        ...location,
-        isDefault: location.id === locationId,
-      }));
-      snapshot.project.updatedAt = now();
-      appendActivity(
-        snapshot,
-        'activity.defaultLocation',
-        snapshot.locations.find((location) => location.id === locationId)?.name ?? '',
-      );
-      writeSnapshot(projectId, snapshot);
-      return structuredClone(snapshot.project);
-    },
-    async markReady(projectId) {
-      await wait(220);
-      const snapshot = readSnapshot(projectId);
-      const prerequisiteSteps = snapshot.setupSteps.filter(
-        (step) => step.id !== 'ready',
-      );
-      if (prerequisiteSteps.some((step) => step.status !== 'complete')) {
-        throw new CoffeeRepositoryError('invalid-operation');
-      }
-      completeStep(snapshot, 'ready');
-      snapshot.project.ready = true;
-      snapshot.project.solutionStatus = 'configured';
-      snapshot.project.updatedAt = now();
-      appendActivity(snapshot, 'activity.projectReady', snapshot.project.name);
-      writeSnapshot(projectId, snapshot);
-      return structuredClone(snapshot.project);
-    },
-    async remove(projectId) {
-      await wait(60);
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(storageKey(projectId));
-        window.localStorage.removeItem(
-          `${coffeeBarOrderStoragePrefix}.${encodeURIComponent(projectId)}`,
+        appendActivity(
+          snapshot,
+          'activity.defaultLocation',
+          snapshot.locations.find((location) => location.id === locationId)?.name ?? '',
         );
-        await localCoffeeEmployeeCredentialRepository.removeProject(projectId);
-      }
-    },
-  },
-  businessProfile: {
-    async get(projectId) {
-      await wait();
-      return structuredClone(readSnapshot(projectId).businessProfile);
-    },
-    async update(projectId, profile) {
-      await wait(180);
-      const snapshot = readSnapshot(projectId);
-      snapshot.businessProfile = { ...profile, updatedAt: now() };
-      completeStep(snapshot, 'business-profile');
-      appendActivity(snapshot, 'activity.profileUpdated', profile.businessName);
-      writeSnapshot(projectId, snapshot);
-      return structuredClone(snapshot.businessProfile);
-    },
-  },
-  settings: {
-    async get(projectId) {
-      await wait();
-      return structuredClone(readSnapshot(projectId).settings);
-    },
-    async update(projectId, settings) {
-      await wait(160);
-      const snapshot = readSnapshot(projectId);
-      snapshot.settings = { ...settings, updatedAt: now() };
-      appendActivity(snapshot, 'activity.settingsUpdated', snapshot.project.name);
-      writeSnapshot(projectId, snapshot);
-      return structuredClone(snapshot.settings);
-    },
-  },
-  locations: collectionRepository('locations'),
-  registers: collectionRepository('registers'),
-  workstations: collectionRepository('workstations'),
-  menuCategories: collectionRepository('menuCategories'),
-  menuItems: collectionRepository('menuItems'),
-  modifiers: collectionRepository('modifiers'),
-  recipes: collectionRepository('recipes'),
-  ingredients: collectionRepository('ingredients'),
-  units: collectionRepository('units'),
-  warehouses: collectionRepository('warehouses'),
-  suppliers: collectionRepository('suppliers'),
-  employees: collectionRepository('employees'),
-  employeeCredentials: localCoffeeEmployeeCredentialRepository,
-  solutionConstructor: {
-    async get(projectId) {
-      await wait();
-      return structuredClone(readSnapshot(projectId).solutionStructure);
-    },
-    async generate(projectId, selectedModuleIds) {
-      await wait(180);
-      const snapshot = readSnapshot(projectId);
-      const selected = [...new Set(selectedModuleIds)];
-      if (
-        selected.length === 0 ||
-        selected.some((moduleId) => !coffeeSolutionModuleIds.includes(moduleId))
-      ) {
-        throw new CoffeeRepositoryError('invalid-operation');
-      }
-
-      const timestamp = now();
-      const existingByModule = new Map(
-        snapshot.solutionStructure.workspaces.map((workspace) => [
-          workspace.moduleId,
-          workspace,
-        ]),
-      );
-      const structure: CoffeeSolutionStructure = {
-        selectedModuleIds: selected,
-        workspaces: selected.map((moduleId) => {
-          const existing = existingByModule.get(moduleId);
-          return (
-            existing ?? {
-              id: `workspace-${moduleId}`,
-              moduleId,
-              assignedEmployeeIds: [],
-              status: 'active',
-              createdAt: timestamp,
-              updatedAt: timestamp,
-            }
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.project);
+      },
+      async markReady(projectId) {
+        await wait(220);
+        const snapshot = readSnapshot(projectId);
+        const prerequisiteSteps = snapshot.setupSteps.filter(
+          (step) => step.id !== 'ready',
+        );
+        if (prerequisiteSteps.some((step) => step.status !== 'complete')) {
+          throw new CoffeeRepositoryError('invalid-operation');
+        }
+        completeStep(snapshot, 'ready');
+        snapshot.project.ready = true;
+        snapshot.project.solutionStatus = 'configured';
+        snapshot.project.updatedAt = now();
+        appendActivity(snapshot, 'activity.projectReady', snapshot.project.name);
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.project);
+      },
+      async remove(projectId) {
+        await wait(60);
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(storageKey(projectId));
+          window.localStorage.removeItem(
+            `${coffeeBarOrderStoragePrefix}.${encodeURIComponent(projectId)}`,
           );
-        }),
-        generatedAt: snapshot.solutionStructure.generatedAt ?? timestamp,
-        updatedAt: timestamp,
-      };
-      snapshot.solutionStructure = structure;
-      appendActivity(
-        snapshot,
-        'activity.solutionStructureGenerated',
-        snapshot.project.name,
+          await localCoffeeEmployeeCredentialRepository.removeProject(projectId);
+          await mediaAssets.removeProject(projectId);
+        }
+      },
+    },
+    businessProfile: {
+      async get(projectId) {
+        await wait();
+        return structuredClone(readSnapshot(projectId).businessProfile);
+      },
+      async update(projectId, profile) {
+        await wait(180);
+        const snapshot = readSnapshot(projectId);
+        snapshot.businessProfile = { ...profile, updatedAt: now() };
+        completeStep(snapshot, 'business-profile');
+        appendActivity(snapshot, 'activity.profileUpdated', profile.businessName);
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.businessProfile);
+      },
+    },
+    settings: {
+      async get(projectId) {
+        await wait();
+        return structuredClone(readSnapshot(projectId).settings);
+      },
+      async update(projectId, settings) {
+        await wait(160);
+        const snapshot = readSnapshot(projectId);
+        snapshot.settings = { ...settings, updatedAt: now() };
+        appendActivity(snapshot, 'activity.settingsUpdated', snapshot.project.name);
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.settings);
+      },
+    },
+    locations: collectionRepository('locations'),
+    registers: collectionRepository('registers'),
+    workstations: collectionRepository('workstations'),
+    menuCategories: mediaAwareMenuCategories,
+    menuItems: mediaAwareMenuItems,
+    modifiers: collectionRepository('modifiers'),
+    recipes: collectionRepository('recipes'),
+    ingredients: collectionRepository('ingredients'),
+    units: collectionRepository('units'),
+    warehouses: collectionRepository('warehouses'),
+    suppliers: collectionRepository('suppliers'),
+    employees: collectionRepository('employees'),
+    employeeCredentials: localCoffeeEmployeeCredentialRepository,
+    solutionConstructor: {
+      async get(projectId) {
+        await wait();
+        return structuredClone(readSnapshot(projectId).solutionStructure);
+      },
+      async generate(projectId, selectedModuleIds) {
+        await wait(180);
+        const snapshot = readSnapshot(projectId);
+        const selected = [...new Set(selectedModuleIds)];
+        if (
+          selected.length === 0 ||
+          selected.some((moduleId) => !coffeeSolutionModuleIds.includes(moduleId))
+        ) {
+          throw new CoffeeRepositoryError('invalid-operation');
+        }
+
+        const timestamp = now();
+        const existingByModule = new Map(
+          snapshot.solutionStructure.workspaces.map((workspace) => [
+            workspace.moduleId,
+            workspace,
+          ]),
+        );
+        const structure: CoffeeSolutionStructure = {
+          selectedModuleIds: selected,
+          workspaces: selected.map((moduleId) => {
+            const existing = existingByModule.get(moduleId);
+            return (
+              existing ?? {
+                id: `workspace-${moduleId}`,
+                moduleId,
+                assignedEmployeeIds: [],
+                status: 'active',
+                createdAt: timestamp,
+                updatedAt: timestamp,
+              }
+            );
+          }),
+          generatedAt: snapshot.solutionStructure.generatedAt ?? timestamp,
+          updatedAt: timestamp,
+        };
+        snapshot.solutionStructure = structure;
+        appendActivity(
+          snapshot,
+          'activity.solutionStructureGenerated',
+          snapshot.project.name,
+        );
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(structure);
+      },
+      async assignEmployee(projectId, workspaceId, employeeId, assigned) {
+        await wait(120);
+        const snapshot = readSnapshot(projectId);
+        const workspace = snapshot.solutionStructure.workspaces.find(
+          (candidate) => candidate.id === workspaceId,
+        );
+        const employee = snapshot.employees.find(
+          (candidate) => candidate.id === employeeId,
+        );
+        if (!workspace || !employee) {
+          throw new CoffeeRepositoryError('not-found');
+        }
+        const assignments = new Set(workspace.assignedEmployeeIds);
+        if (assigned) assignments.add(employeeId);
+        else assignments.delete(employeeId);
+        workspace.assignedEmployeeIds = [...assignments];
+        workspace.updatedAt = now();
+        snapshot.solutionStructure.updatedAt = workspace.updatedAt;
+        appendActivity(
+          snapshot,
+          'activity.workspaceAssignmentUpdated',
+          employee.fullName,
+        );
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.solutionStructure);
+      },
+    },
+    floorPlan: {
+      async load(projectId) {
+        await wait(80);
+        const snapshot = readSnapshot(projectId);
+        return structuredClone({
+          zones: snapshot.floorPlanZones,
+          tables: snapshot.tables,
+        });
+      },
+      async save(projectId, floorPlan) {
+        await wait(120);
+        const snapshot = readSnapshot(projectId);
+        snapshot.floorPlanZones = structuredClone(floorPlan.zones);
+        snapshot.tables = structuredClone(floorPlan.tables);
+        appendActivity(snapshot, 'activity.floorPlanUpdated', snapshot.project.name);
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(floorPlan);
+      },
+    },
+    roles: {
+      async list(projectId) {
+        await wait();
+        return structuredClone(readSnapshot(projectId).roles);
+      },
+      async assign(projectId, employeeId, roleId) {
+        await wait(160);
+        const snapshot = readSnapshot(projectId);
+        const employee = snapshot.employees.find((item) => item.id === employeeId);
+        if (!employee) throw new CoffeeRepositoryError('not-found');
+        const previousRole = snapshot.roles.find(
+          (role) => role.id === employee.assignedRoleId,
+        );
+        const nextRole = roleId
+          ? snapshot.roles.find((role) => role.id === roleId)
+          : undefined;
+        if (roleId && !nextRole) throw new CoffeeRepositoryError('not-found');
+        employee.assignedRoleId = roleId;
+        employee.updatedAt = now();
+        if (previousRole && previousRole.assignmentCount > 0) {
+          previousRole.assignmentCount -= 1;
+        }
+        if (nextRole) {
+          nextRole.assignmentCount += 1;
+          completeStep(snapshot, 'role');
+        }
+        appendActivity(snapshot, 'activity.roleAssigned', employee.fullName);
+        writeSnapshot(projectId, snapshot);
+      },
+    },
+    permissions: {
+      async list(projectId) {
+        await wait();
+        return structuredClone(readSnapshot(projectId).permissions);
+      },
+      async capabilitiesForRole(projectId, roleId) {
+        await wait(60);
+        const role = readSnapshot(projectId).roles.find((item) => item.id === roleId);
+        return structuredClone(role?.capabilities ?? []);
+      },
+      async setPreviewRole(projectId, roleId) {
+        await wait(60);
+        const snapshot = readSnapshot(projectId);
+        if (!snapshot.roles.some((role) => role.id === roleId)) {
+          throw new CoffeeRepositoryError('not-found');
+        }
+        snapshot.currentRoleId = roleId;
+        writeSnapshot(projectId, snapshot);
+      },
+    },
+    setupChecklist: {
+      async list(projectId) {
+        await wait();
+        return structuredClone(readSnapshot(projectId).setupSteps);
+      },
+      async complete(projectId, stepId) {
+        await wait(120);
+        const snapshot = readSnapshot(projectId);
+        const target = snapshot.setupSteps.find((step) => step.id === stepId);
+        if (!target || target.status === 'blocked') {
+          throw new CoffeeRepositoryError('invalid-operation');
+        }
+        completeStep(snapshot, stepId);
+        appendActivity(snapshot, 'activity.stepCompleted', target.labelKey);
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.setupSteps);
+      },
+    },
+    activity: {
+      async list(projectId) {
+        await wait();
+        return structuredClone(readSnapshot(projectId).activities);
+      },
+    },
+    developmentSeed: {
+      async apply(projectId, seed: CoffeeDevelopmentSeed) {
+        await wait(120);
+        const snapshot = readSnapshot(projectId);
+        if (snapshot.developmentSeedId === seed.id) return;
+        snapshot.project.name = seed.projectDisplayName;
+        snapshot.project.developmentLabel = 'crash-test';
+        snapshot.project.defaultLocationId =
+          seed.locations.find((location) => location.isDefault)?.id ??
+          seed.locations[0]?.id ??
+          null;
+        snapshot.project.ready = true;
+        snapshot.project.solutionStatus = 'configured';
+        snapshot.project.updatedAt = now();
+        snapshot.locations = structuredClone(seed.locations);
+        snapshot.floorPlanZones = structuredClone(seed.floorPlanZones);
+        snapshot.tables = structuredClone(seed.tables);
+        snapshot.registers = structuredClone(seed.registers);
+        snapshot.workstations = structuredClone(seed.workstations);
+        snapshot.warehouses = structuredClone(seed.warehouses);
+        snapshot.units = structuredClone(seed.units);
+        snapshot.ingredients = structuredClone(seed.ingredients);
+        snapshot.menuCategories = structuredClone(seed.menuCategories);
+        snapshot.menuItems = structuredClone(seed.menuItems);
+        snapshot.modifiers = structuredClone(seed.modifiers);
+        snapshot.recipes = structuredClone(seed.recipes);
+        snapshot.openingStockBalances = structuredClone(seed.openingStockBalances);
+        snapshot.suppliers = structuredClone(seed.suppliers);
+        snapshot.employees = structuredClone(seed.employees);
+        snapshot.roles = snapshot.roles.map((role) => ({
+          ...role,
+          assignmentCount:
+            seed.employees.filter((employee) => employee.assignedRoleId === role.id)
+              .length + (role.id === 'owner' ? 1 : 0),
+        }));
+        snapshot.setupSteps = snapshot.setupSteps.map((step) => ({
+          ...step,
+          status: 'complete',
+        }));
+        snapshot.developmentSeedId = seed.id;
+        appendActivity(
+          snapshot,
+          'activity.developmentSeedApplied',
+          snapshot.project.name,
+        );
+        writeSnapshot(projectId, snapshot);
+      },
+    },
+    async loadSnapshot(projectId) {
+      await wait(220);
+      return structuredClone(
+        await readSnapshotWithMediaMigration(projectId, mediaAssets),
       );
-      writeSnapshot(projectId, snapshot);
-      return structuredClone(structure);
     },
-    async assignEmployee(projectId, workspaceId, employeeId, assigned) {
-      await wait(120);
-      const snapshot = readSnapshot(projectId);
-      const workspace = snapshot.solutionStructure.workspaces.find(
-        (candidate) => candidate.id === workspaceId,
-      );
-      const employee = snapshot.employees.find(
-        (candidate) => candidate.id === employeeId,
-      );
-      if (!workspace || !employee) {
-        throw new CoffeeRepositoryError('not-found');
-      }
-      const assignments = new Set(workspace.assignedEmployeeIds);
-      if (assigned) assignments.add(employeeId);
-      else assignments.delete(employeeId);
-      workspace.assignedEmployeeIds = [...assignments];
-      workspace.updatedAt = now();
-      snapshot.solutionStructure.updatedAt = workspace.updatedAt;
-      appendActivity(
-        snapshot,
-        'activity.workspaceAssignmentUpdated',
-        employee.fullName,
-      );
-      writeSnapshot(projectId, snapshot);
-      return structuredClone(snapshot.solutionStructure);
-    },
-  },
-  floorPlan: {
-    async load(projectId) {
-      await wait(80);
-      const snapshot = readSnapshot(projectId);
-      return structuredClone({
-        zones: snapshot.floorPlanZones,
-        tables: snapshot.tables,
-      });
-    },
-    async save(projectId, floorPlan) {
-      await wait(120);
-      const snapshot = readSnapshot(projectId);
-      snapshot.floorPlanZones = structuredClone(floorPlan.zones);
-      snapshot.tables = structuredClone(floorPlan.tables);
-      appendActivity(snapshot, 'activity.floorPlanUpdated', snapshot.project.name);
-      writeSnapshot(projectId, snapshot);
-      return structuredClone(floorPlan);
-    },
-  },
-  roles: {
-    async list(projectId) {
-      await wait();
-      return structuredClone(readSnapshot(projectId).roles);
-    },
-    async assign(projectId, employeeId, roleId) {
-      await wait(160);
-      const snapshot = readSnapshot(projectId);
-      const employee = snapshot.employees.find((item) => item.id === employeeId);
-      if (!employee) throw new CoffeeRepositoryError('not-found');
-      const previousRole = snapshot.roles.find(
-        (role) => role.id === employee.assignedRoleId,
-      );
-      const nextRole = roleId
-        ? snapshot.roles.find((role) => role.id === roleId)
-        : undefined;
-      if (roleId && !nextRole) throw new CoffeeRepositoryError('not-found');
-      employee.assignedRoleId = roleId;
-      employee.updatedAt = now();
-      if (previousRole && previousRole.assignmentCount > 0) {
-        previousRole.assignmentCount -= 1;
-      }
-      if (nextRole) {
-        nextRole.assignmentCount += 1;
-        completeStep(snapshot, 'role');
-      }
-      appendActivity(snapshot, 'activity.roleAssigned', employee.fullName);
-      writeSnapshot(projectId, snapshot);
-    },
-  },
-  permissions: {
-    async list(projectId) {
-      await wait();
-      return structuredClone(readSnapshot(projectId).permissions);
-    },
-    async capabilitiesForRole(projectId, roleId) {
-      await wait(60);
-      const role = readSnapshot(projectId).roles.find((item) => item.id === roleId);
-      return structuredClone(role?.capabilities ?? []);
-    },
-    async setPreviewRole(projectId, roleId) {
-      await wait(60);
-      const snapshot = readSnapshot(projectId);
-      if (!snapshot.roles.some((role) => role.id === roleId)) {
-        throw new CoffeeRepositoryError('not-found');
-      }
-      snapshot.currentRoleId = roleId;
-      writeSnapshot(projectId, snapshot);
-    },
-  },
-  setupChecklist: {
-    async list(projectId) {
-      await wait();
-      return structuredClone(readSnapshot(projectId).setupSteps);
-    },
-    async complete(projectId, stepId) {
-      await wait(120);
-      const snapshot = readSnapshot(projectId);
-      const target = snapshot.setupSteps.find((step) => step.id === stepId);
-      if (!target || target.status === 'blocked') {
-        throw new CoffeeRepositoryError('invalid-operation');
-      }
-      completeStep(snapshot, stepId);
-      appendActivity(snapshot, 'activity.stepCompleted', target.labelKey);
-      writeSnapshot(projectId, snapshot);
-      return structuredClone(snapshot.setupSteps);
-    },
-  },
-  activity: {
-    async list(projectId) {
-      await wait();
-      return structuredClone(readSnapshot(projectId).activities);
-    },
-  },
-  developmentSeed: {
-    async apply(projectId, seed: CoffeeDevelopmentSeed) {
-      await wait(120);
-      const snapshot = readSnapshot(projectId);
-      if (snapshot.developmentSeedId === seed.id) return;
-      snapshot.project.name = seed.projectDisplayName;
-      snapshot.project.developmentLabel = 'crash-test';
-      snapshot.project.defaultLocationId =
-        seed.locations.find((location) => location.isDefault)?.id ??
-        seed.locations[0]?.id ??
-        null;
-      snapshot.project.ready = true;
-      snapshot.project.solutionStatus = 'configured';
-      snapshot.project.updatedAt = now();
-      snapshot.locations = structuredClone(seed.locations);
-      snapshot.floorPlanZones = structuredClone(seed.floorPlanZones);
-      snapshot.tables = structuredClone(seed.tables);
-      snapshot.registers = structuredClone(seed.registers);
-      snapshot.workstations = structuredClone(seed.workstations);
-      snapshot.warehouses = structuredClone(seed.warehouses);
-      snapshot.units = structuredClone(seed.units);
-      snapshot.ingredients = structuredClone(seed.ingredients);
-      snapshot.menuCategories = structuredClone(seed.menuCategories);
-      snapshot.menuItems = structuredClone(seed.menuItems);
-      snapshot.modifiers = structuredClone(seed.modifiers);
-      snapshot.recipes = structuredClone(seed.recipes);
-      snapshot.openingStockBalances = structuredClone(seed.openingStockBalances);
-      snapshot.suppliers = structuredClone(seed.suppliers);
-      snapshot.employees = structuredClone(seed.employees);
-      snapshot.roles = snapshot.roles.map((role) => ({
-        ...role,
-        assignmentCount:
-          seed.employees.filter((employee) => employee.assignedRoleId === role.id)
-            .length + (role.id === 'owner' ? 1 : 0),
-      }));
-      snapshot.setupSteps = snapshot.setupSteps.map((step) => ({
-        ...step,
-        status: 'complete',
-      }));
-      snapshot.developmentSeedId = seed.id;
-      appendActivity(
-        snapshot,
-        'activity.developmentSeedApplied',
-        snapshot.project.name,
-      );
-      writeSnapshot(projectId, snapshot);
-    },
-  },
-  async loadSnapshot(projectId) {
-    await wait(220);
-    return structuredClone(readSnapshot(projectId));
-  },
-};
+  };
+}
+
+export const localCoffeeManagerRepositories = createLocalCoffeeManagerRepositories();
 
 export const localCoffeeOperationalReadRepository: CoffeeOperationalReadRepository = {
   async load(projectId): Promise<CoffeeOperationalSnapshot> {
     await wait(80);
-    const snapshot = readSnapshot(projectId);
+    const snapshot = await readSnapshotWithMediaMigration(
+      projectId,
+      localBrowserMediaAssets,
+    );
     return structuredClone({
       project: snapshot.project,
       businessProfile: snapshot.businessProfile,

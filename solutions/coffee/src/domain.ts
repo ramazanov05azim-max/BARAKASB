@@ -1,3 +1,5 @@
+import type { MediaAssetId } from '@barakasb/contracts-platform';
+
 export type CoffeeLocale = 'ru' | 'en';
 export type EntityStatus = 'active' | 'inactive' | 'draft';
 export type SetupStepStatus = 'complete' | 'incomplete' | 'blocked';
@@ -190,7 +192,7 @@ export interface MenuCategory extends BaseEntity {
   description: string;
   displayOrder: number;
   locationAvailability: string;
-  imagePlaceholder: string;
+  imageAssetId: MediaAssetId | null;
 }
 
 export interface MenuItem extends BaseEntity {
@@ -201,7 +203,7 @@ export interface MenuItem extends BaseEntity {
   sellingPrice: number;
   taxCategory: string;
   locationAvailability: string;
-  imagePlaceholder: string;
+  imageAssetId: MediaAssetId | null;
   recipeId: string;
   modifierGroupIds: string[];
   currency?: string;

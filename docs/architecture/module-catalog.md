@@ -54,13 +54,14 @@ domain/application public contracts.
 
 ## Frontend platform modules
 
-| Module            | Responsibility                                                           |
-| ----------------- | ------------------------------------------------------------------------ |
-| `ui`              | Accessible design-system primitives and tokens                           |
-| `api-client`      | Generated REST client and error normalization                            |
-| `auth`            | Browser session state and authenticated navigation guards                |
-| `project-context` | Active-project selection and mismatch prevention                         |
-| `extension-host`  | Validated browser registration and composition of Solution and Plugin UI |
+| Module            | Responsibility                                                                   |
+| ----------------- | -------------------------------------------------------------------------------- |
+| `ui`              | Accessible design-system primitives and tokens                                   |
+| `api-client`      | Generated REST client and error normalization                                    |
+| `auth`            | Browser session state and authenticated navigation guards                        |
+| `project-context` | Active-project selection and mismatch prevention                                 |
+| `extension-host`  | Validated browser registration and composition of Solution and Plugin UI         |
+| `media`           | Project-isolated browser media references, normalization, and local Blob storage |
 
 ## Reserved extension zones
 

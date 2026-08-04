@@ -76,6 +76,7 @@ export {
 } from './employee-credential-repository';
 export {
   clearLocalCoffeeDevelopmentStorage,
+  createLocalCoffeeManagerRepositories,
   localCoffeeManagerRepositories,
   localCoffeeOperationalReadRepository,
 } from './repositories';

@@ -1,5 +1,6 @@
 'use client';
 
+import type { MediaAssetId } from '@barakasb/contracts-platform';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   ArrowDownAZ,
@@ -13,10 +14,11 @@ import {
   SlidersHorizontal,
   X,
 } from 'lucide-react';
-import { useId, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useId, useMemo, useState, type FormEvent } from 'react';
 import type { CollectionEntity, CollectionKey, FormValues } from './domain';
 import { ImageUploadField, ReadableMultiSelectField } from './form-controls';
 import { useCoffeeTranslation, type CoffeeTranslationKey } from './i18n';
+import { readLegacyMenuImage } from './menu-image-migration';
 import {
   initialValues,
   resourceDefinitions,
@@ -52,6 +54,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
     duplicateResource,
     toggleResourceStatus,
     setDefaultLocation,
+    removeMediaIfUnreferenced,
   } = useCoffeeWorkspace();
   const definition = resourceDefinitions[kind];
   const [query, setQuery] = useState('');
@@ -115,6 +118,14 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
   };
 
   const closeForm = () => {
+    const pendingImageAssetId = formValues?.imageAssetId;
+    const originalImageAssetId =
+      kind === 'menuItems' && editingId
+        ? snapshot.menuItems.find((item) => item.id === editingId)?.imageAssetId
+        : null;
+    if (pendingImageAssetId && pendingImageAssetId !== originalImageAssetId) {
+      void removeMediaIfUnreferenced(pendingImageAssetId as MediaAssetId);
+    }
     setFormValues(null);
     setEditingId(null);
     setErrors({});
@@ -254,9 +265,25 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
                     value={formValues[field.name] ?? ''}
                     error={errors[field.name]}
                     snapshot={snapshot}
+                    ownerId={editingId}
+                    legacyPreviewUrl={
+                      kind === 'menuItems' && editingId
+                        ? (readLegacyMenuImage(
+                            snapshot.menuItems.find((item) => item.id === editingId)!,
+                          ) ?? undefined)
+                        : undefined
+                    }
                     onChange={(nextValue) => {
+                      const previousValue = formValues[field.name];
                       setFormValues({ ...formValues, [field.name]: nextValue });
                       setDirty(true);
+                      if (
+                        field.type === 'image' &&
+                        previousValue &&
+                        previousValue !== nextValue
+                      ) {
+                        void removeMediaIfUnreferenced(previousValue as MediaAssetId);
+                      }
                       if (errors[field.name]) {
                         setErrors((current) => {
                           const next = { ...current };
@@ -495,17 +522,40 @@ function ResourceField({
   value,
   error,
   snapshot,
+  ownerId,
+  legacyPreviewUrl,
   onChange,
 }: {
   field: FieldDefinition;
   value: string;
   error: CoffeeTranslationKey | undefined;
   snapshot: NonNullable<ReturnType<typeof useCoffeeWorkspace>['snapshot']>;
+  ownerId: string | null;
+  legacyPreviewUrl: string | undefined;
   onChange: (value: string) => void;
 }) {
   const { t } = useCoffeeTranslation();
+  const { projectId, mediaAssets } = useCoffeeWorkspace();
   const inputId = useId();
   const options = field.optionsFrom?.(snapshot) ?? field.options;
+  const uploadImage = useCallback(
+    async (file: File): Promise<string> => {
+      const asset = await mediaAssets.uploadImage({
+        projectId,
+        ownerType: 'catalog-item',
+        ownerId,
+        file,
+        fileName: file.name,
+      });
+      return asset.id;
+    },
+    [mediaAssets, ownerId, projectId],
+  );
+  const resolvePreview = useCallback(
+    (assetId: string) =>
+      mediaAssets.resolveDisplayUrl(projectId, assetId as MediaAssetId),
+    [mediaAssets, projectId],
+  );
   if (field.type === 'image') {
     return (
       <ImageUploadField
@@ -515,6 +565,13 @@ function ResourceField({
         replaceLabel={t('form.imageReplace')}
         removeLabel={t('form.imageRemove')}
         previewLabel={t('form.imagePreview')}
+        processingLabel={t('form.imageProcessing')}
+        unsupportedTypeError={t('form.imageUnsupported')}
+        fileTooLargeError={t('form.imageTooLarge')}
+        uploadError={t('form.imageFailed')}
+        legacyPreviewUrl={legacyPreviewUrl}
+        onUpload={uploadImage}
+        resolvePreview={resolvePreview}
         onChange={onChange}
       />
     );

@@ -733,7 +733,7 @@ function menuItems(timestamp: string): MenuItem[] {
     preparationLocationId:
       category === 'food' ? 'crash-location-production' : 'crash-location-main',
     servingUnitId: 'unit-portion',
-    imagePlaceholder: '',
+    imageAssetId: null,
     recipeId: [
       'bottled-water',
       'sparkling-water',
@@ -1140,7 +1140,7 @@ export function createCoffeeCrashTestSeed(timestamp: string): CoffeeDevelopmentS
       description: 'CRASH TEST · активная категория',
       displayOrder: displayOrder as number,
       locationAvailability: 'Север Coffee Lab — CRASH TEST',
-      imagePlaceholder: '',
+      imageAssetId: null,
       status: active,
       updatedAt: timestamp,
     })),

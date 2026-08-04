@@ -1,7 +1,8 @@
 'use client';
 
+import { MediaValidationError, type ResolvedMediaUrl } from '@barakasb/frontend-media';
 import { ImagePlus, RefreshCw, Trash2 } from 'lucide-react';
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { FieldOption } from './resource-definitions';
 import { secondaryButtonClass } from './ui';
 
@@ -14,15 +15,6 @@ function selectedValues(value: string): Set<string> {
   );
 }
 
-async function imageFileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener('load', () => resolve(String(reader.result ?? '')));
-    reader.addEventListener('error', () => reject(reader.error));
-    reader.readAsDataURL(file);
-  });
-}
-
 export function ImageUploadField({
   label,
   value,
@@ -30,6 +22,13 @@ export function ImageUploadField({
   replaceLabel,
   removeLabel,
   previewLabel,
+  processingLabel,
+  unsupportedTypeError,
+  fileTooLargeError,
+  uploadError,
+  legacyPreviewUrl,
+  onUpload,
+  resolvePreview,
   onChange,
 }: {
   label: string;
@@ -38,9 +37,75 @@ export function ImageUploadField({
   replaceLabel: string;
   removeLabel: string;
   previewLabel: string;
+  processingLabel: string;
+  unsupportedTypeError: string;
+  fileTooLargeError: string;
+  uploadError: string;
+  legacyPreviewUrl: string | undefined;
+  onUpload: (file: File) => Promise<string>;
+  resolvePreview: (assetId: string) => Promise<ResolvedMediaUrl | null>;
   onChange: (value: string) => void;
 }) {
   const inputId = useId();
+  const [resolvedPreview, setResolvedPreview] = useState<{
+    assetId: string;
+    url: string;
+  } | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    let lease: ResolvedMediaUrl | null = null;
+    if (!value) {
+      return () => {
+        active = false;
+      };
+    }
+    void resolvePreview(value)
+      .then((resolved) => {
+        if (!active) {
+          resolved?.release();
+          return;
+        }
+        lease = resolved;
+        setResolvedPreview(resolved ? { assetId: value, url: resolved.url } : null);
+      })
+      .catch(() => {
+        if (active) setResolvedPreview(null);
+      });
+    return () => {
+      active = false;
+      lease?.release();
+    };
+  }, [resolvePreview, value]);
+
+  const previewUrl = value
+    ? resolvedPreview?.assetId === value
+      ? resolvedPreview.url
+      : ''
+    : (legacyPreviewUrl ?? '');
+  const hasImage = Boolean(value || legacyPreviewUrl || previewUrl);
+
+  async function upload(file: File): Promise<void> {
+    setProcessing(true);
+    setError('');
+    try {
+      onChange(await onUpload(file));
+    } catch (caught) {
+      setError(
+        caught instanceof MediaValidationError
+          ? caught.code === 'unsupported-type'
+            ? unsupportedTypeError
+            : caught.code === 'file-too-large'
+              ? fileTooLargeError
+              : uploadError
+          : uploadError,
+      );
+    } finally {
+      setProcessing(false);
+    }
+  }
 
   return (
     <div className="sm:col-span-2">
@@ -50,40 +115,48 @@ export function ImageUploadField({
           role="img"
           aria-label={previewLabel}
           className="grid aspect-[4/3] w-full max-w-48 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] bg-cover bg-center"
-          style={value ? { backgroundImage: `url("${value}")` } : undefined}
+          style={previewUrl ? { backgroundImage: `url("${previewUrl}")` } : undefined}
         >
-          {!value ? <ImagePlus className="size-7 text-[var(--muted)]" /> : null}
+          {!previewUrl ? <ImagePlus className="size-7 text-[var(--muted)]" /> : null}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <input
-            id={inputId}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              void imageFileToDataUrl(file).then(onChange);
-              event.target.value = '';
-            }}
-          />
-          <label htmlFor={inputId} className={secondaryButtonClass}>
-            {value ? (
-              <RefreshCw className="size-4" />
-            ) : (
-              <ImagePlus className="size-4" />
-            )}
-            {value ? replaceLabel : uploadLabel}
-          </label>
-          {value ? (
-            <button
-              type="button"
-              className={secondaryButtonClass}
-              onClick={() => onChange('')}
-            >
-              <Trash2 className="size-4" />
-              {removeLabel}
-            </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            <input
+              id={inputId}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              disabled={processing}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                void upload(file);
+                event.target.value = '';
+              }}
+            />
+            <label htmlFor={inputId} className={secondaryButtonClass}>
+              {hasImage ? (
+                <RefreshCw className="size-4" />
+              ) : (
+                <ImagePlus className="size-4" />
+              )}
+              {processing ? processingLabel : hasImage ? replaceLabel : uploadLabel}
+            </label>
+            {hasImage ? (
+              <button
+                type="button"
+                className={secondaryButtonClass}
+                onClick={() => onChange('')}
+              >
+                <Trash2 className="size-4" />
+                {removeLabel}
+              </button>
+            ) : null}
+          </div>
+          {error ? (
+            <p role="alert" className="text-sm font-medium text-red-600">
+              {error}
+            </p>
           ) : null}
         </div>
       </div>
