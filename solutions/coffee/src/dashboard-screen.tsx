@@ -33,7 +33,13 @@ export function CoffeeDashboardScreen() {
       items.push({ key: 'dashboard.warningLocation', href: `${base}/setup/locations` });
     }
     if (snapshot.menuCategories.length === 0 || snapshot.menuItems.length === 0) {
-      items.push({ key: 'dashboard.warningMenu', href: `${base}/menu` });
+      items.push({
+        key: 'dashboard.warningMenu',
+        href:
+          snapshot.menuCategories.length === 0
+            ? `${base}/menu/categories`
+            : `${base}/menu/items`,
+      });
     }
     if (snapshot.recipes.length === 0) {
       items.push({ key: 'dashboard.warningRecipe', href: `${base}/recipes` });
@@ -56,7 +62,7 @@ export function CoffeeDashboardScreen() {
     {
       key: 'dashboard.moduleMenu',
       textKey: 'dashboard.moduleMenuText',
-      href: `${base}/menu`,
+      href: `${base}/menu/categories`,
       icon: Coffee,
     },
     {

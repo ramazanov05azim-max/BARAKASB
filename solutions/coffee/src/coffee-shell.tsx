@@ -5,38 +5,29 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Bell,
-  Boxes,
-  BriefcaseBusiness,
-  Building2,
   Check,
   ChevronDown,
   ChevronRight,
   CircleAlert,
-  ClipboardCheck,
   Coffee,
   Command,
-  CookingPot,
-  FileBarChart,
-  Gauge,
   LayoutGrid,
-  LockKeyhole,
-  Map,
   Menu,
-  PackageOpen,
   Plus,
   Search,
-  Settings,
-  ShieldCheck,
   Store,
-  Users,
-  Warehouse,
-  Wheat,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { CoffeeCapability, CoffeeLocale } from './domain';
+import type { CoffeeLocale } from './domain';
+import {
+  coffeeNavigationGroups,
+  coffeeQuickActions,
+  findCoffeeNavigationItem,
+  type CoffeeNavigationGroup,
+} from './coffee-navigation';
 import {
   CoffeeI18nProvider,
   type CoffeeTranslationKey,
@@ -44,146 +35,6 @@ import {
 } from './i18n';
 import type { CoffeeManagerRepositories } from './repository-contracts';
 import { CoffeeWorkspaceProvider, useCoffeeWorkspace } from './workspace-store';
-
-type IconComponent = typeof Gauge;
-
-interface NavigationItem {
-  key: CoffeeTranslationKey;
-  suffix: string;
-  icon: IconComponent;
-  capability?: CoffeeCapability;
-}
-
-interface NavigationGroup {
-  key?: CoffeeTranslationKey;
-  items: NavigationItem[];
-}
-
-const navigationGroups: NavigationGroup[] = [
-  {
-    items: [
-      { key: 'nav.overview', suffix: '', icon: Gauge },
-      { key: 'nav.setup', suffix: '/setup', icon: ClipboardCheck },
-    ],
-  },
-  {
-    key: 'nav.menu',
-    items: [
-      { key: 'nav.menuOverview', suffix: '/menu', icon: LayoutGrid },
-      {
-        key: 'nav.categories',
-        suffix: '/menu/categories',
-        icon: Boxes,
-        capability: 'menu.read',
-      },
-      {
-        key: 'nav.items',
-        suffix: '/menu/items',
-        icon: Coffee,
-        capability: 'menu.read',
-      },
-      {
-        key: 'nav.modifiers',
-        suffix: '/menu/modifiers',
-        icon: Plus,
-        capability: 'menu.read',
-      },
-    ],
-  },
-  {
-    items: [
-      {
-        key: 'nav.recipes',
-        suffix: '/recipes',
-        icon: CookingPot,
-        capability: 'recipes.read',
-      },
-    ],
-  },
-  {
-    key: 'nav.inventory',
-    items: [
-      { key: 'nav.inventory', suffix: '/inventory', icon: Warehouse },
-      {
-        key: 'nav.ingredients',
-        suffix: '/inventory/ingredients',
-        icon: Wheat,
-        capability: 'inventory.read',
-      },
-      {
-        key: 'nav.units',
-        suffix: '/inventory/units',
-        icon: PackageOpen,
-        capability: 'inventory.read',
-      },
-      {
-        key: 'nav.warehouses',
-        suffix: '/inventory/warehouses',
-        icon: Store,
-        capability: 'inventory.read',
-      },
-    ],
-  },
-  {
-    items: [
-      {
-        key: 'nav.suppliers',
-        suffix: '/suppliers',
-        icon: BriefcaseBusiness,
-        capability: 'suppliers.read',
-      },
-      {
-        key: 'nav.employees',
-        suffix: '/employees',
-        icon: Users,
-        capability: 'employees.read',
-      },
-      {
-        key: 'nav.roles',
-        suffix: '/employees/roles',
-        icon: ShieldCheck,
-        capability: 'roles.read',
-      },
-      {
-        key: 'nav.permissions',
-        suffix: '/employees/permissions',
-        icon: LockKeyhole,
-        capability: 'roles.read',
-      },
-      {
-        key: 'nav.workstations',
-        suffix: '/workstations',
-        icon: Building2,
-        capability: 'workstations.read',
-      },
-      {
-        key: 'nav.floorPlan',
-        suffix: '/floor-plan',
-        icon: Map,
-        capability: 'locations.manage',
-      },
-      {
-        key: 'nav.reports',
-        suffix: '/reports',
-        icon: FileBarChart,
-        capability: 'reports.read',
-      },
-      {
-        key: 'nav.settings',
-        suffix: '/settings',
-        icon: Settings,
-        capability: 'settings.manage',
-      },
-    ],
-  },
-];
-
-const quickActions: Array<Pick<NavigationItem, 'key' | 'suffix' | 'icon'>> = [
-  { key: 'quick.addLocation', suffix: '/setup/locations', icon: Building2 },
-  { key: 'quick.addMenuItem', suffix: '/menu/items', icon: Coffee },
-  { key: 'quick.addIngredient', suffix: '/inventory/ingredients', icon: Wheat },
-  { key: 'quick.inviteEmployee', suffix: '/employees', icon: Users },
-];
 
 export function CoffeeProjectEnvironment({
   projectId,
@@ -255,7 +106,7 @@ function CoffeeShell({
 
   const visibleGroups = useMemo(
     () =>
-      navigationGroups.map((group) => ({
+      coffeeNavigationGroups.map((group) => ({
         ...group,
         items: group.items.filter((item) => !item.capability || can(item.capability)),
       })),
@@ -272,10 +123,7 @@ function CoffeeShell({
     [searchQuery, t, visibleGroups],
   );
 
-  const currentItem = navigationGroups
-    .flatMap((group) => group.items)
-    .filter((item) => pathname === `${base}${item.suffix}`)
-    .at(0);
+  const currentItem = findCoffeeNavigationItem(pathname, base);
 
   const completeCount =
     snapshot?.setupSteps.filter((step) => step.status === 'complete').length ?? 0;
@@ -637,7 +485,7 @@ function DesktopSidebar({
   ready,
 }: {
   base: string;
-  groups: NavigationGroup[];
+  groups: CoffeeNavigationGroup[];
   pathname: string;
   progress: number;
   ready: boolean;
@@ -688,7 +536,7 @@ function SidebarNavigation({
   onNavigate,
 }: {
   base: string;
-  groups: NavigationGroup[];
+  groups: CoffeeNavigationGroup[];
   pathname: string;
   onNavigate?: () => void;
 }) {
@@ -827,7 +675,7 @@ function QuickActionsMenu({ base }: { base: string }) {
       <DropdownMenu.Portal>
         <MenuSurface align="end">
           <MenuLabel>{t('nav.quickActions')}</MenuLabel>
-          {quickActions.map((action) => {
+          {coffeeQuickActions.map((action) => {
             const Icon = action.icon;
             return (
               <DropdownMenu.Item key={action.suffix} asChild>
