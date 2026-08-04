@@ -15,7 +15,7 @@ import type {
 
 const push = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push, refresh: vi.fn() }),
+  useRouter: () => ({ push }),
 }));
 
 const record: CoffeeManagerSetupRecord = {
@@ -109,5 +109,28 @@ describe('CoffeeCrashTestScreen', () => {
 
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining('DEV ONLY'));
     expect(repository.resetAndInstall).not.toHaveBeenCalled();
+  });
+
+  it('performs one navigation after a successful reset', async () => {
+    const repository = service(state('not-installed'));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const user = userEvent.setup();
+    render(
+      <I18nProvider>
+        <CoffeeCrashTestScreen service={repository} />
+      </I18nProvider>,
+    );
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Обновить тестовое окружение',
+      }),
+    );
+
+    expect(repository.resetAndInstall).toHaveBeenCalledOnce();
+    expect(push).toHaveBeenCalledOnce();
+    expect(push).toHaveBeenCalledWith(
+      `/projects/${coffeeCrashTestProjectId}?crashTestInstalled=1`,
+    );
   });
 });

@@ -54,7 +54,6 @@ export function CoffeeCrashTestScreen({
     try {
       await service.resetAndInstall();
       router.push(`${projectUrl}?crashTestInstalled=1`);
-      router.refresh();
     } catch {
       setError(true);
       setWorking(false);

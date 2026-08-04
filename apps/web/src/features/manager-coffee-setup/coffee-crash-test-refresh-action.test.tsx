@@ -7,10 +7,9 @@ import { CoffeeCrashTestRefreshAction } from './coffee-crash-test-refresh-action
 import type { CoffeeCrashTestService } from './coffee-crash-test-service';
 
 const push = vi.fn();
-const refresh = vi.fn();
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push, refresh }),
+  useRouter: () => ({ push }),
 }));
 
 function service(): CoffeeCrashTestService {
@@ -58,6 +57,6 @@ describe('CoffeeCrashTestRefreshAction', () => {
     expect(push).toHaveBeenCalledWith(
       `/projects/${coffeeCrashTestProjectId}?crashTestInstalled=1`,
     );
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(push).toHaveBeenCalledOnce();
   });
 });

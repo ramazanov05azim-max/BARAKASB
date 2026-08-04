@@ -32,7 +32,6 @@ export function CoffeeCrashTestRefreshAction({
     try {
       await service.resetAndInstall();
       router.push(`/projects/${coffeeCrashTestProjectId}?crashTestInstalled=1`);
-      router.refresh();
     } catch {
       setFailed(true);
       setWorking(false);
