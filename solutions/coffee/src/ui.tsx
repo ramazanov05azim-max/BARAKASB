@@ -140,5 +140,7 @@ export const quietButtonClass =
 export const inputClass =
   'h-12 w-full rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-raised)] px-4 text-[15px] text-[var(--text)] shadow-[inset_0_1px_0_rgb(255_255_255_/_70%)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:bg-[var(--surface-solid)] focus:ring-4 focus:ring-[var(--focus-soft)] disabled:opacity-50';
 
+export const selectClass = `${inputClass} appearance-none bg-none pr-10`;
+
 export const textareaClass =
   'min-h-28 w-full resize-y rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-3 text-[15px] text-[var(--text)] shadow-[inset_0_1px_0_rgb(255_255_255_/_70%)] outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--action)] focus:bg-[var(--surface-solid)] focus:ring-4 focus:ring-[var(--focus-soft)] disabled:opacity-50';

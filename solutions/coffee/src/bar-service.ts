@@ -74,6 +74,10 @@ export interface CoffeeBarService {
     itemId: string,
   ): Promise<CoffeeOrder>;
   sendOrder(context: CoffeeBarRuntimeContext, orderId: string): Promise<CoffeeOrder>;
+  acceptAllSentItems(
+    context: CoffeeBarRuntimeContext,
+    orderId: string,
+  ): Promise<CoffeeOrder>;
   updateBarItemStatus(
     context: CoffeeBarRuntimeContext,
     orderId: string,
@@ -853,6 +857,36 @@ export function createCoffeeBarService({
         { ...changed, status: preparationStatus(changed) },
         'ITEM_STATUS_CHANGED',
         `${itemId}:${status}`,
+      );
+    },
+    async acceptAllSentItems(context, orderId) {
+      await snapshotFor(context);
+      const store = await orders.load(context.projectId);
+      const order = findOrder(store, orderId);
+      assertContext(context, order);
+      if (terminalStatuses.has(order.status) || order.issuedAt) {
+        throw new CoffeeBarOperationError('ORDER_IMMUTABLE');
+      }
+      const newItems = order.items.filter(
+        (item) => item.submittedBatchId && item.status === 'NEW',
+      );
+      if (newItems.length === 0) {
+        throw new CoffeeBarOperationError('INVALID_OPERATION');
+      }
+      const acceptedIds = new Set(newItems.map((item) => item.id));
+      const changed = {
+        ...order,
+        items: order.items.map((item) =>
+          acceptedIds.has(item.id) ? { ...item, status: 'PREPARING' as const } : item,
+        ),
+        updatedAt: now(),
+      };
+      return persist(
+        context,
+        store,
+        { ...changed, status: preparationStatus(changed) },
+        'ITEMS_ACCEPTED',
+        String(newItems.length),
       );
     },
     async issueReadyOrder(context, orderId) {

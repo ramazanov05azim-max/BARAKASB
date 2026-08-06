@@ -97,6 +97,7 @@ export interface CoffeeBarAuditEntry {
     | 'ORDER_TRANSFERRED'
     | 'ORDER_RELEASED'
     | 'BATCH_SENT'
+    | 'ITEMS_ACCEPTED'
     | 'ITEM_STATUS_CHANGED'
     | 'PAYMENT_RECORDED'
     | 'ORDER_ISSUED'

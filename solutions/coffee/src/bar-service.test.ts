@@ -87,13 +87,18 @@ function operationalSnapshot(): CoffeeOperationalSnapshot {
   };
 }
 
-function memoryRepository(): CoffeeBarOrderRepository & { value: CoffeeBarStore } {
+function memoryRepository(): CoffeeBarOrderRepository & {
+  value: CoffeeBarStore;
+  saveCount: number;
+} {
   return {
     value: { orders: [], audit: [] },
+    saveCount: 0,
     async load() {
       return structuredClone(this.value);
     },
     async save(_projectId, store) {
+      this.saveCount += 1;
       this.value = structuredClone(store);
     },
     subscribe() {
@@ -491,6 +496,46 @@ describe('Coffee Bar application service', () => {
     await expect(service.issueReadyOrder(context, order.orderId)).rejects.toMatchObject(
       { code: 'ORDER_IMMUTABLE' },
     );
+  });
+
+  it('accepts every new sent position atomically and preserves ready positions', async () => {
+    let order = await withItem(service);
+    order = await service.addItem(context, order.orderId, {
+      productId: 'crash-item-cappuccino',
+      modifiers: [
+        {
+          modifierGroupId: 'crash-modifier-coffee-volume',
+          optionName: '250 мл',
+        },
+        { modifierGroupId: 'crash-modifier-milk', optionName: 'Обычное' },
+      ],
+    });
+    order = await service.sendOrder(context, order.orderId);
+    const firstItem = order.items[0]!;
+    order = await service.updateBarItemStatus(
+      context,
+      order.orderId,
+      firstItem.id,
+      'PREPARING',
+    );
+    order = await service.updateBarItemStatus(
+      context,
+      order.orderId,
+      firstItem.id,
+      'READY',
+    );
+    const savesBefore = repository.saveCount;
+
+    order = await service.acceptAllSentItems(context, order.orderId);
+
+    expect(repository.saveCount - savesBefore).toBe(1);
+    expect(order.items.map((item) => item.status)).toEqual(['READY', 'PREPARING']);
+    expect(
+      repository.value.audit.filter((entry) => entry.operation === 'ITEMS_ACCEPTED'),
+    ).toHaveLength(1);
+    await expect(
+      service.acceptAllSentItems(context, order.orderId),
+    ).rejects.toMatchObject({ code: 'INVALID_OPERATION' });
   });
 
   it('keeps an issued unpaid order open, then payment completes it and releases the table', async () => {

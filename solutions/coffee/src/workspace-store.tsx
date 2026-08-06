@@ -28,7 +28,15 @@ import type {
 } from './domain';
 import type { CoffeeTranslationKey } from './i18n';
 import { recipeNetQuantity, recipeTitle } from './recipe-migration';
+import {
+  baseUnitForAccountingType,
+  type IngredientAccountingType,
+} from './ingredient-migration';
 import { localCoffeeManagerRepositories } from './repositories';
+import {
+  resourceDeletionDependencies,
+  type ResourceDependency,
+} from './resource-deletion';
 import {
   CoffeeRepositoryError,
   type CoffeeManagerRepositories,
@@ -57,6 +65,8 @@ interface CoffeeWorkspaceContextValue {
     copySuffix: string,
   ) => Promise<void>;
   toggleResourceStatus: (kind: CollectionKey, id: string) => Promise<void>;
+  deletionDependencies: (kind: CollectionKey, id: string) => ResourceDependency[];
+  removeResource: (kind: CollectionKey, id: string) => Promise<void>;
   saveBusinessProfile: (profile: BusinessProfile) => Promise<void>;
   saveSettings: (settings: CoffeeSettings) => Promise<void>;
   setDefaultLocation: (locationId: string) => Promise<void>;
@@ -152,6 +162,21 @@ export function generateMenuItemSku(existingSkus: readonly string[]): string {
     sequence += 1;
   }
   return `MENU-${String(sequence).padStart(4, '0')}`;
+}
+
+export function generateIngredientSku(existingSkus: readonly string[]): string {
+  const occupied = new Set(existingSkus.map((sku) => sku.trim().toUpperCase()));
+  let sequence = 1;
+  while (occupied.has(`ING-${String(sequence).padStart(4, '0')}`)) {
+    sequence += 1;
+  }
+  return `ING-${String(sequence).padStart(4, '0')}`;
+}
+
+function ingredientAccountingType(values: FormValues): IngredientAccountingType {
+  const type = value(values, 'accountingType');
+  if (type === 'weight' || type === 'volume' || type === 'pieces') return type;
+  throw new CoffeeRepositoryError('invalid-operation');
 }
 
 export async function removeCoffeeMediaIfUnreferenced(
@@ -366,19 +391,30 @@ export function CoffeeWorkspaceProvider({
               });
             }
             break;
-          case 'ingredients':
+          case 'ingredients': {
+            if (!snapshot) throw new CoffeeRepositoryError('not-found');
+            const accountingType = ingredientAccountingType(values);
+            const baseUnit = baseUnitForAccountingType(accountingType, snapshot.units);
+            if (!baseUnit) throw new CoffeeRepositoryError('invalid-operation');
+            const purchasePackageSize = numeric(values, 'purchasePackageSize');
             await repositories.ingredients.create(projectId, {
               ...common,
-              sku: value(values, 'sku'),
+              sku: generateIngredientSku(
+                snapshot.ingredients.map((ingredient) => ingredient.sku),
+              ),
               category: value(values, 'category'),
-              baseUnitId: value(values, 'baseUnitId'),
+              accountingType,
+              baseUnitId: baseUnit.id,
               purchaseUnitId: value(values, 'purchaseUnitId'),
-              conversionRate: numeric(values, 'conversionRate'),
-              minimumStock: numeric(values, 'minimumStock'),
-              cost: numeric(values, 'cost'),
-              supplierReferences: value(values, 'supplierReferences'),
+              purchasePackageSize,
+              conversionRate: purchasePackageSize,
+              barcode: value(values, 'barcode'),
+              minimumStock: 0,
+              cost: 0,
+              supplierReferences: '',
             });
             break;
+          }
           case 'units':
             await repositories.units.create(projectId, {
               ...common,
@@ -569,19 +605,42 @@ export function CoffeeWorkspaceProvider({
               });
             }
             break;
-          case 'ingredients':
+          case 'ingredients': {
+            if (!snapshot) throw new CoffeeRepositoryError('not-found');
+            const existingIngredient = snapshot.ingredients.find(
+              (ingredient) => ingredient.id === id,
+            );
+            if (!existingIngredient) throw new CoffeeRepositoryError('not-found');
+            const accountingType = ingredientAccountingType(values);
+            const baseUnit = baseUnitForAccountingType(accountingType, snapshot.units);
+            if (!baseUnit) throw new CoffeeRepositoryError('invalid-operation');
+            const purchasePackageSize = numeric(values, 'purchasePackageSize');
             await repositories.ingredients.update(projectId, id, {
               ...common,
-              sku: value(values, 'sku'),
+              sku: existingIngredient.sku,
               category: value(values, 'category'),
-              baseUnitId: value(values, 'baseUnitId'),
+              accountingType,
+              baseUnitId: baseUnit.id,
               purchaseUnitId: value(values, 'purchaseUnitId'),
-              conversionRate: numeric(values, 'conversionRate'),
-              minimumStock: numeric(values, 'minimumStock'),
-              cost: numeric(values, 'cost'),
-              supplierReferences: value(values, 'supplierReferences'),
+              purchasePackageSize,
+              conversionRate: purchasePackageSize,
+              barcode: value(values, 'barcode'),
+              minimumStock: existingIngredient.minimumStock,
+              cost: existingIngredient.cost,
+              supplierReferences: existingIngredient.supplierReferences,
+              ...(existingIngredient.preferredSupplierId
+                ? { preferredSupplierId: existingIngredient.preferredSupplierId }
+                : {}),
+              ...(existingIngredient.reorderQuantity !== undefined
+                ? { reorderQuantity: existingIngredient.reorderQuantity }
+                : {}),
+              ...(existingIngredient.storageLocationId
+                ? { storageLocationId: existingIngredient.storageLocationId }
+                : {}),
+              accountingConfigurationWarning: undefined,
             });
             break;
+          }
           case 'units':
             await repositories.units.update(projectId, id, {
               ...common,
@@ -666,6 +725,28 @@ export function CoffeeWorkspaceProvider({
       setFeedbackKey('resource.successStatus');
     },
     [snapshot, updateResource],
+  );
+
+  const deletionDependencies = useCallback(
+    (kind: CollectionKey, id: string): ResourceDependency[] =>
+      snapshot ? resourceDeletionDependencies(snapshot, kind, id) : [],
+    [snapshot],
+  );
+
+  const removeResource = useCallback(
+    async (kind: CollectionKey, id: string) => {
+      if (!snapshot) throw new CoffeeRepositoryError('not-found');
+      if (resourceDeletionDependencies(snapshot, kind, id).length > 0) {
+        throw new CoffeeRepositoryError('invalid-operation');
+      }
+      await refreshAfter(async () => {
+        if (kind === 'employees') {
+          await repositories.employeeCredentials.remove(projectId, id);
+        }
+        await repositories[kind].remove(projectId, id);
+      }, 'resource.successDeleted');
+    },
+    [projectId, refreshAfter, repositories, snapshot],
   );
 
   const saveBusinessProfile = useCallback(
@@ -758,6 +839,8 @@ export function CoffeeWorkspaceProvider({
       updateResource,
       duplicateResource,
       toggleResourceStatus,
+      deletionDependencies,
+      removeResource,
       saveBusinessProfile,
       saveSettings,
       setDefaultLocation,
@@ -780,6 +863,8 @@ export function CoffeeWorkspaceProvider({
       updateResource,
       duplicateResource,
       toggleResourceStatus,
+      deletionDependencies,
+      removeResource,
       saveBusinessProfile,
       saveSettings,
       setDefaultLocation,

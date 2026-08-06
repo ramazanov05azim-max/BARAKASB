@@ -12,6 +12,7 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
+  Trash2,
   X,
 } from 'lucide-react';
 import { useCallback, useId, useMemo, useState, type FormEvent } from 'react';
@@ -37,6 +38,7 @@ import {
   primaryButtonClass,
   quietButtonClass,
   secondaryButtonClass,
+  selectClass,
   textareaClass,
 } from './ui';
 
@@ -54,6 +56,8 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
     updateResource,
     duplicateResource,
     toggleResourceStatus,
+    deletionDependencies,
+    removeResource,
     setDefaultLocation,
     removeMediaIfUnreferenced,
   } = useCoffeeWorkspace();
@@ -68,6 +72,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
   const [dirty, setDirty] = useState(false);
   const [discardPrompt, setDiscardPrompt] = useState(false);
   const [statusTarget, setStatusTarget] = useState<CollectionEntity | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CollectionEntity | null>(null);
 
   const records = useMemo(() => {
     if (!snapshot) return [];
@@ -191,6 +196,25 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
         cursor = snapshot.units.find((unit) => unit.id === cursor?.conversionTargetId);
       }
     }
+    if (kind === 'ingredients') {
+      const accountingType = values.accountingType;
+      const purchaseUnit = snapshot.units.find(
+        (unit) => unit.id === values.purchaseUnitId,
+      );
+      const isPieceUnit = purchaseUnit
+        ? ['pc', 'pcs', 'шт', 'шт.'].includes(
+            purchaseUnit.symbol.trim().toLocaleLowerCase(),
+          )
+        : false;
+      if (
+        purchaseUnit &&
+        ((purchaseUnit.dimension === 'mass' && accountingType !== 'weight') ||
+          (purchaseUnit.dimension === 'volume' && accountingType !== 'volume') ||
+          (isPieceUnit && accountingType !== 'pieces'))
+      ) {
+        next.purchaseUnitId = 'validation.accountingUnitMismatch';
+      }
+    }
     if (kind === 'recipes') {
       try {
         const target = JSON.parse(values.target ?? '') as {
@@ -304,6 +328,14 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
             </button>
           </div>
           <form onSubmit={(event) => void handleSubmit(event)} noValidate>
+            {kind === 'ingredients' &&
+            editingId &&
+            snapshot.ingredients.find((ingredient) => ingredient.id === editingId)
+              ?.accountingConfigurationWarning ? (
+              <p className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900">
+                {t('ingredients.accountingWarning')}
+              </p>
+            ) : null}
             <div className="grid gap-5 sm:grid-cols-2">
               {definition.fields
                 .filter((field) => field.visibleWhen?.(snapshot) ?? true)
@@ -312,6 +344,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
                     key={field.name}
                     field={field}
                     value={formValues[field.name] ?? ''}
+                    formValues={formValues}
                     error={errors[field.name]}
                     snapshot={snapshot}
                     ownerId={editingId}
@@ -324,7 +357,16 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
                     }
                     onChange={(nextValue) => {
                       const previousValue = formValues[field.name];
-                      setFormValues({ ...formValues, [field.name]: nextValue });
+                      setFormValues({
+                        ...formValues,
+                        [field.name]: nextValue,
+                        ...(kind === 'ingredients' &&
+                        field.name === 'accountingType' &&
+                        previousValue &&
+                        previousValue !== nextValue
+                          ? { purchasePackageSize: '' }
+                          : {}),
+                      });
                       setDirty(true);
                       if (
                         field.type === 'image' &&
@@ -406,7 +448,8 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className={`${inputClass} min-w-44 pl-10`}
+              className={`${selectClass} min-w-44 pl-10`}
+              data-clean-native-select="true"
             >
               <option value="all">{t('resource.statusAll')}</option>
               <option value="active">
@@ -493,6 +536,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
                     <ResourceTableRow
                       key={record.id}
                       record={record}
+                      snapshot={snapshot}
                       definition={definition}
                       canManage={canManage}
                       isDefault={
@@ -504,6 +548,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
                         void duplicateResource(kind, record.id, t('common.copySuffix'))
                       }
                       onStatus={() => setStatusTarget(record)}
+                      onDelete={() => setDeleteTarget(record)}
                       onDefault={() => void setDefaultLocation(record.id)}
                     />
                   ))}
@@ -515,6 +560,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
                 <ResourceMobileCard
                   key={record.id}
                   record={record}
+                  snapshot={snapshot}
                   definition={definition}
                   canManage={canManage}
                   isDefault={
@@ -523,6 +569,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
                   }
                   onEdit={() => startEdit(record)}
                   onStatus={() => setStatusTarget(record)}
+                  onDelete={() => setDeleteTarget(record)}
                   onDefault={() => void setDefaultLocation(record.id)}
                 />
               ))}
@@ -567,6 +614,82 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
         </Dialog.Portal>
       </Dialog.Root>
 
+      <Dialog.Root
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => (!open ? setDeleteTarget(null) : undefined)}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-[90] bg-black/35 backdrop-blur-sm" />
+          <Dialog.Content className="floating-chrome fixed left-1/2 top-1/2 z-[100] w-[min(92vw,520px)] -translate-x-1/2 -translate-y-1/2 rounded-[24px] p-6">
+            {deleteTarget && deletionDependencies(kind, deleteTarget.id).length > 0 ? (
+              <>
+                <Dialog.Title className="text-xl font-semibold">
+                  {t('resource.deleteBlockedTitle')}
+                </Dialog.Title>
+                <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  {t('resource.deleteBlockedDescription')}
+                </Dialog.Description>
+                <ul className="mt-4 space-y-2 rounded-2xl bg-rose-50 p-4 text-sm text-rose-900">
+                  {deletionDependencies(kind, deleteTarget.id).map((dependency) => (
+                    <li key={dependency.label}>
+                      <strong>
+                        {t(
+                          `resource.dependency.${dependency.label}` as CoffeeTranslationKey,
+                        )}{' '}
+                        ({dependency.names.length}):
+                      </strong>{' '}
+                      {dependency.names.slice(0, 6).join(', ')}
+                      {dependency.names.length > 6
+                        ? ` +${dependency.names.length - 6}`
+                        : ''}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-6 flex justify-end">
+                  <Dialog.Close asChild>
+                    <button type="button" className={secondaryButtonClass}>
+                      {t('common.close')}
+                    </button>
+                  </Dialog.Close>
+                </div>
+              </>
+            ) : (
+              <>
+                <Dialog.Title className="text-xl font-semibold">
+                  {t('resource.deleteTitle')}
+                </Dialog.Title>
+                <Dialog.Description className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  {t('resource.deleteNamed').replace(
+                    '{name}',
+                    deleteTarget?.name ?? '',
+                  )}
+                </Dialog.Description>
+                <div className="mt-6 flex justify-end gap-3">
+                  <Dialog.Close asChild>
+                    <button type="button" className={secondaryButtonClass}>
+                      {t('common.cancel')}
+                    </button>
+                  </Dialog.Close>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!deleteTarget) return;
+                      void removeResource(kind, deleteTarget.id).then(() =>
+                        setDeleteTarget(null),
+                      );
+                    }}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-700"
+                  >
+                    <Trash2 className="size-4" />
+                    {t('common.delete')}
+                  </button>
+                </div>
+              </>
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
       <span className="sr-only">{allRecords.length}</span>
     </>
   );
@@ -575,6 +698,7 @@ export function CoffeeResourceScreen({ kind }: { kind: CollectionKey }) {
 function ResourceField({
   field,
   value,
+  formValues,
   error,
   snapshot,
   ownerId,
@@ -583,6 +707,7 @@ function ResourceField({
 }: {
   field: FieldDefinition;
   value: string;
+  formValues: FormValues;
   error: CoffeeTranslationKey | undefined;
   snapshot: NonNullable<ReturnType<typeof useCoffeeWorkspace>['snapshot']>;
   ownerId: string | null;
@@ -713,7 +838,7 @@ function ResourceField({
           aria-label={t(field.labelKey)}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className={inputClass}
+          className={selectClass}
           aria-invalid={Boolean(error)}
         >
           {!value ? <option value="">{t('common.notConfigured')}</option> : null}
@@ -742,7 +867,21 @@ function ResourceField({
       ) : null}
       {field.helperKey && !error ? (
         <span className="mt-1.5 block text-xs leading-5 text-[var(--muted)]">
-          {t(field.helperKey)}
+          {field.name === 'purchasePackageSize' &&
+          value &&
+          formValues.purchaseUnitId &&
+          formValues.accountingType
+            ? `1 ${
+                snapshot.units.find((unit) => unit.id === formValues.purchaseUnitId)
+                  ?.name ?? t('fields.purchaseUnit')
+              } = ${value} ${
+                formValues.accountingType === 'weight'
+                  ? t('ingredients.baseGram')
+                  : formValues.accountingType === 'volume'
+                    ? t('ingredients.baseMilliliter')
+                    : t('ingredients.basePiece')
+              }`
+            : t(field.helperKey)}
         </span>
       ) : null}
     </label>
@@ -751,21 +890,25 @@ function ResourceField({
 
 function ResourceTableRow({
   record,
+  snapshot,
   definition,
   canManage,
   isDefault,
   onEdit,
   onDuplicate,
   onStatus,
+  onDelete,
   onDefault,
 }: {
   record: CollectionEntity;
+  snapshot: NonNullable<ReturnType<typeof useCoffeeWorkspace>['snapshot']>;
   definition: (typeof resourceDefinitions)[CollectionKey];
   canManage: boolean;
   isDefault: boolean;
   onEdit: () => void;
   onDuplicate: () => void;
   onStatus: () => void;
+  onDelete: () => void;
   onDefault: () => void;
 }) {
   const { t } = useCoffeeTranslation();
@@ -785,7 +928,13 @@ function ResourceTableRow({
           key={fieldName}
           className="max-w-56 truncate px-5 py-4 text-sm text-[var(--text-secondary)] dark:text-[var(--text-secondary)]"
         >
-          {values[fieldName] || '—'}
+          {formatResourceValue(
+            fieldName,
+            values[fieldName] ?? '',
+            definition,
+            snapshot,
+            t,
+          )}
         </td>
       ))}
       <td className="px-5 py-4">
@@ -834,6 +983,14 @@ function ResourceTableRow({
                   record.status === 'active' ? 'common.deactivate' : 'common.activate',
                 )}
               </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                className={`${quietButtonClass} text-rose-600`}
+                aria-label={`${t('common.delete')} ${record.name}`}
+              >
+                <Trash2 className="size-4" />
+              </button>
             </>
           ) : null}
         </div>
@@ -844,19 +1001,23 @@ function ResourceTableRow({
 
 function ResourceMobileCard({
   record,
+  snapshot,
   definition,
   canManage,
   isDefault,
   onEdit,
   onStatus,
+  onDelete,
   onDefault,
 }: {
   record: CollectionEntity;
+  snapshot: NonNullable<ReturnType<typeof useCoffeeWorkspace>['snapshot']>;
   definition: (typeof resourceDefinitions)[CollectionKey];
   canManage: boolean;
   isDefault: boolean;
   onEdit: () => void;
   onStatus: () => void;
+  onDelete: () => void;
   onDefault: () => void;
 }) {
   const { t } = useCoffeeTranslation();
@@ -896,7 +1057,13 @@ function ResourceMobileCard({
                 {field ? t(field.labelKey) : fieldName}
               </dt>
               <dd className="max-w-[55%] truncate text-right font-medium">
-                {values[fieldName] || '—'}
+                {formatResourceValue(
+                  fieldName,
+                  values[fieldName] ?? '',
+                  definition,
+                  snapshot,
+                  t,
+                )}
               </dd>
             </div>
           );
@@ -916,8 +1083,33 @@ function ResourceMobileCard({
           <button type="button" onClick={onStatus} className={secondaryButtonClass}>
             {t(record.status === 'active' ? 'common.deactivate' : 'common.activate')}
           </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className={`${secondaryButtonClass} text-rose-600`}
+            aria-label={`${t('common.delete')} ${record.name}`}
+          >
+            <Trash2 className="size-4" />
+            {t('common.delete')}
+          </button>
         </div>
       ) : null}
     </article>
   );
+}
+
+function formatResourceValue(
+  fieldName: string,
+  rawValue: string,
+  definition: (typeof resourceDefinitions)[CollectionKey],
+  snapshot: NonNullable<ReturnType<typeof useCoffeeWorkspace>['snapshot']>,
+  t: (key: CoffeeTranslationKey) => string,
+): string {
+  if (!rawValue) return '—';
+  const field = definition.fields.find((candidate) => candidate.name === fieldName);
+  const option = (field?.optionsFrom?.(snapshot) ?? field?.options)?.find(
+    (candidate) => candidate.value === rawValue,
+  );
+  if (option) return option.labelKey ? t(option.labelKey) : (option.label ?? rawValue);
+  return rawValue;
 }

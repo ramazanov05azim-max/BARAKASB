@@ -250,6 +250,19 @@ function serviceFixture(initialState: CoffeeBarState = state): CoffeeBarService 
     updateItemDetails: vi.fn(async () => storeOrder(order)),
     removeItem: vi.fn(async () => storeOrder(order)),
     sendOrder: vi.fn(async () => storeOrder(order)),
+    acceptAllSentItems: vi.fn(async (_context, orderId) => {
+      const existing =
+        currentState.orders.find((candidate) => candidate.orderId === orderId) ?? order;
+      return storeOrder({
+        ...existing,
+        status: 'IN_PREPARATION',
+        items: existing.items.map((item) =>
+          item.submittedBatchId && item.status === 'NEW'
+            ? { ...item, status: 'PREPARING' as const }
+            : item,
+        ),
+      });
+    }),
     updateBarItemStatus: vi.fn(async (_context, orderId, itemId, status) => {
       const existing =
         currentState.orders.find((candidate) => candidate.orderId === orderId) ?? order;
@@ -310,7 +323,7 @@ describe('Coffee Bar operator navigation', () => {
     expect(await screen.findByRole('heading', { name: 'Меню' })).toBeTruthy();
   });
 
-  it('uses the exact sent-position flow and reveals the atomic issue action only when ready', async () => {
+  it('keeps both bulk actions visible and enables them according to preparation state', async () => {
     const sentOrder = preparedOrder('NEW');
     const preparedState: CoffeeBarState = {
       ...structuredClone(state),
@@ -329,23 +342,38 @@ describe('Coffee Bar operator navigation', () => {
 
     await user.click(await screen.findByRole('button', { name: /Стол 1:/ }));
     expect(await screen.findByText('Готовит бар · Новый')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Принять' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Принять всё' }).hasAttribute('disabled'),
+    ).toBe(false);
+    expect(
+      screen.getByRole('button', { name: 'Всё готово' }).hasAttribute('disabled'),
+    ).toBe(true);
     expect(screen.queryByText(/Следующий статус/u)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Всё готово' })).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: 'Принять' }));
+    await user.click(screen.getByRole('button', { name: 'Принять всё' }));
     expect(await screen.findByText('Готовит бар · Готовится')).toBeTruthy();
+    expect(service.acceptAllSentItems).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole('button', { name: 'Принять всё' }).hasAttribute('disabled'),
+    ).toBe(true);
     expect(screen.getByRole('button', { name: 'Готов' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Всё готово' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Всё готово' }).hasAttribute('disabled'),
+    ).toBe(true);
 
     await user.click(screen.getByRole('button', { name: 'Готов' }));
     expect(await screen.findByText('Готовит бар · Готов')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Готов' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Принять всё' }).hasAttribute('disabled'),
+    ).toBe(true);
     expect(screen.getByRole('button', { name: 'Всё готово' })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Всё готово' }));
     await waitFor(() => expect(service.issueReadyOrder).toHaveBeenCalledTimes(1));
-    expect(screen.queryByRole('button', { name: 'Всё готово' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Всё готово' }).hasAttribute('disabled'),
+    ).toBe(true);
   });
 
   it('uses pastel red only for occupied tables and keeps free tables neutral', async () => {

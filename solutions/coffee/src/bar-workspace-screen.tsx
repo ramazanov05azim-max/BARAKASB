@@ -486,6 +486,9 @@ export function CoffeeBarWorkspaceScreen({
               onSend={() =>
                 run(() => service.sendOrder(context, selectedOrder.orderId))
               }
+              onAcceptAll={() =>
+                run(() => service.acceptAllSentItems(context, selectedOrder.orderId))
+              }
               onStatus={(item, status) =>
                 run(() =>
                   service.updateBarItemStatus(
@@ -710,6 +713,7 @@ function Receipt({
   onQuantity,
   onRemove,
   onSend,
+  onAcceptAll,
   onStatus,
   onPayment,
   onIssue,
@@ -727,6 +731,7 @@ function Receipt({
   onQuantity: (item: CoffeeOrderItem, quantity: number) => Promise<void>;
   onRemove: (item: CoffeeOrderItem) => Promise<void>;
   onSend: () => Promise<void>;
+  onAcceptAll: () => Promise<void>;
   onStatus: (
     item: CoffeeOrderItem,
     status: Exclude<CoffeeOrderItemStatus, 'DRAFT' | 'CANCELLED'>,
@@ -746,6 +751,7 @@ function Receipt({
   const [attachOpen, setAttachOpen] = useState(false);
   const submitted = order.items.filter((item) => item.submittedBatchId);
   const drafts = order.items.filter((item) => !item.submittedBatchId);
+  const canAcceptAll = submitted.some((item) => item.status === 'NEW');
   const canIssue =
     submitted.length > 0 &&
     drafts.length === 0 &&
@@ -840,15 +846,25 @@ function Receipt({
             <ChevronRight className="size-4" />
           </button>
         )}
-        {canIssue && (
-          <button
-            className="mb-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-900 hover:bg-emerald-100 disabled:opacity-40"
-            disabled={busy}
-            onClick={() => void onIssue()}
-          >
-            <Check className="size-4" />
-            {coffeeBarRu.allReady}
-          </button>
+        {!terminal(order) && (
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            <button
+              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-semibold text-orange-900 transition hover:bg-orange-100 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:opacity-70"
+              disabled={busy || !canAcceptAll}
+              onClick={() => void onAcceptAll()}
+            >
+              <Check className="size-4" />
+              {coffeeBarRu.acceptAll}
+            </button>
+            <button
+              className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-100 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:opacity-70"
+              disabled={busy || !canIssue}
+              onClick={() => void onIssue()}
+            >
+              <Check className="size-4" />
+              {coffeeBarRu.allReady}
+            </button>
+          </div>
         )}
         {order.items.length > 0 &&
           drafts.length === 0 &&

@@ -256,9 +256,13 @@ export interface Recipe extends BaseEntity {
 export interface Ingredient extends BaseEntity {
   sku: string;
   category: string;
+  accountingType?: 'weight' | 'volume' | 'pieces';
   baseUnitId: string;
   purchaseUnitId: string;
+  purchasePackageSize?: number | undefined;
   conversionRate: number;
+  barcode?: string;
+  accountingConfigurationWarning?: string | undefined;
   minimumStock: number;
   cost: number;
   supplierReferences: string;

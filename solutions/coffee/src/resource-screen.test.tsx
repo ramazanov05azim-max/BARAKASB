@@ -509,6 +509,195 @@ describe('automatic menu item SKU', () => {
   });
 });
 
+describe('Coffee ingredient owner form', () => {
+  it('shows only business fields and persists derived accounting data', async () => {
+    await testRepositories.coffeeProject.initialize(projectId, 'Тестовая кофейня');
+    await testRepositories.developmentSeed.apply(
+      projectId,
+      createCoffeeCrashTestSeed(timestamp),
+    );
+    renderResource('ingredients', projectId, 'Тестовая кофейня');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'Ингредиенты' });
+    await user.click(screen.getByRole('button', { name: 'Создать ингредиент' }));
+
+    expect(screen.getByRole('textbox', { name: /Название/u })).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: /Категория/u })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: /Тип учёта/u })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: /Единица закупки/u })).toBeTruthy();
+    expect(
+      screen.getByRole('spinbutton', { name: /Размер закупочной упаковки/u }),
+    ).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: /Штрихкод/u })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: /Статус/u })).toBeTruthy();
+    expect(screen.queryByLabelText('SKU')).toBeNull();
+    expect(screen.queryByLabelText('Базовая единица')).toBeNull();
+    expect(screen.queryByLabelText('Коэффициент преобразования')).toBeNull();
+    expect(screen.queryByLabelText('Минимальный запас')).toBeNull();
+    expect(screen.queryByLabelText('Справочная стоимость')).toBeNull();
+    expect(screen.queryByLabelText('Поставщики')).toBeNull();
+
+    await user.type(screen.getByRole('textbox', { name: /Название/u }), 'Какао');
+    await user.type(screen.getByRole('textbox', { name: /Категория/u }), 'Сырьё');
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /Тип учёта/u }),
+      'volume',
+    );
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /Единица закупки/u }),
+      'unit-kg',
+    );
+    const packageSize = screen.getByRole('spinbutton', {
+      name: /Размер закупочной упаковки/u,
+    });
+    await user.clear(packageSize);
+    await user.type(packageSize, '1000');
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+    expect(
+      screen.getByText('Единица закупки не соответствует выбранному типу учёта.'),
+    ).toBeTruthy();
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: /Тип учёта/u }),
+      'weight',
+    );
+    expect(packageSize).toHaveProperty('value', '');
+    await user.type(packageSize, '0');
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+    expect(screen.getByText('Значение должно быть больше нуля.')).toBeTruthy();
+    await user.clear(packageSize);
+    await user.type(packageSize, '1000');
+    expect(screen.getByText('1 Килограмм = 1000 г')).toBeTruthy();
+    expect(
+      within(screen.getByRole('combobox', { name: /Статус/u })).getByRole('option', {
+        name: 'Активен',
+      }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(async () => {
+      const created = (await testRepositories.loadSnapshot(projectId)).ingredients.find(
+        (ingredient) => ingredient.name === 'Какао',
+      );
+      expect(created).toMatchObject({
+        sku: 'ING-0001',
+        accountingType: 'weight',
+        baseUnitId: 'unit-g',
+        purchaseUnitId: 'unit-kg',
+        purchasePackageSize: 1000,
+        conversionRate: 1000,
+        barcode: '',
+      });
+    });
+  });
+
+  it('preserves hidden stock, cost and supplier values while editing', async () => {
+    await testRepositories.coffeeProject.initialize(projectId, 'Тестовая кофейня');
+    await testRepositories.developmentSeed.apply(
+      projectId,
+      createCoffeeCrashTestSeed(timestamp),
+    );
+    const before = await testRepositories.loadSnapshot(projectId);
+    const ingredient = before.ingredients[0]!;
+    renderResource('ingredients', projectId, 'Тестовая кофейня');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'Ингредиенты' });
+    const row = screen
+      .getAllByRole('row')
+      .find((candidate) => within(candidate).queryByText(ingredient.name));
+    expect(row).toBeTruthy();
+    await user.click(within(row!).getByRole('button', { name: 'Изменить' }));
+    const name = screen.getByRole('textbox', { name: /Название/u });
+    await user.clear(name);
+    await user.type(name, `${ingredient.name} обновлён`);
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    await waitFor(async () => {
+      const updated = (await testRepositories.loadSnapshot(projectId)).ingredients.find(
+        (item) => item.id === ingredient.id,
+      );
+      expect(updated).toMatchObject({
+        minimumStock: ingredient.minimumStock,
+        cost: ingredient.cost,
+        supplierReferences: ingredient.supplierReferences,
+        preferredSupplierId: ingredient.preferredSupplierId,
+      });
+    });
+  });
+});
+
+describe('Coffee resource safe deletion and filters', () => {
+  it('renders one Safari-safe status value and deletes an unused entity after named confirmation', async () => {
+    await testRepositories.coffeeProject.initialize(projectId, 'Тестовая кофейня');
+    await testRepositories.developmentSeed.apply(
+      projectId,
+      createCoffeeCrashTestSeed(timestamp),
+    );
+    const unused = await testRepositories.workstations.create(projectId, {
+      name: 'Резервное место',
+      workstationType: 'manager',
+      locationId: 'crash-location-main',
+      registerId: '',
+      printer: '',
+      enabledModules: '',
+      status: 'inactive',
+    });
+    renderResource('workstations', projectId, 'Тестовая кофейня');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'Рабочие места' });
+    const filter = screen.getByRole('combobox', { name: 'Фильтр' });
+    expect(filter.getAttribute('data-clean-native-select')).toBe('true');
+    expect(filter.className).toContain('appearance-none');
+    expect(within(filter).getAllByRole('option', { name: 'Все статусы' })).toHaveLength(
+      1,
+    );
+
+    const row = screen
+      .getAllByRole('row')
+      .find((candidate) => within(candidate).queryByText(unused.name));
+    await user.click(
+      within(row!).getByRole('button', { name: `Удалить ${unused.name}` }),
+    );
+    expect(
+      screen.getByText(`Удалить «${unused.name}»? Это действие нельзя отменить.`),
+    ).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Удалить' }));
+    await waitFor(async () =>
+      expect(await testRepositories.workstations.list(projectId)).not.toContainEqual(
+        expect.objectContaining({ id: unused.id }),
+      ),
+    );
+  });
+
+  it('blocks referenced ingredient deletion with readable dependency names', async () => {
+    await testRepositories.coffeeProject.initialize(projectId, 'Тестовая кофейня');
+    await testRepositories.developmentSeed.apply(
+      projectId,
+      createCoffeeCrashTestSeed(timestamp),
+    );
+    const state = await testRepositories.loadSnapshot(projectId);
+    const ingredient = state.ingredients.find((item) =>
+      state.recipes.some((recipe) =>
+        recipe.components.some((component) => component.referenceId === item.id),
+      ),
+    )!;
+    renderResource('ingredients', projectId, 'Тестовая кофейня');
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'Ингредиенты' });
+    const row = screen
+      .getAllByRole('row')
+      .find((candidate) => within(candidate).queryByText(ingredient.name));
+    await user.click(
+      within(row!).getByRole('button', { name: `Удалить ${ingredient.name}` }),
+    );
+    expect(screen.getByText('Удаление невозможно')).toBeTruthy();
+    expect(screen.getByText(/Техкарта/u)).toBeTruthy();
+    expect(screen.queryByText(ingredient.id)).toBeNull();
+    expect(await testRepositories.ingredients.list(projectId)).toContainEqual(
+      expect.objectContaining({ id: ingredient.id }),
+    );
+  });
+});
+
 describe('Coffee menu category owner form', () => {
   it('shows readable location selection only when several locations exist', async () => {
     await testRepositories.coffeeProject.initialize(projectId, 'Тестовая кофейня');

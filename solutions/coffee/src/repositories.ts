@@ -33,6 +33,7 @@ import {
 } from './employee-credential-repository';
 import { migrateLegacyMenuImages } from './menu-image-migration';
 import { migrateLegacyRecipes } from './recipe-migration';
+import { migrateLegacyIngredients } from './ingredient-migration';
 
 const storagePrefix = 'barakasb.mock.coffee.project.v1';
 
@@ -426,7 +427,12 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
       parsed.menuItems,
     );
     parsed.recipes = recipeMigration.recipes;
-    if (recipeMigration.migratedCount > 0) {
+    const ingredientMigration = migrateLegacyIngredients(
+      Array.isArray(parsed.ingredients) ? parsed.ingredients : [],
+      Array.isArray(parsed.units) ? parsed.units : [],
+    );
+    parsed.ingredients = ingredientMigration.ingredients;
+    if (recipeMigration.migratedCount > 0 || ingredientMigration.migratedCount > 0) {
       writeSnapshot(projectId, parsed);
     }
     if (!parsed.settings) {

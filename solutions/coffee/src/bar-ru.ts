@@ -60,6 +60,7 @@ export const coffeeBarRu = {
   card: 'Карта',
   preparation: 'Приготовление',
   accept: 'Принять',
+  acceptAll: 'Принять всё',
   ready: 'Готов',
   allReady: 'Всё готово',
   total: 'Итого',

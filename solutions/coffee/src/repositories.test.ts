@@ -150,6 +150,52 @@ describe('local Coffee repository adapter', () => {
     expect(secondLoad.recipes).toEqual(migrated.recipes);
   });
 
+  it('migrates legacy ingredient accounting in place without losing hidden data', async () => {
+    const projectId = 'project-ingredient-migration';
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
+      projectId,
+      'Coffee сохранённый',
+    );
+    await localCoffeeManagerRepositories.developmentSeed.apply(
+      projectId,
+      createCoffeeCrashTestSeed('2026-07-31T12:00:00.000Z'),
+    );
+    const storageKey = `barakasb.mock.coffee.project.v1.${encodeURIComponent(
+      projectId,
+    )}`;
+    const raw = JSON.parse(window.localStorage.getItem(storageKey) ?? '{}') as {
+      project: { name: string };
+      ingredients: Array<Record<string, unknown>>;
+    };
+    const ingredient = raw.ingredients[0]!;
+    const hiddenValues = {
+      minimumStock: ingredient.minimumStock,
+      cost: ingredient.cost,
+      supplierReferences: ingredient.supplierReferences,
+      preferredSupplierId: ingredient.preferredSupplierId,
+    };
+    delete ingredient.accountingType;
+    delete ingredient.purchasePackageSize;
+    delete ingredient.barcode;
+    raw.project.name = 'Coffee сохранённый';
+    window.localStorage.setItem(storageKey, JSON.stringify(raw));
+
+    const first = await localCoffeeManagerRepositories.loadSnapshot(projectId);
+    expect(first.project.name).toBe('Coffee сохранённый');
+    expect(first.ingredients[0]).toMatchObject({
+      id: ingredient.id,
+      accountingType: 'weight',
+      purchasePackageSize: ingredient.conversionRate,
+      barcode: '',
+      ...hiddenValues,
+    });
+    const persisted = window.localStorage.getItem(storageKey);
+    expect(persisted).toContain('"accountingType":"weight"');
+
+    const second = await localCoffeeManagerRepositories.loadSnapshot(projectId);
+    expect(second.ingredients).toEqual(first.ingredients);
+  });
+
   it('creates a complete operating-hours profile for a new establishment', async () => {
     await localCoffeeManagerRepositories.coffeeProject.initialize(
       'project-hours',

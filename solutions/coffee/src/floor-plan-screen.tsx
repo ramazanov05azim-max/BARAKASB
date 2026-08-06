@@ -116,7 +116,11 @@ export function CoffeeFloorPlanScreen({
     } catch (error) {
       setMessage(
         error instanceof CoffeeFloorPlanError
-          ? floorPlanErrors[error.code]
+          ? error.code === 'ACTIVE_ORDER' && error.detail
+            ? `Стол связан с активным заказом ${error.detail}.`
+            : error.code === 'ZONE_NOT_EMPTY' && error.detail
+              ? `В зоне находятся столы: ${error.detail}. Сначала переместите или удалите их.`
+              : floorPlanErrors[error.code]
           : 'Не удалось сохранить изменения.',
       );
     } finally {
@@ -258,7 +262,11 @@ export function CoffeeFloorPlanScreen({
                 className="mt-4 text-xs font-semibold text-rose-600"
                 disabled={busy}
                 onClick={() => {
-                  if (window.confirm('Удалить пустую зону?')) {
+                  if (
+                    window.confirm(
+                      `Удалить «${zone.name}»? Это действие нельзя отменить.`,
+                    )
+                  ) {
                     void run(() => service.deleteZone(projectId, zone.id));
                   }
                 }}
@@ -357,7 +365,11 @@ export function CoffeeFloorPlanScreen({
                 run(() => service.updateTable(projectId, selectedTable.id, values))
               }
               onDelete={() => {
-                if (window.confirm('Удалить этот стол?')) {
+                if (
+                  window.confirm(
+                    `Удалить «${selectedTable.name}»? Это действие нельзя отменить.`,
+                  )
+                ) {
                   void run(() => service.deleteTable(projectId, selectedTable.id));
                   setSelectedTableId(null);
                 }

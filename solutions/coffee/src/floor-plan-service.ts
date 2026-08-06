@@ -11,7 +11,10 @@ export type CoffeeFloorPlanErrorCode =
   | 'DUPLICATE_CODE';
 
 export class CoffeeFloorPlanError extends Error {
-  constructor(public readonly code: CoffeeFloorPlanErrorCode) {
+  constructor(
+    public readonly code: CoffeeFloorPlanErrorCode,
+    public readonly detail?: string,
+  ) {
     super(code);
     this.name = 'CoffeeFloorPlanError';
   }
@@ -121,10 +124,16 @@ export function createCoffeeFloorPlanService({
     }
   }
 
-  async function hasActiveOrder(projectId: string, tableId: string): Promise<boolean> {
+  async function activeOrderNumber(
+    projectId: string,
+    tableId: string,
+  ): Promise<string | null> {
     const store = await orders.load(projectId);
-    return store.orders.some(
-      (order) => order.tableId === tableId && !terminalOrderStatuses.has(order.status),
+    return (
+      store.orders.find(
+        (order) =>
+          order.tableId === tableId && !terminalOrderStatuses.has(order.status),
+      )?.orderNumber ?? null
     );
   }
 
@@ -180,7 +189,7 @@ export function createCoffeeFloorPlanService({
           await Promise.all(
             floorPlan.tables
               .filter((table) => table.zoneId === zoneId)
-              .map((table) => hasActiveOrder(projectId, table.id)),
+              .map((table) => activeOrderNumber(projectId, table.id)),
           )
         ).some(Boolean)
       ) {
@@ -197,8 +206,12 @@ export function createCoffeeFloorPlanService({
       if (!floorPlan.zones.some((zone) => zone.id === zoneId)) {
         throw new CoffeeFloorPlanError('NOT_FOUND');
       }
-      if (floorPlan.tables.some((table) => table.zoneId === zoneId)) {
-        throw new CoffeeFloorPlanError('ZONE_NOT_EMPTY');
+      const zoneTables = floorPlan.tables.filter((table) => table.zoneId === zoneId);
+      if (zoneTables.length > 0) {
+        throw new CoffeeFloorPlanError(
+          'ZONE_NOT_EMPTY',
+          zoneTables.map((table) => table.name).join(', '),
+        );
       }
       return save(projectId, {
         ...floorPlan,
@@ -266,7 +279,7 @@ export function createCoffeeFloorPlanService({
       if (
         input.status === 'inactive' &&
         current.status === 'active' &&
-        (await hasActiveOrder(projectId, tableId))
+        (await activeOrderNumber(projectId, tableId))
       ) {
         throw new CoffeeFloorPlanError('ACTIVE_ORDER');
       }
@@ -283,8 +296,9 @@ export function createCoffeeFloorPlanService({
       if (!floorPlan.tables.some((table) => table.id === tableId)) {
         throw new CoffeeFloorPlanError('NOT_FOUND');
       }
-      if (await hasActiveOrder(projectId, tableId)) {
-        throw new CoffeeFloorPlanError('ACTIVE_ORDER');
+      const activeOrder = await activeOrderNumber(projectId, tableId);
+      if (activeOrder) {
+        throw new CoffeeFloorPlanError('ACTIVE_ORDER', activeOrder);
       }
       return save(projectId, {
         ...floorPlan,
