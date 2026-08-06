@@ -7,6 +7,7 @@ import {
   type CoffeeSolutionModuleId,
   type CoffeeSolutionStructure,
   type Employee,
+  type Warehouse,
 } from '@barakasb/solution-coffee';
 import type {
   OperationalWorkspaceAccessInput,
@@ -50,6 +51,7 @@ export interface SolutionConstructorState {
   readonly employees: ReadonlyArray<Employee>;
   readonly accessCodes: ReadonlyArray<ResolvedOperationalWorkspace>;
   readonly connectedWorkspaceId: string | null;
+  readonly warehouses: ReadonlyArray<Warehouse>;
 }
 
 export interface SolutionConstructorService {
@@ -91,6 +93,17 @@ export interface SolutionConstructorService {
     employeeId: string,
     assigned: boolean,
     names: CoffeeModuleNames,
+  ): Promise<SolutionConstructorState>;
+  assignWarehouse(
+    projectId: string,
+    workspaceId: string,
+    warehouseId: string,
+    assigned: boolean,
+  ): Promise<SolutionConstructorState>;
+  assignSourceWarehouse(
+    projectId: string,
+    workspaceId: string,
+    warehouseId: string | null,
   ): Promise<SolutionConstructorState>;
   issueAccessCode(
     projectId: string,
@@ -184,6 +197,7 @@ export function createSolutionConstructorService({
         connected?.workspace.projectId === projectId
           ? connected.workspace.workspaceId
           : null,
+      warehouses: snapshot.warehouses,
     };
   }
 
@@ -348,6 +362,25 @@ export function createSolutionConstructorService({
       );
       const employees = await coffee.employees.list(projectId);
       await syncIssuedWorkspaces(setupRecord, structure, employees, names);
+      return load(projectId);
+    },
+    async assignWarehouse(projectId, workspaceId, warehouseId, assigned) {
+      requireSetup(await setup.get(projectId));
+      await coffee.solutionConstructor.assignWarehouse(
+        projectId,
+        workspaceId,
+        warehouseId,
+        assigned,
+      );
+      return load(projectId);
+    },
+    async assignSourceWarehouse(projectId, workspaceId, warehouseId) {
+      requireSetup(await setup.get(projectId));
+      await coffee.solutionConstructor.assignSourceWarehouse(
+        projectId,
+        workspaceId,
+        warehouseId,
+      );
       return load(projectId);
     },
     async issueAccessCode(projectId, workspaceId, names) {

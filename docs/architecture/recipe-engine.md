@@ -11,8 +11,10 @@ It is not moved to Platform Core and it does not make Core aware of Coffee. Anot
 Solution may adopt the contract deliberately, but cannot query Coffee repositories or
 share Coffee business data.
 
-This architecture defines contracts only. It does not deduct stock, create inventory
-movements, calculate purchasing, post finance entries or execute production.
+The canonical contracts remain side-effect free. Coffee Warehouse v1 now provides the
+first expansion consumer: it converts a resolved recipe into aggregated base-unit
+requirements and then owns the resulting stock movements. The engine itself still does
+not persist stock, calculate purchasing, post finance entries or execute production.
 
 ## Unified model
 
@@ -94,7 +96,7 @@ Future module responsibilities remain separate:
 | Consumer      | Allowed use                                       | Not owned by Recipe Engine         |
 | ------------- | ------------------------------------------------- | ---------------------------------- |
 | Bar / Kitchen | Read effective product preparation                | Order or kitchen execution         |
-| Warehouse     | Interpret components for future material demand   | Stock balance and deduction        |
+| Warehouse     | Expand components into material requirements      | Stock balance and movement ledger  |
 | Purchasing    | Build a consumer-owned demand projection          | Purchase orders and supplier terms |
 | Production    | Resolve preparation and semi-finished definitions | Production runs and yield posting  |
 | Finance       | Consume cost/projection outputs when defined      | Ledger, COGS and financial posting |
@@ -104,13 +106,16 @@ No consumer may fork the recipe schema or create a second recipe source of truth
 ## Existing prototype compatibility
 
 The existing Coffee configuration prototype persists a legacy `menu-item` recipe target.
-It is not silently rewritten in this architecture-only task. Before the canonical engine
-becomes the write path, an explicit tested adapter/migration must map `menu-item` to
-Product, add Package support, preserve IDs and versions, and be reversible according to
-the repository migration policy.
+The Warehouse expansion adapter maps this read model to Product at the application
+boundary without rewriting stored recipes. Package, Preparation and Semi-finished
+references are expanded recursively when configured. A future canonical write-path
+migration must still preserve IDs and versions and remain reversible according to the
+repository migration policy.
 
-Until that migration is implemented, the new engine contracts are the target boundary;
-the legacy form remains a compatibility input and must not be copied by future modules.
+Until that migration is implemented, the new engine contracts remain the target
+boundary; the legacy form is a compatibility input and must not be copied by future
+modules. Modifier effects are typed manager-owned recipe inputs; operational services
+never infer consumption from Russian option labels.
 
 ## Validation requirements
 

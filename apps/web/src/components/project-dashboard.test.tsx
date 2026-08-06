@@ -74,6 +74,7 @@ const constructorState: SolutionConstructorState = {
   employees: [],
   accessCodes: [],
   connectedWorkspaceId: null,
+  warehouses: [],
 };
 
 describe('ProjectDashboard Coffee overview', () => {

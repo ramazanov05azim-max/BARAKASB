@@ -782,6 +782,26 @@ function modifierGroups(timestamp: string): ModifierGroup[] {
       minimumSelections: 0,
       maximumSelections: 1,
       options: 'Обычное; Овсяное +70 ₽; Безлактозное +50 ₽',
+      consumptionEffects: [
+        {
+          optionName: 'Овсяное +70 ₽',
+          mode: 'replace',
+          resourceId: 'crash-ingredient-oat-milk',
+          resourceType: 'ingredient',
+          quantity: 180,
+          unitId: 'unit-ml',
+          replacesResourceId: 'crash-ingredient-whole-milk',
+        },
+        {
+          optionName: 'Безлактозное +50 ₽',
+          mode: 'replace',
+          resourceId: 'crash-ingredient-lactose-free-milk',
+          resourceType: 'ingredient',
+          quantity: 180,
+          unitId: 'unit-ml',
+          replacesResourceId: 'crash-ingredient-whole-milk',
+        },
+      ],
     },
     {
       id: 'crash-modifier-syrup',
@@ -792,6 +812,24 @@ function modifierGroups(timestamp: string): ModifierGroup[] {
       minimumSelections: 0,
       maximumSelections: 1,
       options: 'Ванильный +50 ₽; Карамельный +50 ₽',
+      consumptionEffects: [
+        {
+          optionName: 'Ванильный +50 ₽',
+          mode: 'add',
+          resourceId: 'crash-ingredient-vanilla-syrup',
+          resourceType: 'ingredient',
+          quantity: 20,
+          unitId: 'unit-ml',
+        },
+        {
+          optionName: 'Карамельный +50 ₽',
+          mode: 'add',
+          resourceId: 'crash-ingredient-caramel-syrup',
+          resourceType: 'ingredient',
+          quantity: 20,
+          unitId: 'unit-ml',
+        },
+      ],
     },
     {
       id: 'crash-modifier-extra-shot',
@@ -802,6 +840,24 @@ function modifierGroups(timestamp: string): ModifierGroup[] {
       minimumSelections: 0,
       maximumSelections: 1,
       options: '1 шот +90 ₽; 2 шота +180 ₽',
+      consumptionEffects: [
+        {
+          optionName: '1 шот +90 ₽',
+          mode: 'add',
+          resourceId: 'crash-ingredient-espresso-beans',
+          resourceType: 'ingredient',
+          quantity: 18,
+          unitId: 'unit-g',
+        },
+        {
+          optionName: '2 шота +180 ₽',
+          mode: 'add',
+          resourceId: 'crash-ingredient-espresso-beans',
+          resourceType: 'ingredient',
+          quantity: 36,
+          unitId: 'unit-g',
+        },
+      ],
     },
     {
       id: 'crash-modifier-coffee-additional',

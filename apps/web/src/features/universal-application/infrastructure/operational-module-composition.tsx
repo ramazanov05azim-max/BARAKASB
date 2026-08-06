@@ -5,7 +5,9 @@ import {
 } from '@barakasb/frontend-extension-host';
 import {
   CoffeeBarWorkspaceScreen,
+  CoffeeWarehouseWorkspaceScreen,
   coffeeBarOperationalModuleManifest,
+  coffeeWarehouseOperationalModuleManifest,
 } from '@barakasb/solution-coffee';
 import type { ReactNode } from 'react';
 
@@ -28,6 +30,21 @@ registry.register({
   manifest: coffeeBarOperationalModuleManifest,
   render: ({ execution, onLogoutEmployee }) => (
     <CoffeeBarWorkspaceScreen
+      context={{
+        projectId: execution.projectId,
+        businessEnvironmentId: execution.isolationScopeId,
+        workspaceId: execution.workspaceId,
+        employeeId: execution.employeeId,
+      }}
+      onLogoutEmployee={onLogoutEmployee}
+    />
+  ),
+});
+
+registry.register({
+  manifest: coffeeWarehouseOperationalModuleManifest,
+  render: ({ execution, onLogoutEmployee }) => (
+    <CoffeeWarehouseWorkspaceScreen
       context={{
         projectId: execution.projectId,
         businessEnvironmentId: execution.isolationScopeId,

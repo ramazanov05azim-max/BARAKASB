@@ -17,6 +17,7 @@ import {
   type CoffeeBarOrderRepository,
 } from './bar-repository-contracts';
 import type { ModifierGroup } from './domain';
+import { expandCoffeeRecipe } from './recipe-engine/expansion';
 import type { CoffeeOperationalReadRepository } from './repository-contracts';
 
 export interface CoffeeBarService {
@@ -110,6 +111,12 @@ interface Dependencies {
   orders: CoffeeBarOrderRepository;
   now?: () => string;
   createId?: () => string;
+  completion?: {
+    consumeCompletedOrder(
+      context: CoffeeBarRuntimeContext,
+      order: CoffeeOrder,
+    ): Promise<void>;
+  };
 }
 
 type OperationalSnapshot = Awaited<ReturnType<CoffeeOperationalReadRepository['load']>>;
@@ -263,13 +270,52 @@ function selectedModifiers(
   return result;
 }
 
+function stockConsumptionSnapshot(
+  snapshot: OperationalSnapshot,
+  productId: string,
+  modifiers: CoffeeOrderItem['modifiers'],
+): NonNullable<CoffeeOrderItem['stockConsumptionSnapshot']> {
+  const product = snapshot.menuItems.find((candidate) => candidate.id === productId);
+  const expanded = expandCoffeeRecipe({
+    snapshot,
+    productId,
+    quantity: 1,
+    selectedModifiers: modifiers,
+  });
+  return expanded.ok
+    ? {
+        recipeId: product?.recipeId ?? null,
+        requirements: expanded.requirements.map((requirement) => ({
+          resourceId: requirement.resourceId,
+          resourceType: requirement.resourceType,
+          quantityBasePerItem: requirement.quantityBase,
+          baseUnit: requirement.baseUnit,
+        })),
+        issueCode: null,
+      }
+    : {
+        recipeId: product?.recipeId ?? null,
+        requirements: [],
+        issueCode: expanded.code,
+      };
+}
+
 export function createCoffeeBarService({
   operational,
   orders,
   now = () => new Date().toISOString(),
   createId = () =>
     globalThis.crypto?.randomUUID?.() ?? `local-${Date.now().toString(36)}`,
+  completion,
 }: Dependencies): CoffeeBarService {
+  async function notifyCompletion(
+    context: CoffeeBarRuntimeContext,
+    order: CoffeeOrder,
+  ): Promise<void> {
+    if (order.status === 'COMPLETED') {
+      await completion?.consumeCompletedOrder(context, order);
+    }
+  }
   async function snapshotFor(
     context: CoffeeBarRuntimeContext,
   ): Promise<OperationalSnapshot> {
@@ -292,10 +338,11 @@ export function createCoffeeBarService({
         candidate.status === 'active' &&
         candidate.employmentStatus === 'active',
     );
+    const ownerPreview = context.employeeId === 'owner-preview';
     if (
       !workspace ||
-      !employee ||
-      !workspace.assignedEmployeeIds.includes(employee.id)
+      (!ownerPreview &&
+        (!employee || !workspace.assignedEmployeeIds.includes(employee.id)))
     ) {
       throw new CoffeeBarOperationError('ACCESS_DENIED');
     }
@@ -701,6 +748,11 @@ export function createCoffeeBarService({
         unitPrice: product.sellingPrice,
         finalUnitPrice,
         modifiers,
+        stockConsumptionSnapshot: stockConsumptionSnapshot(
+          snapshot,
+          product.id,
+          modifiers,
+        ),
         comment: input.comment?.trim() ?? '',
         preparationWorkspace: routeFor(snapshot, product.id),
         status: 'DRAFT',
@@ -760,6 +812,11 @@ export function createCoffeeBarService({
                   ...candidate,
                   variantName: input.variantName?.trim() || null,
                   modifiers,
+                  stockConsumptionSnapshot: stockConsumptionSnapshot(
+                    snapshot,
+                    item.productId,
+                    modifiers,
+                  ),
                   comment: input.comment?.trim() ?? '',
                   finalUnitPrice,
                 }
@@ -934,6 +991,7 @@ export function createCoffeeBarService({
         ].slice(0, 500),
       };
       await orders.save(context.projectId, replaced);
+      await notifyCompletion(context, issued);
       return structuredClone(issued);
     },
     async recordPayment(context, orderId, method) {
@@ -974,6 +1032,7 @@ export function createCoffeeBarService({
           ...store.audit,
         ].slice(0, 500),
       });
+      await notifyCompletion(context, paid);
       return structuredClone(paid);
     },
     async completeOrder(context, orderId) {
@@ -1012,6 +1071,7 @@ export function createCoffeeBarService({
           ...store.audit,
         ].slice(0, 500),
       });
+      await notifyCompletion(context, completed);
       return structuredClone(completed);
     },
     async cancelOrder(context, orderId, reason = '') {

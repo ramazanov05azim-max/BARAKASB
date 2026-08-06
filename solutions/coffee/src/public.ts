@@ -10,6 +10,18 @@ export { CoffeeNotFoundScreen } from './not-found-screen';
 export { CoffeeBarWorkspaceScreen } from './bar-workspace-screen';
 export { CoffeeFloorPlanScreen } from './floor-plan-screen';
 export { coffeeBarOperationalModuleManifest } from './operational-modules/bar/manifest';
+export { coffeeWarehouseOperationalModuleManifest } from './operational-modules/warehouse/manifest';
+export { CoffeeWarehouseWorkspaceScreen } from './operational-modules/warehouse/screen';
+export {
+  createCoffeeWarehouseService,
+  localCoffeeWarehouseService,
+} from './operational-modules/warehouse/service';
+export {
+  coffeeWarehouseStoragePrefix,
+  createLocalCoffeeWarehouseRepository,
+  localCoffeeWarehouseRepository,
+} from './operational-modules/warehouse/repository';
+export { expandCoffeeRecipe } from './recipe-engine/expansion';
 export {
   recipeEngineComponentTypes,
   recipeEngineTargetTypes,
@@ -38,9 +50,34 @@ export type {
   CoffeePaymentStatus,
   CoffeePreparationWorkspace,
   CoffeeSeatingInput,
+  CoffeeStockConsumptionSnapshot,
   CoffeeTableOperationalStatus,
 } from './bar-domain';
 export type { CoffeeBarService } from './bar-service';
+export type {
+  CoffeeWarehouseService,
+  WarehouseQuantityInput,
+} from './operational-modules/warehouse/service';
+export type {
+  WarehouseBalance,
+  WarehouseBaseUnit,
+  WarehouseConsumptionIssue,
+  WarehouseInventoryDocument,
+  WarehouseInventoryLine,
+  WarehouseMovement,
+  WarehouseMovementType,
+  WarehouseRuntimeContext,
+  WarehouseState,
+  WarehouseStockResource,
+  WarehouseStore,
+  WarehouseThresholdProvider,
+  WarehouseReversalPort,
+} from './operational-modules/warehouse/domain';
+export type { CoffeeWarehouseRepository } from './operational-modules/warehouse/repository';
+export type {
+  ExpandedRecipeRequirement,
+  RecipeExpansionResult,
+} from './recipe-engine/expansion';
 export type {
   RecipeEngine,
   RecipeEngineComponent,
@@ -78,6 +115,7 @@ export type {
   CoffeeSolutionModuleId,
   CoffeeSolutionStructure,
   Employee,
+  Warehouse,
 } from './domain';
 export { coffeeSolutionModuleIds } from './domain';
 export {

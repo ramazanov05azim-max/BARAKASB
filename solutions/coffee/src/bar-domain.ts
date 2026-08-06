@@ -25,6 +25,17 @@ export interface CoffeeOrderItemModifier {
   readonly priceAdjustment: number;
 }
 
+export interface CoffeeStockConsumptionSnapshot {
+  readonly recipeId: string | null;
+  readonly requirements: ReadonlyArray<{
+    readonly resourceId: string;
+    readonly resourceType: 'ingredient' | 'preparation' | 'semi-finished' | 'package';
+    readonly quantityBasePerItem: number;
+    readonly baseUnit: 'g' | 'ml' | 'pc';
+  }>;
+  readonly issueCode: 'RECIPE_NOT_FOUND' | 'RECIPE_CYCLE' | null;
+}
+
 export interface CoffeeOrderItem {
   readonly id: string;
   readonly productId: string;
@@ -34,6 +45,7 @@ export interface CoffeeOrderItem {
   readonly unitPrice: number;
   readonly finalUnitPrice: number;
   readonly modifiers: ReadonlyArray<CoffeeOrderItemModifier>;
+  readonly stockConsumptionSnapshot?: CoffeeStockConsumptionSnapshot;
   readonly comment: string;
   readonly preparationWorkspace: CoffeePreparationWorkspace;
   readonly status: CoffeeOrderItemStatus;

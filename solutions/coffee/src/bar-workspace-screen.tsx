@@ -42,10 +42,12 @@ import {
 import { CoffeeBarOperationError } from './bar-repository-contracts';
 import { createCoffeeBarService, type CoffeeBarService } from './bar-service';
 import { localCoffeeOperationalReadRepository } from './repositories';
+import { localCoffeeWarehouseService } from './operational-modules/warehouse/service';
 
 const defaultService = createCoffeeBarService({
   operational: localCoffeeOperationalReadRepository,
   orders: localCoffeeBarOrderRepository,
+  completion: localCoffeeWarehouseService,
 });
 const control =
   'min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100';

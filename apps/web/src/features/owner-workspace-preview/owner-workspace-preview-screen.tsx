@@ -1,9 +1,8 @@
 'use client';
 
-import { ArrowLeft, Coffee, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { CoffeeBarWorkspaceScreen } from '@barakasb/solution-coffee';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +14,7 @@ import {
   type OwnerWorkspacePreviewContext,
   type OwnerWorkspacePreviewService,
 } from './owner-workspace-preview-service';
+import { operationalModulePresentationRegistry } from '@/features/universal-application/infrastructure/operational-module-composition';
 
 const moduleKeys = {
   bar: 'constructor.module.bar',
@@ -96,6 +96,7 @@ export function OwnerWorkspacePreviewScreen({
   }
 
   const workspaceName = t(moduleKeys[context.workspaceType]);
+  const runtime = operationalModulePresentationRegistry.get(context.workspaceType);
 
   return (
     <div>
@@ -123,21 +124,22 @@ export function OwnerWorkspacePreviewScreen({
         </Link>
       </div>
 
-      {context.workspaceType === 'bar' ? (
-        <CoffeeBarWorkspaceScreen
-          context={{
+      {runtime ? (
+        runtime.render({
+          execution: {
             projectId: context.projectId,
-            businessEnvironmentId: context.businessEnvironmentId,
+            solutionId: 'coffee',
+            solutionInstallationId: `owner-preview:${context.projectId}`,
+            isolationScopeId: context.businessEnvironmentId,
             workspaceId: context.workspaceId,
+            workspaceType: context.workspaceType,
             employeeId: 'owner-preview',
-          }}
-        />
+          },
+          onLogoutEmployee: () => undefined,
+        })
       ) : (
         <Card>
           <CardContent className="py-16 text-center">
-            <span className="soft-icon-tile mx-auto grid size-14 place-items-center rounded-[18px]">
-              <Coffee className="size-6" />
-            </span>
             <h1 className="mt-6 text-3xl font-semibold">{workspaceName}</h1>
             <p className="mx-auto mt-3 max-w-md text-sm text-[var(--text-secondary)]">
               {t('ownerPreview.placeholder')}

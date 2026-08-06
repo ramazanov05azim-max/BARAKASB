@@ -56,6 +56,14 @@ function normalizeItem(value: unknown, legacyBatchId: string): CoffeeOrderItem {
         ? item.finalUnitPrice
         : unitPrice + modifierPrice,
     modifiers: modifiers as CoffeeOrderItem['modifiers'],
+    ...(item.stockConsumptionSnapshot &&
+    typeof item.stockConsumptionSnapshot === 'object'
+      ? {
+          stockConsumptionSnapshot: item.stockConsumptionSnapshot as NonNullable<
+            CoffeeOrderItem['stockConsumptionSnapshot']
+          >,
+        }
+      : {}),
     comment: typeof item.comment === 'string' ? item.comment : '',
     preparationWorkspace:
       item.preparationWorkspace === 'KITCHEN' ||

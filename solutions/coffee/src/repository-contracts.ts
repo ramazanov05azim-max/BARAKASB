@@ -79,6 +79,17 @@ export interface CoffeeSolutionConstructorRepository {
     employeeId: string,
     assigned: boolean,
   ): Promise<CoffeeSolutionStructure>;
+  assignWarehouse(
+    projectId: string,
+    workspaceId: string,
+    warehouseId: string,
+    assigned: boolean,
+  ): Promise<CoffeeSolutionStructure>;
+  assignSourceWarehouse(
+    projectId: string,
+    workspaceId: string,
+    warehouseId: string | null,
+  ): Promise<CoffeeSolutionStructure>;
 }
 
 export interface CoffeeFloorPlanRepository {

@@ -218,10 +218,26 @@ export interface ModifierGroup extends BaseEntity {
   minimumSelections: number;
   maximumSelections: number;
   options: string;
+  /** Optional manager-owned stock effects. Operational services never infer effects by label. */
+  consumptionEffects?: ModifierConsumptionEffect[];
 }
 
-export type RecipeTargetType = 'menu-item' | 'preparation' | 'semi-finished';
-export type RecipeComponentType = 'ingredient' | 'preparation' | 'semi-finished';
+export type StockedResourceType =
+  'ingredient' | 'preparation' | 'semi-finished' | 'package';
+
+export interface ModifierConsumptionEffect {
+  optionName: string;
+  mode: 'add' | 'replace';
+  resourceId: string;
+  resourceType: StockedResourceType;
+  quantity: number;
+  unitId: string;
+  replacesResourceId?: string;
+}
+
+export type RecipeTargetType =
+  'menu-item' | 'preparation' | 'semi-finished' | 'package';
+export type RecipeComponentType = StockedResourceType;
 
 export interface RecipeTarget {
   type: RecipeTargetType;
@@ -257,6 +273,7 @@ export interface Ingredient extends BaseEntity {
   sku: string;
   category: string;
   accountingType?: 'weight' | 'volume' | 'pieces';
+  resourceType?: StockedResourceType;
   baseUnitId: string;
   purchaseUnitId: string;
   purchasePackageSize?: number | undefined;
@@ -343,6 +360,9 @@ export interface CoffeeOperationalWorkspace {
   id: string;
   moduleId: CoffeeSolutionModuleId;
   assignedEmployeeIds: string[];
+  assignedWarehouseIds?: string[];
+  /** Explicit source used by preparation/sales consumption. Never inferred by order. */
+  sourceWarehouseId?: string | null;
   status: 'active';
   createdAt: string;
   updatedAt: string;

@@ -26,7 +26,10 @@ import {
   type CollectionRepository,
 } from './repository-contracts';
 import { coffeeBarOrderStoragePrefix } from './bar-local-repository';
-import { createCoffeeCrashTestSeed } from './coffee-crash-test-seed';
+import {
+  coffeeCrashTestSeedId,
+  createCoffeeCrashTestSeed,
+} from './coffee-crash-test-seed';
 import {
   coffeeEmployeeCredentialStoragePrefix,
   localCoffeeEmployeeCredentialRepository,
@@ -34,6 +37,7 @@ import {
 import { migrateLegacyMenuImages } from './menu-image-migration';
 import { migrateLegacyRecipes } from './recipe-migration';
 import { migrateLegacyIngredients } from './ingredient-migration';
+import { coffeeWarehouseStoragePrefix } from './operational-modules/warehouse/repository';
 
 const storagePrefix = 'barakasb.mock.coffee.project.v1';
 
@@ -432,7 +436,27 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
       Array.isArray(parsed.units) ? parsed.units : [],
     );
     parsed.ingredients = ingredientMigration.ingredients;
-    if (recipeMigration.migratedCount > 0 || ingredientMigration.migratedCount > 0) {
+    let modifierEffectsMigrated = false;
+    if (parsed.developmentSeedId === coffeeCrashTestSeedId) {
+      const canonicalModifiers = createCoffeeCrashTestSeed(now()).modifiers;
+      parsed.modifiers = parsed.modifiers.map((modifier) => {
+        if (modifier.consumptionEffects) return modifier;
+        const canonical = canonicalModifiers.find(
+          (candidate) => candidate.id === modifier.id,
+        );
+        if (!canonical?.consumptionEffects) return modifier;
+        modifierEffectsMigrated = true;
+        return {
+          ...modifier,
+          consumptionEffects: structuredClone(canonical.consumptionEffects),
+        };
+      });
+    }
+    if (
+      recipeMigration.migratedCount > 0 ||
+      ingredientMigration.migratedCount > 0 ||
+      modifierEffectsMigrated
+    ) {
       writeSnapshot(projectId, parsed);
     }
     if (!parsed.settings) {
@@ -884,16 +908,22 @@ export function createLocalCoffeeManagerRepositories(
           selectedModuleIds: selected,
           workspaces: selected.map((moduleId) => {
             const existing = existingByModule.get(moduleId);
-            return (
-              existing ?? {
-                id: `workspace-${moduleId}`,
-                moduleId,
-                assignedEmployeeIds: [],
-                status: 'active',
-                createdAt: timestamp,
-                updatedAt: timestamp,
-              }
-            );
+            return existing
+              ? {
+                  ...existing,
+                  assignedWarehouseIds: existing.assignedWarehouseIds ?? [],
+                  sourceWarehouseId: existing.sourceWarehouseId ?? null,
+                }
+              : {
+                  id: `workspace-${moduleId}`,
+                  moduleId,
+                  assignedEmployeeIds: [],
+                  assignedWarehouseIds: [],
+                  sourceWarehouseId: null,
+                  status: 'active',
+                  createdAt: timestamp,
+                  updatedAt: timestamp,
+                };
           }),
           generatedAt: snapshot.solutionStructure.generatedAt ?? timestamp,
           updatedAt: timestamp,
@@ -930,6 +960,50 @@ export function createLocalCoffeeManagerRepositories(
           'activity.workspaceAssignmentUpdated',
           employee.fullName,
         );
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.solutionStructure);
+      },
+      async assignWarehouse(projectId, workspaceId, warehouseId, assigned) {
+        await wait(80);
+        const snapshot = readSnapshot(projectId);
+        const workspace = snapshot.solutionStructure.workspaces.find(
+          (candidate) => candidate.id === workspaceId,
+        );
+        const warehouse = snapshot.warehouses.find(
+          (candidate) => candidate.id === warehouseId && candidate.status === 'active',
+        );
+        if (!workspace || !warehouse) throw new CoffeeRepositoryError('not-found');
+        const assignments = new Set(workspace.assignedWarehouseIds ?? []);
+        if (assigned) assignments.add(warehouseId);
+        else assignments.delete(warehouseId);
+        workspace.assignedWarehouseIds = [...assignments];
+        if (!assignments.has(workspace.sourceWarehouseId ?? '')) {
+          workspace.sourceWarehouseId = null;
+        }
+        workspace.updatedAt = now();
+        snapshot.solutionStructure.updatedAt = workspace.updatedAt;
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.solutionStructure);
+      },
+      async assignSourceWarehouse(projectId, workspaceId, warehouseId) {
+        await wait(80);
+        const snapshot = readSnapshot(projectId);
+        const workspace = snapshot.solutionStructure.workspaces.find(
+          (candidate) => candidate.id === workspaceId,
+        );
+        if (!workspace) throw new CoffeeRepositoryError('not-found');
+        if (
+          warehouseId &&
+          !snapshot.warehouses.some(
+            (candidate) =>
+              candidate.id === warehouseId && candidate.status === 'active',
+          )
+        ) {
+          throw new CoffeeRepositoryError('not-found');
+        }
+        workspace.sourceWarehouseId = warehouseId;
+        workspace.updatedAt = now();
+        snapshot.solutionStructure.updatedAt = workspace.updatedAt;
         writeSnapshot(projectId, snapshot);
         return structuredClone(snapshot.solutionStructure);
       },
@@ -1123,6 +1197,7 @@ export function clearLocalCoffeeDevelopmentStorage(storage: Storage): number {
     (key) =>
       key.startsWith(`${storagePrefix}.`) ||
       key.startsWith(`${coffeeBarOrderStoragePrefix}.`) ||
+      key.startsWith(`${coffeeWarehouseStoragePrefix}.`) ||
       key.startsWith(`${coffeeEmployeeCredentialStoragePrefix}.`),
   );
   for (const key of targets) storage.removeItem(key);

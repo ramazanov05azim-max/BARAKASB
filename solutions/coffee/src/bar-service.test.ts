@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   CoffeeBarRuntimeContext,
   CoffeeBarStore,
@@ -110,7 +110,15 @@ function memoryRepository(): CoffeeBarOrderRepository & {
   };
 }
 
-function fixture(snapshot = operationalSnapshot()): {
+function fixture(
+  snapshot = operationalSnapshot(),
+  completion?: {
+    consumeCompletedOrder(
+      context: CoffeeBarRuntimeContext,
+      order: CoffeeOrder,
+    ): Promise<void>;
+  },
+): {
   service: CoffeeBarService;
   repository: ReturnType<typeof memoryRepository>;
 } {
@@ -129,6 +137,7 @@ function fixture(snapshot = operationalSnapshot()): {
       orders: repository,
       now: () => timestamp,
       createId: () => `generated-${++sequence}`,
+      ...(completion ? { completion } : {}),
     }),
   };
 }
@@ -626,6 +635,19 @@ describe('Coffee Bar application service', () => {
     expect(state.tables.find((table) => table.id === 'crash-table-01')?.status).toBe(
       'FREE',
     );
+  });
+
+  it('publishes only successful terminal completion to the Warehouse port', async () => {
+    const consumeCompletedOrder = vi.fn(async () => undefined);
+    const integrated = fixture(operationalSnapshot(), { consumeCompletedOrder });
+    let order = await withItem(integrated.service, 'crash-item-bottled-water');
+    order = await integrated.service.sendOrder(context, order.orderId);
+    expect(consumeCompletedOrder).not.toHaveBeenCalled();
+    order = await integrated.service.recordPayment(context, order.orderId, 'CARD');
+    expect(consumeCompletedOrder).not.toHaveBeenCalled();
+    order = await integrated.service.completeOrder(context, order.orderId);
+    expect(consumeCompletedOrder).toHaveBeenCalledOnce();
+    expect(consumeCompletedOrder).toHaveBeenCalledWith(context, order);
   });
 
   it('requires a reason when cancelling a sent order', async () => {

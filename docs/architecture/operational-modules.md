@@ -17,7 +17,7 @@ The standard covers this Solution-owned workspace family:
 | ----------------- | -------------------- | ----------------------------------- |
 | `bar`             | Бар                  | Reference implementation registered |
 | `kitchen`         | Кухня                | Architecture only                   |
-| `warehouse`       | Склад                | Architecture only                   |
+| `warehouse`       | Склад                | v1 implementation registered        |
 | `purchasing`      | Закупщик             | Architecture only                   |
 | `production`      | Производство         | Architecture only                   |
 | `finance`         | Финансы              | Architecture only                   |
@@ -174,6 +174,19 @@ second Bar implementation.
 
 No future module may copy Bar screens. It may reuse only public platform ports,
 Solution-level domain engines such as the Recipe Engine, and design-system primitives.
+
+## Warehouse v1 implementation
+
+Warehouse is the second registered Operational Module and the first consumer of the
+Recipe Engine. It owns an append-only movement ledger, balances derived exclusively from
+that ledger, receipt/write-off/transfer/inventory use cases, history and local Project +
+Business Environment scoped persistence. Bar publishes terminal completion through an
+application port; Warehouse expands the applicable recipe and records an idempotent
+atomic consumption batch. Missing recipe or source-warehouse configuration creates a
+visible unresolved issue and never changes the completed order.
+
+The detailed behavior and migration rules are documented in
+[Coffee Warehouse Operational Module v1](../solutions/coffee/warehouse-operational-module.md).
 
 ## Testing contract
 

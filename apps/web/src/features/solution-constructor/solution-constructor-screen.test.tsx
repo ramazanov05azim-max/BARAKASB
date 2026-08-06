@@ -43,6 +43,7 @@ const initialState: SolutionConstructorState = {
   employees: [],
   accessCodes: [],
   connectedWorkspaceId: null,
+  warehouses: [],
 };
 
 function service(
@@ -57,6 +58,8 @@ function service(
     deleteEmployee: vi.fn(async () => state),
     resetEmployeePassword: vi.fn(async () => state),
     assignEmployee: vi.fn(async () => state),
+    assignWarehouse: vi.fn(async () => state),
+    assignSourceWarehouse: vi.fn(async () => state),
     issueAccessCode: vi.fn(async () => state),
     rotateAccessCode: vi.fn(async () => state),
     disconnectDevice: vi.fn(async () => ({

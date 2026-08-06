@@ -215,6 +215,39 @@ export function SolutionConstructorScreen({
     }
   }
 
+  async function assignWarehouse(
+    workspaceId: string,
+    warehouseId: string,
+    assigned: boolean,
+  ): Promise<void> {
+    setPendingAction(`warehouse:${workspaceId}:${warehouseId}`);
+    try {
+      setState(
+        await service.assignWarehouse(projectId, workspaceId, warehouseId, assigned),
+      );
+    } catch {
+      setFeedback({ tone: 'error', message: t('constructor.operationError') });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function assignSourceWarehouse(
+    workspaceId: string,
+    warehouseId: string | null,
+  ): Promise<void> {
+    setPendingAction(`source:${workspaceId}`);
+    try {
+      setState(
+        await service.assignSourceWarehouse(projectId, workspaceId, warehouseId),
+      );
+    } catch {
+      setFeedback({ tone: 'error', message: t('constructor.operationError') });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   async function copyCode(code: string): Promise<void> {
     await navigator.clipboard.writeText(code);
     setCopiedCode(code);
@@ -535,6 +568,63 @@ export function SolutionConstructorScreen({
                         </div>
                       )}
                     </div>
+                    {workspace.moduleId === 'warehouse' && (
+                      <div className="mt-5 border-t border-[var(--border)] pt-5">
+                        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
+                          Физические склады рабочего пространства
+                        </p>
+                        <div className="mt-3 space-y-2">
+                          {state.warehouses.map((warehouse) => (
+                            <label
+                              key={warehouse.id}
+                              className="flex min-h-11 items-center gap-3 rounded-[14px] border border-[var(--border)] px-3 py-2 text-sm font-semibold"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={(
+                                  workspace.assignedWarehouseIds ?? []
+                                ).includes(warehouse.id)}
+                                disabled={pendingAction !== null}
+                                onChange={(event) =>
+                                  void assignWarehouse(
+                                    workspace.id,
+                                    warehouse.id,
+                                    event.target.checked,
+                                  )
+                                }
+                              />
+                              {warehouse.name}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {(workspace.moduleId === 'bar' ||
+                      workspace.moduleId === 'warehouse') && (
+                      <div className="mt-5 border-t border-[var(--border)] pt-5">
+                        <label className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
+                          Склад списания
+                          <select
+                            className="mt-2 min-h-11 w-full rounded-[14px] border border-[var(--border)] bg-white px-3 text-sm font-medium normal-case tracking-normal text-[var(--text)]"
+                            value={workspace.sourceWarehouseId ?? ''}
+                            disabled={pendingAction !== null}
+                            onChange={(event) =>
+                              void assignSourceWarehouse(
+                                workspace.id,
+                                event.target.value || null,
+                              )
+                            }
+                          >
+                            <option value="">Не назначен</option>
+                            {state.warehouses.map((warehouse) => (
+                              <option key={warehouse.id} value={warehouse.id}>
+                                {warehouse.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                    )}
                     <div className="mt-5 flex flex-wrap gap-2 border-t border-[var(--border)] pt-5">
                       <Link
                         href={`/projects/${projectId}/admin/solutions/coffee/workspaces/${workspace.id}/open`}
