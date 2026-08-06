@@ -114,6 +114,14 @@ default and rejects duplicate `solutionKey` registrations. It does not own the S
 catalog, Project installation state, compatibility policy, or lifecycle. Those
 responsibilities remain in `core-solutions-runtime`.
 
+Operational Workspace presentation uses the same composition boundary. A
+transport-neutral `OperationalModuleManifest` declares module-owned routes and screens,
+module-local navigation, capabilities and port versions. The browser-side
+`OperationalModuleRuntimeRegistry` accepts one reviewed Solution renderer for each
+`workspaceType` and rejects duplicate or internally inconsistent manifests. Platform UI
+does not provide business screens and one operational module cannot reuse another
+module's presentation.
+
 ## Design system
 
 `@barakasb/frontend-ui` owns tokens and accessible primitives, not business components.
@@ -127,3 +135,4 @@ WCAG 2.2 AA.
 - [ADR 0017: Confidential web BFF](../adr/0017-confidential-web-bff.md)
 - [ADR 0022: WebSocket notification semantics](../adr/0022-websocket-notification-semantics.md)
 - [Universal Application runtime mode](universal-application.md)
+- [Operational Module architecture](operational-modules.md)

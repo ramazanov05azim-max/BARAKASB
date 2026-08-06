@@ -9,6 +9,11 @@ export { CoffeeSettingsScreen } from './settings-screen';
 export { CoffeeNotFoundScreen } from './not-found-screen';
 export { CoffeeBarWorkspaceScreen } from './bar-workspace-screen';
 export { CoffeeFloorPlanScreen } from './floor-plan-screen';
+export { coffeeBarOperationalModuleManifest } from './operational-modules/bar/manifest';
+export {
+  recipeEngineComponentTypes,
+  recipeEngineTargetTypes,
+} from './recipe-engine/contracts';
 export { createCoffeeBarService } from './bar-service';
 export {
   CoffeeFloorPlanError,
@@ -36,6 +41,18 @@ export type {
   CoffeeTableOperationalStatus,
 } from './bar-domain';
 export type { CoffeeBarService } from './bar-service';
+export type {
+  RecipeEngine,
+  RecipeEngineComponent,
+  RecipeEngineComponentType,
+  RecipeEngineDefinition,
+  RecipeEngineQuantity,
+  RecipeEngineRepository,
+  RecipeEngineTargetReference,
+  RecipeEngineTargetType,
+  RecipeEngineValidationIssue,
+  RecipeEngineValidationResult,
+} from './recipe-engine/contracts';
 export type {
   CoffeeFloorPlanErrorCode,
   CoffeeFloorPlanService,

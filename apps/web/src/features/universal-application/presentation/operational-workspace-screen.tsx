@@ -3,7 +3,6 @@
 import { LoaderCircle, LockKeyhole, LogOut, UserRound, UsersRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
-import { CoffeeBarWorkspaceScreen } from '@barakasb/solution-coffee';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +17,10 @@ import { localCoffeeEmployeeAuthenticator } from '../infrastructure/local-coffee
 import { migrateLegacyOperationalStorage } from '../infrastructure/local-operational-storage-migration';
 import { localOperationalWorkspaceResolver } from '../infrastructure/local-operational-workspace-directory';
 import { localOperationalWorkspaceSession } from '../infrastructure/local-operational-workspace-session';
+import {
+  operationalModulePresentationRegistry,
+  type OperationalModulePresentationRegistry,
+} from '../infrastructure/operational-module-composition';
 import { universalApplicationRoutes } from '../routes';
 
 const selectClassName =
@@ -28,11 +31,13 @@ export function OperationalWorkspaceScreen({
   authenticator = localCoffeeEmployeeAuthenticator,
   workspaceResolver = localOperationalWorkspaceResolver,
   migrateStorage = migrateLegacyOperationalStorage,
+  moduleRegistry = operationalModulePresentationRegistry,
 }: {
   session?: OperationalWorkspaceSessionStore;
   authenticator?: OperationalEmployeeAuthenticator;
   workspaceResolver?: OperationalWorkspaceAccessResolver;
   migrateStorage?: () => void;
+  moduleRegistry?: OperationalModulePresentationRegistry;
 }) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -126,22 +131,22 @@ export function OperationalWorkspaceScreen({
     setLoginState('idle');
   }
 
-  if (
-    selectedEmployee &&
-    (current.workspace.workspaceType === 'bar' ||
-      current.workspace.workspaceId === 'workspace-bar')
-  ) {
-    return (
-      <CoffeeBarWorkspaceScreen
-        context={{
+  if (selectedEmployee) {
+    const moduleRuntime = moduleRegistry.get(current.workspace.workspaceType);
+    if (moduleRuntime) {
+      return moduleRuntime.render({
+        execution: {
           projectId: current.workspace.projectId,
-          businessEnvironmentId: current.workspace.isolationScopeId,
+          solutionId: current.workspace.solutionId,
+          solutionInstallationId: current.workspace.solutionInstallationId,
+          isolationScopeId: current.workspace.isolationScopeId,
           workspaceId: current.workspace.workspaceId,
+          workspaceType: current.workspace.workspaceType,
           employeeId: selectedEmployee.employeeId,
-        }}
-        onLogoutEmployee={logoutEmployee}
-      />
-    );
+        },
+        onLogoutEmployee: logoutEmployee,
+      });
+    }
   }
 
   if (!selectedEmployee) {

@@ -19,6 +19,15 @@ The package does not own platform identity, Project lifecycle, subscriptions,
 authentication or authoritative authorization. UI permission checks are usability
 controls only and must be repeated by the future backend adapter.
 
+Operational workspaces are independent vertical slices. `Бар` publishes the first
+transport-neutral Operational Module manifest and remains the reference slice; future
+Coffee modules must own their navigation, screens, state, services, repositories,
+capabilities, module-local routing and tests instead of importing Bar presentation.
+
+The package also owns one shared Recipe Engine contract for Coffee operational modules.
+Its targets are Product, Preparation, Semi-finished product and Package. It defines no
+stock deduction, inventory movement, purchasing or finance behavior.
+
 The local adapter is prototype infrastructure. Its Project-keyed storage and contract
 tests prevent accidental browser-state mixing, but they are not a substitute for
 PostgreSQL constraints, forced RLS, transactions, audit, or backend authorization.

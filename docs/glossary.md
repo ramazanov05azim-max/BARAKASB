@@ -6,6 +6,12 @@
 - **Capability**: stable namespaced permission checked by authorization policy.
 - **Core**: platform capabilities independent of any business domain.
 - **Solution**: installable business capability for a Project.
+- **Operational Module**: Solution-owned vertical slice rendered inside one employee
+  workspace, with independent business UI, state, services and repositories.
+- **Operational Workspace**: one configured runtime instance of an Operational Module to
+  which a device and employees may be assigned.
+- **Recipe Engine**: Solution-owned reusable domain boundary for versioned Product,
+  Preparation, Semi-finished product and Package recipes.
 - **Plugin**: extension of one Solution through a declared contract.
 - **Extension point**: versioned slot a Solution exposes to Plugins.
 - **Manifest**: signed declarative metadata for a Solution or Plugin.

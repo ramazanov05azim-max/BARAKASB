@@ -27,6 +27,8 @@ const requiredFiles = [
   'docs/architecture/authorization.md',
   'docs/architecture/solution-engine.md',
   'docs/architecture/plugin-engine.md',
+  'docs/architecture/operational-modules.md',
+  'docs/architecture/recipe-engine.md',
   'docs/architecture/extension-contracts.md',
   'docs/architecture/extension-isolation.md',
   'docs/architecture/compatibility-and-versioning.md',

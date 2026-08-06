@@ -1,5 +1,14 @@
 # Coffee Solution Modules
 
+This document catalogs Coffee business capabilities. An employee-facing Operational
+Module is a separate architectural concept: it is a Solution-owned vertical slice with
+its own UI and runtime boundary. Bar is the reference; future workspaces follow
+[`docs/architecture/operational-modules.md`](docs/architecture/operational-modules.md).
+
+All Coffee capabilities that interpret recipes use the single Solution-owned
+[`Recipe Engine`](docs/architecture/recipe-engine.md). They do not create module-local
+recipe schemas.
+
 ## Dependency rule
 
 Modules own their business state and expose versioned application contracts and events.

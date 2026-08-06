@@ -49,6 +49,8 @@ This is the canonical entry point for BARAKASB documentation.
 - [Backend architecture](architecture/backend.md)
 - [Frontend architecture](architecture/frontend.md)
 - [Universal Application runtime mode](architecture/universal-application.md)
+- [Operational Module architecture](architecture/operational-modules.md)
+- [Recipe Engine architecture](architecture/recipe-engine.md)
 - [Project isolation](architecture/tenancy-and-isolation.md)
 - [Control plane and data plane](architecture/control-plane-and-data-plane.md)
 - [Data architecture](architecture/data-architecture.md)

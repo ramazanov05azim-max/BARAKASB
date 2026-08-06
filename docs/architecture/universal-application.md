@@ -116,9 +116,15 @@ Solution-specific operational UI remains owned by its Solution package. Platform
 owns only device binding, employee authentication orchestration, routing, and the
 workspace host boundary.
 
+The host resolves the connected `workspaceType` through the browser-side Operational
+Module registry. One validated registration maps to one Solution-owned renderer. Unknown
+or unimplemented module types are not silently redirected to Bar or another business
+module.
+
 ## Related decisions
 
 - [ADR 0006: Solution and Plugin contracts](../adr/0006-solution-plugin-contracts.md)
 - [ADR 0026: Architecture quality gates](../adr/0026-architecture-quality-gates.md)
 - [ADR 0027: Central runtime version policy](../adr/0027-central-runtime-version-policy.md)
 - [ADR 0032: Plane-separated modular deployments](../adr/0032-plane-separated-modular-deployments.md)
+- [Operational Module architecture](operational-modules.md)

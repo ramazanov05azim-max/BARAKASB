@@ -6,7 +6,23 @@ A Plugin extends one named Solution through extension points explicitly publishe
 that Solution. It cannot patch Core, replace authorization, access another module's
 repositories, or create undeclared routes and jobs.
 
-No concrete Plugin is part of Phase 1.
+No concrete Plugin is approved by this architectural-foundation change.
+
+## Plugins are not Operational Modules
+
+An Operational Module is a Solution-owned employee workspace with its own business UI,
+state, services, repositories, permissions and module-local navigation. A Plugin is an
+optional extension of one installed Solution through declared extension points. It does
+not become an employee workspace and cannot register itself as one.
+
+Examples of Plugins include Customer Menu, Loyalty, QR Ordering, Employee NFC, Online
+Ordering and Delivery Integrations. Apple Wallet and Google Wallet are provider adapters
+inside the Loyalty Plugin; they are not independent modules or independent Plugins.
+
+A Plugin may contribute only the UI slots, commands, policies, handlers and events named
+by its target Solution contract. It cannot import an Operational Module screen, reuse
+its business UI, access its repository or add navigation outside an approved extension
+slot.
 
 ## Trust model
 
@@ -85,3 +101,4 @@ application services only.
 - [ADR 0013: Extension artifact trust](../adr/0013-extension-artifact-trust.md)
 - [ADR 0024: Extension desired state](../adr/0024-extension-desired-state.md)
 - [ADR 0033: Extension execution isolation](../adr/0033-extension-execution-isolation.md)
+- [Operational Module architecture](operational-modules.md)

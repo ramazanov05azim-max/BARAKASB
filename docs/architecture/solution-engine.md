@@ -61,6 +61,18 @@ Routes and handlers are deployment-global registrations guarded by per-request P
 installation state. Enabling a Solution does not mutate the NestJS or Next.js route
 graph at runtime.
 
+## Operational Modules
+
+A Solution may expose independent Operational Modules. Every module owns its business
+presentation, state, application services, repositories, capabilities and module-local
+navigation. The Solution publishes a transport-neutral manifest for each implemented
+module; the existing browser extension host binds that manifest to a reviewed renderer.
+
+Operational Modules are not Plugins and are not deployables. They remain inside their
+owning Solution and may share only public platform ports, design-system primitives and
+Solution-owned domain engines. See
+[Operational Module architecture](operational-modules.md).
+
 ## Compatibility
 
 Solution versions follow semantic versioning. Public REST and event contracts may evolve
@@ -86,3 +98,5 @@ data compatibility unsafe.
 - [ADR 0024: Extension desired state](../adr/0024-extension-desired-state.md)
 - [ADR 0025: Fleet migrations](../adr/0025-expand-contract-fleet-migrations.md)
 - [ADR 0034: Contract compatibility and versioning](../adr/0034-contract-compatibility-versioning.md)
+- [Operational Module architecture](operational-modules.md)
+- [Recipe Engine architecture](recipe-engine.md)

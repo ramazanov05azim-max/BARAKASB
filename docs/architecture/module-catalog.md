@@ -36,6 +36,10 @@ point.
 | -------------------- | ------------------------------------------------------------------------ |
 | `contracts/platform` | Transport-neutral schemas, runtime manifests, and compatibility metadata |
 
+The platform contract includes Operational Workspace access/session contracts,
+Operational Module manifests, and opt-in platform service ports. It contains no
+Solution-specific business model.
+
 Contracts are side-effect free and cannot import Core, Infrastructure, Solutions, or
 Plugins.
 
@@ -63,11 +67,22 @@ domain/application public contracts.
 | `extension-host`  | Validated browser registration and composition of Solution and Plugin UI         |
 | `media`           | Project-isolated browser media references, normalization, and local Blob storage |
 
-## Reserved extension zones
+## Solution modules
 
-`solutions/` and `plugins/` contain only their governance README files in Phase 1.
-Creating the first package requires an approved ADR, manifest schema, threat review, and
-Core foundation acceptance.
+| Module             | Responsibility                                                                      | Does not own                                           |
+| ------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `solutions/coffee` | Coffee administration, Coffee-owned operational modules and Recipe Engine contracts | Platform identity, Project lifecycle, Plugin lifecycle |
+
+Within Coffee, Bar is the reference Operational Module. Future Kitchen, Warehouse,
+Purchasing, Production, Finance, CRM, Delivery and Pickup modules remain unimplemented
+until their business stages are approved. They must follow the
+[Operational Module architecture](operational-modules.md) without copying Bar UI.
+
+## Plugin zone
+
+`plugins/` remains governed by the Plugin Engine. A Plugin targets exactly one Solution
+and cannot act as an Operational Module. No Plugin implementation is introduced by the
+Operational Module foundation.
 
 ## Related decisions
 
@@ -76,3 +91,5 @@ Core foundation acceptance.
 - [ADR 0012: Module-local transactions](../adr/0012-module-local-transactions.md)
 - [ADR 0032: Plane-separated modular deployments](../adr/0032-plane-separated-modular-deployments.md)
 - [ADR 0038: Explicit package taxonomy](../adr/0038-explicit-package-taxonomy.md)
+- [Operational Module architecture](operational-modules.md)
+- [Recipe Engine architecture](recipe-engine.md)

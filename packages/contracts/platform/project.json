@@ -12,6 +12,9 @@
     "lint": {
       "command": "pnpm --dir packages/contracts/platform exec eslint ."
     },
+    "test": {
+      "command": "pnpm exec vitest run packages/contracts/platform/test"
+    },
     "typecheck": {
       "command": "pnpm exec tsc -p packages/contracts/platform/tsconfig.json --noEmit --incremental false"
     }
