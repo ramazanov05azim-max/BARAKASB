@@ -5,8 +5,11 @@ import type {
   CoffeeOperationalReadRepository,
   CollectionRepository,
 } from '../../repository-contracts';
-import type { CoffeeWarehouseService } from '../warehouse/service';
-import type { WarehouseState } from '../warehouse/domain';
+import type {
+  WarehouseOperationsQueryService,
+  WarehouseOperationsReadModel,
+} from '../warehouse/queries';
+import type { WarehouseSupplyReceiptService } from '../warehouse/supply';
 import type {
   PurchaseDelivery,
   PurchasePriceHistoryEntry,
@@ -97,7 +100,10 @@ function snapshot(): CoffeeOperationalSnapshot {
   };
 }
 
-function warehouseState(minimum: number | null = 1000, balance = 200): WarehouseState {
+function warehouseState(
+  minimum: number | null = 1000,
+  balance = 200,
+): WarehouseOperationsReadModel {
   const resource = {
     resourceId: 'crash-ingredient-espresso-beans',
     resourceType: 'ingredient' as const,
@@ -111,21 +117,26 @@ function warehouseState(minimum: number | null = 1000, balance = 200): Warehouse
     active: true,
   };
   return {
-    employeeName: 'Сергей Котов',
-    employees: [{ id: context.employeeId, name: 'Сергей Котов' }],
     warehouses: [{ id: 'crash-warehouse-main', name: 'Главный склад' }],
     resources: [resource],
     balances: [
       {
         warehouseId: 'crash-warehouse-main',
-        resource,
+        warehouseName: 'Главный склад',
+        resourceId: resource.resourceId,
+        resourceName: resource.name,
+        resourceType: resource.resourceType,
+        accountingType: resource.accountingType,
         quantityBase: balance,
-        lastMovementAt: timestamp,
+        baseUnit: resource.baseUnit,
+        baseUnitId: resource.baseUnitId,
+        purchaseUnitId: resource.purchaseUnitId,
+        purchasePackageSize: resource.purchasePackageSize,
+        minimumStockBase: resource.minimumStockBase,
         status: balance < 0 ? 'NEGATIVE' : balance === 0 ? 'OUT_OF_STOCK' : 'LOW',
       },
     ],
-    movements: [],
-    inventories: [],
+    recentMovements: [],
     issues: [],
   };
 }
@@ -282,8 +293,10 @@ const orderInput = {
 describe('CoffeePurchaserService', () => {
   let value: CoffeeOperationalSnapshot;
   let repository: MemoryPurchaserRepository;
-  let currentWarehouseState: WarehouseState;
-  let recordSupplierDelivery: Mock<CoffeeWarehouseService['recordSupplierDelivery']>;
+  let currentWarehouseState: WarehouseOperationsReadModel;
+  let recordSupplierDelivery: Mock<
+    WarehouseSupplyReceiptService['recordSupplierDelivery']
+  >;
   let service: ReturnType<typeof createCoffeePurchaserService>;
 
   beforeEach(() => {
@@ -301,37 +314,12 @@ describe('CoffeePurchaserService', () => {
       operational,
       purchaser: repository,
       warehouse: {
-        loadForPurchasing: async () => structuredClone(currentWarehouseState),
-        queryOperations: async () => ({
-          warehouses: currentWarehouseState.warehouses,
-          balances: currentWarehouseState.balances.map((balance) => ({
-            warehouseId: balance.warehouseId,
-            warehouseName:
-              currentWarehouseState.warehouses.find(
-                (candidate) => candidate.id === balance.warehouseId,
-              )?.name ?? 'Склад',
-            resourceId: balance.resource.resourceId,
-            resourceName: balance.resource.name,
-            resourceType: balance.resource.resourceType,
-            accountingType: balance.resource.accountingType,
-            quantityBase: balance.quantityBase,
-            baseUnit: balance.resource.baseUnit,
-            baseUnitId: balance.resource.baseUnitId,
-            purchaseUnitId: balance.resource.purchaseUnitId,
-            purchasePackageSize: balance.resource.purchasePackageSize,
-            minimumStockBase: balance.resource.minimumStockBase,
-            status: balance.status,
-          })),
-          recentMovements: [],
-          issues: [],
-        }),
+        queryOperations: async () => structuredClone(currentWarehouseState),
+        subscribe: () => () => undefined,
         recordSupplierDelivery: async (runtime, input) => {
           await recordSupplierDelivery(runtime, input);
         },
-      } satisfies Pick<
-        CoffeeWarehouseService,
-        'loadForPurchasing' | 'recordSupplierDelivery' | 'queryOperations'
-      >,
+      } satisfies WarehouseOperationsQueryService & WarehouseSupplyReceiptService,
       suppliers: supplierRepository(value),
       now: () => timestamp,
       createId: (() => {

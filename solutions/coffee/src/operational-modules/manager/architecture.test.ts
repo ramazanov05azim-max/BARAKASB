@@ -86,6 +86,19 @@ describe('Manager operational boundary', () => {
     );
   });
 
+  it('does not import another bounded context internal domain, repository or screen', () => {
+    const forbidden = sourceFiles(moduleRoot).flatMap((file) =>
+      relativeImports(file)
+        .filter((specifier) =>
+          /^\.\.\/(?:bar|warehouse|purchasing|manager)\/(?:domain|repository|screen)$/u.test(
+            specifier,
+          ),
+        )
+        .map((specifier) => `${path.relative(moduleRoot, file)} -> ${specifier}`),
+    );
+    expect(forbidden).toEqual([]);
+  });
+
   it('contains no circular relative imports across operational modules', () => {
     const files = sourceFiles(moduleRoot);
     const fileSet = new Set(files);

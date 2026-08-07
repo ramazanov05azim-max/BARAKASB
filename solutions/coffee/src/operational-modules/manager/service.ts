@@ -51,6 +51,7 @@ type QueryResult<T> =
 
 const emptyWarehouseData: WarehouseOperationsReadModel = {
   warehouses: [],
+  resources: [],
   balances: [],
   recentMovements: [],
   issues: [],

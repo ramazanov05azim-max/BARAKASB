@@ -5,8 +5,22 @@ export interface WarehouseOperationsQueryContext {
   readonly employeeId: string;
 }
 
+export interface WarehouseOperationsResource {
+  readonly resourceId: string;
+  readonly resourceType: 'ingredient' | 'preparation' | 'semi-finished' | 'package';
+  readonly name: string;
+  readonly accountingType: 'weight' | 'volume' | 'pieces';
+  readonly baseUnit: 'g' | 'ml' | 'pc';
+  readonly baseUnitId: string;
+  readonly purchaseUnitId: string;
+  readonly purchasePackageSize: number;
+  readonly minimumStockBase: number | null;
+  readonly active: boolean;
+}
+
 export interface WarehouseOperationsReadModel {
   readonly warehouses: ReadonlyArray<{ readonly id: string; readonly name: string }>;
+  readonly resources: ReadonlyArray<WarehouseOperationsResource>;
   readonly balances: ReadonlyArray<{
     readonly warehouseId: string;
     readonly warehouseName: string;

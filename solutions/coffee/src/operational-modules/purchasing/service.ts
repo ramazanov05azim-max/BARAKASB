@@ -7,21 +7,26 @@ import {
   localCoffeeManagerRepositories,
   localCoffeeOperationalReadRepository,
 } from '../../repositories';
-import type {
-  CoffeeWarehouseService,
-  WarehouseSupplierReceiptInput,
-} from '../warehouse/service';
 import { localCoffeeWarehouseService } from '../warehouse/service';
-import type { WarehouseOperationsReadModel } from '../warehouse/queries';
+import type {
+  WarehouseOperationsQueryService,
+  WarehouseOperationsReadModel,
+  WarehouseOperationsResource,
+} from '../warehouse/queries';
+import type {
+  WarehouseSupplierReceiptInput,
+  WarehouseSupplyReceiptService,
+} from '../warehouse/supply';
 import type {
   PurchaseDelivery,
   PurchaseDeliveryLine,
   PurchaseNeed,
   PurchasePriceHistoryEntry,
-  PurchasableResourceType,
   PurchaserRuntimeContext,
   PurchaserState,
   PurchaseThresholdProvider,
+  PurchasingWarehouseBalance,
+  PurchasingWarehouseResource,
   SupplierAssortment,
   SupplierOrder,
   SupplierOrderLine,
@@ -125,10 +130,7 @@ export interface CoffeePurchaserService extends PurchasingOperationsQueryService
 interface Dependencies {
   readonly operational: CoffeeOperationalReadRepository;
   readonly purchaser: CoffeePurchaserRepository;
-  readonly warehouse: Pick<
-    CoffeeWarehouseService,
-    'loadForPurchasing' | 'recordSupplierDelivery' | 'queryOperations'
-  >;
+  readonly warehouse: WarehouseOperationsQueryService & WarehouseSupplyReceiptService;
   readonly suppliers: CollectionRepository<Supplier>;
   readonly thresholds?: PurchaseThresholdProvider;
   readonly now?: () => string;
@@ -136,11 +138,15 @@ interface Dependencies {
 }
 
 type Snapshot = Awaited<ReturnType<CoffeeOperationalReadRepository['load']>>;
-type WarehouseState = Awaited<ReturnType<CoffeeWarehouseService['loadForPurchasing']>>;
-type PurchasingWarehouseRead = Pick<
-  WarehouseState,
-  'warehouses' | 'resources' | 'balances'
->;
+interface PurchasingWarehouseRead {
+  readonly warehouses: WarehouseOperationsReadModel['warehouses'];
+  readonly resources: ReadonlyArray<WarehouseOperationsResource>;
+  readonly balances: ReadonlyArray<
+    Omit<PurchasingWarehouseBalance, 'resource'> & {
+      readonly resource: WarehouseOperationsResource;
+    }
+  >;
+}
 
 const round = (value: number): number => Math.round(value * 1_000_000) / 1_000_000;
 const money = (value: number): number => Math.round(value * 100) / 100;
@@ -159,13 +165,11 @@ function requiredText(value: string, code: string): string {
   return normalized;
 }
 
-function activePurchasableResources(state: Pick<WarehouseState, 'resources'>) {
+function activePurchasableResources(
+  state: Pick<PurchasingWarehouseRead, 'resources'>,
+): PurchasingWarehouseResource[] {
   return state.resources.filter(
-    (
-      resource,
-    ): resource is (typeof state.resources)[number] & {
-      resourceType: PurchasableResourceType;
-    } =>
+    (resource): resource is PurchasingWarehouseResource =>
       resource.active &&
       (resource.resourceType === 'ingredient' || resource.resourceType === 'package'),
   );
@@ -286,32 +290,18 @@ export function createCoffeePurchaserService({
   async function operationalState(context: PurchaserRuntimeContext) {
     const { snapshot, workspace } = await access(context);
     await migrateLegacyAssortment(context, snapshot);
-    const [warehouseState, store] = await Promise.all([
-      warehouse.loadForPurchasing(context),
+    const [warehouseOperations, store] = await Promise.all([
+      warehouse.queryOperations(context),
       purchaser.load(context.projectId, context.businessEnvironmentId),
     ]);
+    const warehouseState = purchasingWarehouseRead(warehouseOperations);
     return { snapshot, workspace, warehouseState, store };
   }
 
   function purchasingWarehouseRead(
     operations: WarehouseOperationsReadModel,
   ): PurchasingWarehouseRead {
-    const resources = new Map<string, PurchasingWarehouseRead['resources'][number]>();
-    for (const balance of operations.balances) {
-      resources.set(`${balance.resourceType}:${balance.resourceId}`, {
-        resourceId: balance.resourceId,
-        resourceType: balance.resourceType,
-        name: balance.resourceName,
-        accountingType: balance.accountingType,
-        baseUnit: balance.baseUnit,
-        baseUnitId: balance.baseUnitId,
-        purchaseUnitId: balance.purchaseUnitId,
-        purchasePackageSize: balance.purchasePackageSize,
-        minimumStockBase: balance.minimumStockBase,
-        active: true,
-      });
-    }
-    const resourceList = [...resources.values()];
+    const resourceList = operations.resources;
     return {
       warehouses: operations.warehouses,
       resources: resourceList,
@@ -357,7 +347,8 @@ export function createCoffeePurchaserService({
             (candidate) =>
               candidate.resourceId === balance.resource.resourceId &&
               candidate.resourceType === balance.resource.resourceType,
-          )!;
+          );
+          if (!resource) throw new Error('resource-not-found');
           const physicalWarehouse = warehouseState.warehouses.find(
             (candidate) => candidate.id === balance.warehouseId,
           )!;
@@ -393,7 +384,7 @@ export function createCoffeePurchaserService({
             warehouseId: physicalWarehouse.id,
             warehouseName: physicalWarehouse.name,
             resource,
-            balance,
+            balance: { ...balance, resource },
             thresholdBase,
             recommendedQuantityBase: recommendation,
             state:

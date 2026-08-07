@@ -134,6 +134,9 @@ repository, infrastructure adapter or domain aggregate. These contracts are
 consumer-neutral and may be reused by future Director, Finance or Analytics modules when
 the published projection is sufficient. They must not be moved to a global shared
 package: ownership stays with the bounded context that guarantees their semantics.
+Cross-module commands likewise use a minimal owner-owned application contract (for
+example, Warehouse `supply.ts`). A consumer must not import the owner's internal domain
+types merely to call that contract.
 
 ## Permissions
 

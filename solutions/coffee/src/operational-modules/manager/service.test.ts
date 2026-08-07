@@ -111,6 +111,20 @@ function warehouseRead(
 ): WarehouseOperationsReadModel {
   return {
     warehouses: [{ id: 'warehouse-1', name: 'Основной склад' }],
+    resources: [
+      {
+        resourceId: 'resource-1',
+        resourceType: 'ingredient',
+        name: 'Зерно',
+        accountingType: 'weight',
+        baseUnit: 'g',
+        baseUnitId: 'unit-g',
+        purchaseUnitId: 'unit-kg',
+        purchasePackageSize: 1_000,
+        minimumStockBase: 1_000,
+        active: true,
+      },
+    ],
     balances: [
       {
         warehouseId: 'warehouse-1',

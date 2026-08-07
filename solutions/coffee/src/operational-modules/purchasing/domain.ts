@@ -1,9 +1,4 @@
 import type { StockedResourceType, Supplier } from '../../domain';
-import type {
-  WarehouseBalance,
-  WarehouseBaseUnit,
-  WarehouseStockResource,
-} from '../warehouse/domain';
 
 export type PurchasableResourceType = Extract<
   StockedResourceType,
@@ -12,6 +7,28 @@ export type PurchasableResourceType = Extract<
 export type SupplierOrderStatus =
   'DRAFT' | 'SENT' | 'PARTIALLY_DELIVERED' | 'DELIVERED' | 'CANCELLED';
 export type PurchaseDeliveryStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
+export type PurchasingBaseUnit = 'g' | 'ml' | 'pc';
+
+export interface PurchasingWarehouseResource {
+  readonly resourceId: string;
+  readonly resourceType: PurchasableResourceType;
+  readonly name: string;
+  readonly accountingType: 'weight' | 'volume' | 'pieces';
+  readonly baseUnit: PurchasingBaseUnit;
+  readonly baseUnitId: string;
+  readonly purchaseUnitId: string;
+  readonly purchasePackageSize: number;
+  readonly minimumStockBase: number | null;
+  readonly active: boolean;
+}
+
+export interface PurchasingWarehouseBalance {
+  readonly warehouseId: string;
+  readonly resource: PurchasingWarehouseResource;
+  readonly quantityBase: number;
+  readonly lastMovementAt: string | null;
+  readonly status: 'IN_STOCK' | 'LOW' | 'OUT_OF_STOCK' | 'NEGATIVE';
+}
 
 export interface PurchaserRuntimeContext {
   readonly projectId: string;
@@ -45,7 +62,7 @@ export interface SupplierOrderLine {
   readonly purchaseUnitId: string;
   readonly purchaseUnitNameSnapshot: string;
   readonly packageSizeSnapshot: number;
-  readonly baseUnit: WarehouseBaseUnit;
+  readonly baseUnit: PurchasingBaseUnit;
   readonly orderedQuantityPurchaseUnit: number;
   readonly orderedQuantityBase: number;
   readonly expectedUnitPrice: number;
@@ -85,7 +102,7 @@ export interface PurchaseDeliveryLine {
   readonly purchaseUnitId: string;
   readonly purchaseUnitNameSnapshot: string;
   readonly packageSizeSnapshot: number;
-  readonly baseUnit: WarehouseBaseUnit;
+  readonly baseUnit: PurchasingBaseUnit;
   readonly deliveredQuantityPurchaseUnit: number;
   readonly deliveredQuantityBase: number;
   readonly actualUnitPrice: number;
@@ -146,10 +163,8 @@ export interface PurchaserStore {
 export interface PurchaseNeed {
   readonly warehouseId: string;
   readonly warehouseName: string;
-  readonly resource: WarehouseStockResource & {
-    readonly resourceType: PurchasableResourceType;
-  };
-  readonly balance: WarehouseBalance;
+  readonly resource: PurchasingWarehouseResource;
+  readonly balance: PurchasingWarehouseBalance;
   readonly thresholdBase: number | null;
   readonly recommendedQuantityBase: number | null;
   readonly state: 'OUT_OF_STOCK' | 'BELOW_MINIMUM' | 'SUFFICIENT' | 'NEGATIVE';
@@ -163,9 +178,7 @@ export interface PurchaserState {
   readonly employees: ReadonlyArray<{ readonly id: string; readonly name: string }>;
   readonly warehouses: ReadonlyArray<{ readonly id: string; readonly name: string }>;
   readonly suppliers: ReadonlyArray<Supplier>;
-  readonly resources: ReadonlyArray<
-    WarehouseStockResource & { readonly resourceType: PurchasableResourceType }
-  >;
+  readonly resources: ReadonlyArray<PurchasingWarehouseResource>;
   readonly needs: ReadonlyArray<PurchaseNeed>;
   readonly assortments: ReadonlyArray<SupplierAssortment>;
   readonly orders: ReadonlyArray<SupplierOrder>;

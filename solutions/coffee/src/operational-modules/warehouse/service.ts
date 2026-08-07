@@ -15,6 +15,7 @@ import type { CoffeeWarehouseRepository } from './repository';
 import { localCoffeeWarehouseRepository } from './repository';
 import { localCoffeeOperationalReadRepository } from '../../repositories';
 import type { WarehouseOperationsQueryService } from './queries';
+import type { WarehouseSupplyReceiptService } from './supply';
 
 export interface WarehouseQuantityInput {
   readonly warehouseId: string;
@@ -25,22 +26,8 @@ export interface WarehouseQuantityInput {
   readonly idempotencyKey: string;
 }
 
-export interface WarehouseSupplierReceiptInput {
-  readonly deliveryId: string;
-  readonly supplierOrderId: string;
-  readonly destinationWarehouseId: string;
-  readonly supplierDocumentReference: string;
-  readonly lines: ReadonlyArray<{
-    readonly deliveryLineId: string;
-    readonly resourceId: string;
-    readonly resourceType: WarehouseStockResource['resourceType'];
-    readonly resourceName: string;
-    readonly quantityBase: number;
-    readonly baseUnit: WarehouseStockResource['baseUnit'];
-  }>;
-}
-
-export interface CoffeeWarehouseService extends WarehouseOperationsQueryService {
+export interface CoffeeWarehouseService
+  extends WarehouseOperationsQueryService, WarehouseSupplyReceiptService {
   load(context: WarehouseRuntimeContext): Promise<WarehouseState>;
   recordOpeningBalance(
     context: WarehouseRuntimeContext,
@@ -81,11 +68,6 @@ export interface CoffeeWarehouseService extends WarehouseOperationsQueryService 
   consumeCompletedOrder(
     context: WarehouseRuntimeContext,
     order: CoffeeOrder,
-  ): Promise<void>;
-  loadForPurchasing(context: WarehouseRuntimeContext): Promise<WarehouseState>;
-  recordSupplierDelivery(
-    context: WarehouseRuntimeContext,
-    input: WarehouseSupplierReceiptInput,
   ): Promise<void>;
 }
 
@@ -440,7 +422,6 @@ export function createCoffeeWarehouseService({
 
   return {
     load: (context) => loadState(context),
-    loadForPurchasing: (context) => loadState(context, true),
     async queryOperations(context) {
       const state = await loadState(context, false, true);
       const warehouseNames = new Map(
@@ -454,6 +435,18 @@ export function createCoffeeWarehouseService({
       );
       return {
         warehouses: state.warehouses,
+        resources: state.resources.map((resource) => ({
+          resourceId: resource.resourceId,
+          resourceType: resource.resourceType,
+          name: resource.name,
+          accountingType: resource.accountingType,
+          baseUnit: resource.baseUnit,
+          baseUnitId: resource.baseUnitId,
+          purchaseUnitId: resource.purchaseUnitId,
+          purchasePackageSize: resource.purchasePackageSize,
+          minimumStockBase: resource.minimumStockBase,
+          active: resource.active,
+        })),
         balances: state.balances.map((balance) => ({
           warehouseId: balance.warehouseId,
           warehouseName: warehouseNames.get(balance.warehouseId) ?? 'Склад',

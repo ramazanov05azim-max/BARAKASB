@@ -77,13 +77,17 @@ export type { CoffeeBarService } from './bar-service';
 export type {
   CoffeeWarehouseService,
   WarehouseQuantityInput,
-  WarehouseSupplierReceiptInput,
 } from './operational-modules/warehouse/service';
 export type {
   WarehouseOperationsQueryContext,
   WarehouseOperationsQueryService,
   WarehouseOperationsReadModel,
+  WarehouseOperationsResource,
 } from './operational-modules/warehouse/queries';
+export type {
+  WarehouseSupplierReceiptInput,
+  WarehouseSupplyReceiptService,
+} from './operational-modules/warehouse/supply';
 export type {
   AssortmentInput,
   CoffeePurchaserService,
