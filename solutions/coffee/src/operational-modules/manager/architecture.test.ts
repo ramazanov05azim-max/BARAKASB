@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const moduleRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const solutionSourceRoot = path.resolve(moduleRoot, '..');
 const managerRoot = path.join(moduleRoot, 'manager');
 
 function sourceFiles(directory: string): string[] {
@@ -58,13 +59,24 @@ describe('Manager operational boundary', () => {
     expect(forbidden).toEqual([]);
   });
 
-  it('has no reverse dependency from Warehouse or Purchasing to Manager', () => {
+  it('has no reverse dependency from any implemented owner module to Manager', () => {
     for (const owner of ['warehouse', 'purchasing']) {
       const imports = sourceFiles(path.join(moduleRoot, owner)).flatMap((file) =>
         relativeImports(file).filter((specifier) => specifier.includes('/manager')),
       );
       expect(imports, `${owner} must not know Manager`).toEqual([]);
     }
+    const barFiles = [
+      ...sourceFiles(path.join(moduleRoot, 'bar')),
+      ...fs
+        .readdirSync(solutionSourceRoot)
+        .filter((name) => /^bar-.*\.tsx?$/u.test(name) && !/\.test\.tsx?$/u.test(name))
+        .map((name) => path.join(solutionSourceRoot, name)),
+    ];
+    const barImports = barFiles.flatMap((file) =>
+      relativeImports(file).filter((specifier) => specifier.includes('/manager')),
+    );
+    expect(barImports, 'bar must not know Manager').toEqual([]);
   });
 
   it('does not use another operational module storage namespace', () => {
