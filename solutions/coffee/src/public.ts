@@ -11,7 +11,9 @@ export { CoffeeBarWorkspaceScreen } from './bar-workspace-screen';
 export { CoffeeFloorPlanScreen } from './floor-plan-screen';
 export { coffeeBarOperationalModuleManifest } from './operational-modules/bar/manifest';
 export { coffeeWarehouseOperationalModuleManifest } from './operational-modules/warehouse/manifest';
+export { coffeePurchaserOperationalModuleManifest } from './operational-modules/purchasing/manifest';
 export { CoffeeWarehouseWorkspaceScreen } from './operational-modules/warehouse/screen';
+export { CoffeePurchaserWorkspaceScreen } from './operational-modules/purchasing/screen';
 export {
   createCoffeeWarehouseService,
   localCoffeeWarehouseService,
@@ -22,6 +24,15 @@ export {
   localCoffeeWarehouseRepository,
 } from './operational-modules/warehouse/repository';
 export { expandCoffeeRecipe } from './recipe-engine/expansion';
+export {
+  createCoffeePurchaserService,
+  localCoffeePurchaserService,
+} from './operational-modules/purchasing/service';
+export {
+  coffeePurchaserStoragePrefix,
+  createLocalCoffeePurchaserRepository,
+  localCoffeePurchaserRepository,
+} from './operational-modules/purchasing/repository';
 export {
   recipeEngineComponentTypes,
   recipeEngineTargetTypes,
@@ -57,7 +68,34 @@ export type { CoffeeBarService } from './bar-service';
 export type {
   CoffeeWarehouseService,
   WarehouseQuantityInput,
+  WarehouseSupplierReceiptInput,
 } from './operational-modules/warehouse/service';
+export type {
+  AssortmentInput,
+  CoffeePurchaserService,
+  PurchaseDeliveryPostingInput,
+  SupplierInput,
+  SupplierOrderInput,
+  SupplierOrderLineInput,
+} from './operational-modules/purchasing/service';
+export type {
+  PurchasableResourceType,
+  PurchaseDelivery,
+  PurchaseDeliveryLine,
+  PurchaseDeliveryStatus,
+  PurchaseNeed,
+  PurchasePriceHistoryEntry,
+  PurchaserConfigurationWarning,
+  PurchaserRuntimeContext,
+  PurchaserState,
+  PurchaserStore,
+  PurchaseThresholdProvider,
+  SupplierAssortment,
+  SupplierOrder,
+  SupplierOrderLine,
+  SupplierOrderStatus,
+} from './operational-modules/purchasing/domain';
+export type { CoffeePurchaserRepository } from './operational-modules/purchasing/repository';
 export type {
   WarehouseBalance,
   WarehouseBaseUnit,

@@ -26,6 +26,7 @@ const workspaceNames = {
   bar: 'Бар',
   kitchen: 'Кухня',
   warehouse: 'Склад',
+  purchasing: 'Закупщик',
   manager: 'Руководитель',
   delivery: 'Доставка',
   production: 'Производство',

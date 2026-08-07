@@ -15,6 +15,7 @@ import {
   Power,
   RefreshCw,
   ShoppingBag,
+  ShoppingCart,
   Trash2,
   UserCog,
   Warehouse,
@@ -49,6 +50,7 @@ const moduleKeys: Record<CoffeeSolutionModuleId, TranslationKey> = {
   bar: 'constructor.module.bar',
   kitchen: 'constructor.module.kitchen',
   warehouse: 'constructor.module.warehouse',
+  purchasing: 'constructor.module.purchasing',
   manager: 'constructor.module.manager',
   delivery: 'constructor.module.delivery',
   production: 'constructor.module.production',
@@ -59,6 +61,7 @@ const moduleIcons = {
   bar: GlassWater,
   kitchen: ChefHat,
   warehouse: Warehouse,
+  purchasing: ShoppingCart,
   manager: UserCog,
   delivery: Bike,
   production: Factory,
@@ -88,6 +91,7 @@ export function SolutionConstructorScreen({
       bar: t('constructor.module.bar'),
       kitchen: t('constructor.module.kitchen'),
       warehouse: t('constructor.module.warehouse'),
+      purchasing: t('constructor.module.purchasing'),
       manager: t('constructor.module.manager'),
       delivery: t('constructor.module.delivery'),
       production: t('constructor.module.production'),
@@ -568,10 +572,13 @@ export function SolutionConstructorScreen({
                         </div>
                       )}
                     </div>
-                    {workspace.moduleId === 'warehouse' && (
+                    {(workspace.moduleId === 'warehouse' ||
+                      workspace.moduleId === 'purchasing') && (
                       <div className="mt-5 border-t border-[var(--border)] pt-5">
                         <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
-                          Физические склады рабочего пространства
+                          {workspace.moduleId === 'purchasing'
+                            ? t('constructor.purchasingWarehouses')
+                            : 'Физические склады рабочего пространства'}
                         </p>
                         <div className="mt-3 space-y-2">
                           {state.warehouses.map((warehouse) => (

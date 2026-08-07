@@ -6,7 +6,9 @@ import {
 import {
   CoffeeBarWorkspaceScreen,
   CoffeeWarehouseWorkspaceScreen,
+  CoffeePurchaserWorkspaceScreen,
   coffeeBarOperationalModuleManifest,
+  coffeePurchaserOperationalModuleManifest,
   coffeeWarehouseOperationalModuleManifest,
 } from '@barakasb/solution-coffee';
 import type { ReactNode } from 'react';
@@ -45,6 +47,21 @@ registry.register({
   manifest: coffeeWarehouseOperationalModuleManifest,
   render: ({ execution, onLogoutEmployee }) => (
     <CoffeeWarehouseWorkspaceScreen
+      context={{
+        projectId: execution.projectId,
+        businessEnvironmentId: execution.isolationScopeId,
+        workspaceId: execution.workspaceId,
+        employeeId: execution.employeeId,
+      }}
+      onLogoutEmployee={onLogoutEmployee}
+    />
+  ),
+});
+
+registry.register({
+  manifest: coffeePurchaserOperationalModuleManifest,
+  render: ({ execution, onLogoutEmployee }) => (
+    <CoffeePurchaserWorkspaceScreen
       context={{
         projectId: execution.projectId,
         businessEnvironmentId: execution.isolationScopeId,

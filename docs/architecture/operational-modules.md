@@ -18,7 +18,7 @@ The standard covers this Solution-owned workspace family:
 | `bar`             | Бар                  | Reference implementation registered |
 | `kitchen`         | Кухня                | Architecture only                   |
 | `warehouse`       | Склад                | v1 implementation registered        |
-| `purchasing`      | Закупщик             | Architecture only                   |
+| `purchasing`      | Закупщик             | v1 implementation registered        |
 | `production`      | Производство         | Architecture only                   |
 | `finance`         | Финансы              | Architecture only                   |
 | `crm`             | CRM                  | Architecture only                   |
@@ -187,6 +187,17 @@ visible unresolved issue and never changes the completed order.
 
 The detailed behavior and migration rules are documented in
 [Coffee Warehouse Operational Module v1](../solutions/coffee/warehouse-operational-module.md).
+
+## Purchaser v1 implementation
+
+Purchaser is the third registered Operational Module. It owns supplier assortment,
+supplier-order, delivery and actual-price history records. Purchase needs read
+authoritative Warehouse ledger balances through a public application port; delivery
+posting writes stock only through the Warehouse receipt use case. Purchaser never owns a
+parallel balance and never imports Warehouse UI or repositories.
+
+The detailed behavior, lifecycle and migration rules are documented in
+[Coffee Purchaser Operational Module v1](../solutions/coffee/purchaser-operational-module.md).
 
 ## Testing contract
 

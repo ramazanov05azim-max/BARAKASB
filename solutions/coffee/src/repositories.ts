@@ -38,6 +38,7 @@ import { migrateLegacyMenuImages } from './menu-image-migration';
 import { migrateLegacyRecipes } from './recipe-migration';
 import { migrateLegacyIngredients } from './ingredient-migration';
 import { coffeeWarehouseStoragePrefix } from './operational-modules/warehouse/repository';
+import { coffeePurchaserStoragePrefix } from './operational-modules/purchasing/repository';
 
 const storagePrefix = 'barakasb.mock.coffee.project.v1';
 
@@ -1198,6 +1199,7 @@ export function clearLocalCoffeeDevelopmentStorage(storage: Storage): number {
       key.startsWith(`${storagePrefix}.`) ||
       key.startsWith(`${coffeeBarOrderStoragePrefix}.`) ||
       key.startsWith(`${coffeeWarehouseStoragePrefix}.`) ||
+      key.startsWith(`${coffeePurchaserStoragePrefix}.`) ||
       key.startsWith(`${coffeeEmployeeCredentialStoragePrefix}.`),
   );
   for (const key of targets) storage.removeItem(key);

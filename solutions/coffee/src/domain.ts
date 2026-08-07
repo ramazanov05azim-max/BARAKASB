@@ -18,6 +18,7 @@ export const coffeeSolutionModuleIds = [
   'bar',
   'kitchen',
   'warehouse',
+  'purchasing',
   'manager',
   'delivery',
   'production',
@@ -326,6 +327,7 @@ export interface Supplier extends BaseEntity {
   paymentTerms: string;
   deliverySchedule: string;
   suppliedIngredients: string;
+  comment?: string;
 }
 
 export interface Employee extends BaseEntity {

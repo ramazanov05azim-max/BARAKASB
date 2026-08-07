@@ -493,6 +493,8 @@ export const ru = {
   'constructor.module.bar': 'Бар',
   'constructor.module.kitchen': 'Кухня',
   'constructor.module.warehouse': 'Склад',
+  'constructor.module.purchasing': 'Закупщик',
+  'constructor.purchasingWarehouses': 'Склады назначения для закупок',
   'constructor.module.manager': 'Руководитель',
   'constructor.module.delivery': 'Доставка',
   'constructor.module.production': 'Производство',

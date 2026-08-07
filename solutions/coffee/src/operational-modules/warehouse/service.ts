@@ -24,6 +24,21 @@ export interface WarehouseQuantityInput {
   readonly idempotencyKey: string;
 }
 
+export interface WarehouseSupplierReceiptInput {
+  readonly deliveryId: string;
+  readonly supplierOrderId: string;
+  readonly destinationWarehouseId: string;
+  readonly supplierDocumentReference: string;
+  readonly lines: ReadonlyArray<{
+    readonly deliveryLineId: string;
+    readonly resourceId: string;
+    readonly resourceType: WarehouseStockResource['resourceType'];
+    readonly resourceName: string;
+    readonly quantityBase: number;
+    readonly baseUnit: WarehouseStockResource['baseUnit'];
+  }>;
+}
+
 export interface CoffeeWarehouseService {
   load(context: WarehouseRuntimeContext): Promise<WarehouseState>;
   recordOpeningBalance(
@@ -66,6 +81,11 @@ export interface CoffeeWarehouseService {
     context: WarehouseRuntimeContext,
     order: CoffeeOrder,
   ): Promise<void>;
+  loadForPurchasing(context: WarehouseRuntimeContext): Promise<WarehouseState>;
+  recordSupplierDelivery(
+    context: WarehouseRuntimeContext,
+    input: WarehouseSupplierReceiptInput,
+  ): Promise<void>;
   subscribe(context: WarehouseRuntimeContext, listener: () => void): () => void;
 }
 
@@ -85,7 +105,11 @@ export function createCoffeeWarehouseService({
   createId = () =>
     globalThis.crypto?.randomUUID?.() ?? `local-${Date.now().toString(36)}`,
 }: Dependencies): CoffeeWarehouseService {
-  async function access(context: WarehouseRuntimeContext, allowBar = false) {
+  async function access(
+    context: WarehouseRuntimeContext,
+    allowBar = false,
+    allowPurchasing = false,
+  ) {
     if (
       !context.projectId ||
       !context.businessEnvironmentId ||
@@ -98,7 +122,8 @@ export function createCoffeeWarehouseService({
       (candidate) =>
         candidate.id === context.workspaceId &&
         (candidate.moduleId === 'warehouse' ||
-          (allowBar && candidate.moduleId === 'bar')),
+          (allowBar && candidate.moduleId === 'bar') ||
+          (allowPurchasing && candidate.moduleId === 'purchasing')),
     );
     const employee = snapshot.employees.find(
       (candidate) =>
@@ -337,72 +362,127 @@ export function createCoffeeWarehouseService({
     ]);
   }
 
+  async function loadState(
+    context: WarehouseRuntimeContext,
+    allowPurchasing = false,
+  ): Promise<WarehouseState> {
+    const { snapshot, workspace } = await access(context, false, allowPurchasing);
+    await migrateExplicitOpeningBalances(context, snapshot);
+    const store = await warehouse.load(
+      context.projectId,
+      context.businessEnvironmentId,
+    );
+    const allowed = new Set(workspace.assignedWarehouseIds ?? []);
+    const warehouseList = snapshot.warehouses
+      .filter((candidate) => allowed.has(candidate.id) && candidate.status === 'active')
+      .map(({ id, name }) => ({ id, name }));
+    const resourceList = resources(snapshot).filter((resource) => resource.active);
+    const movements = store.movements.filter((entry) => allowed.has(entry.warehouseId));
+    const balances: WarehouseBalance[] = warehouseList.flatMap((physicalWarehouse) =>
+      resourceList.map((resource) => {
+        const scoped = movements.filter(
+          (entry) =>
+            entry.warehouseId === physicalWarehouse.id &&
+            entry.resourceId === resource.resourceId &&
+            entry.resourceType === resource.resourceType,
+        );
+        const quantity = round(
+          scoped.reduce((sum, entry) => sum + entry.quantityDeltaBase, 0),
+        );
+        const threshold = resource.minimumStockBase;
+        return {
+          warehouseId: physicalWarehouse.id,
+          resource,
+          quantityBase: quantity,
+          lastMovementAt: scoped.at(-1)?.occurredAt ?? null,
+          status:
+            quantity < 0
+              ? 'NEGATIVE'
+              : quantity === 0
+                ? 'OUT_OF_STOCK'
+                : threshold !== null && quantity <= threshold
+                  ? 'LOW'
+                  : 'IN_STOCK',
+        };
+      }),
+    );
+    const employeeName =
+      context.employeeId === 'owner-preview'
+        ? 'Владелец · просмотр'
+        : (snapshot.employees.find((employee) => employee.id === context.employeeId)
+            ?.fullName ?? 'Сотрудник');
+    return {
+      employeeName,
+      employees: snapshot.employees.map((employee) => ({
+        id: employee.id,
+        name: employee.fullName,
+      })),
+      warehouses: warehouseList,
+      resources: resourceList,
+      balances,
+      movements,
+      inventories: store.inventories.filter((entry) => allowed.has(entry.warehouseId)),
+      issues: store.issues,
+    };
+  }
+
   return {
-    async load(context) {
-      const { snapshot, workspace } = await access(context);
-      await migrateExplicitOpeningBalances(context, snapshot);
-      const store = await warehouse.load(
+    load: (context) => loadState(context),
+    loadForPurchasing: (context) => loadState(context, true),
+    async recordSupplierDelivery(context, input) {
+      const { snapshot, workspace } = await access(context, false, true);
+      const allowed = new Set(workspace.assignedWarehouseIds ?? []);
+      const destination = snapshot.warehouses.find(
+        (candidate) =>
+          candidate.id === input.destinationWarehouseId &&
+          candidate.status === 'active' &&
+          allowed.has(candidate.id),
+      );
+      if (!destination) throw new Error('warehouse-access-denied');
+      if (
+        input.lines.length === 0 ||
+        input.lines.some(
+          (line) => !Number.isFinite(line.quantityBase) || line.quantityBase <= 0,
+        )
+      )
+        throw new Error('invalid-quantity');
+      await warehouse.appendBatch(
         context.projectId,
         context.businessEnvironmentId,
-      );
-      const allowed = new Set(workspace.assignedWarehouseIds ?? []);
-      const warehouseList = snapshot.warehouses
-        .filter(
-          (candidate) => allowed.has(candidate.id) && candidate.status === 'active',
-        )
-        .map(({ id, name }) => ({ id, name }));
-      const resourceList = resources(snapshot).filter((resource) => resource.active);
-      const movements = store.movements.filter((entry) =>
-        allowed.has(entry.warehouseId),
-      );
-      const balances: WarehouseBalance[] = warehouseList.flatMap((physicalWarehouse) =>
-        resourceList.map((resource) => {
-          const scoped = movements.filter(
-            (entry) =>
-              entry.warehouseId === physicalWarehouse.id &&
-              entry.resourceId === resource.resourceId &&
-              entry.resourceType === resource.resourceType,
-          );
-          const quantity = round(
-            scoped.reduce((sum, entry) => sum + entry.quantityDeltaBase, 0),
-          );
-          const threshold = resource.minimumStockBase;
-          return {
-            warehouseId: physicalWarehouse.id,
-            resource,
-            quantityBase: quantity,
-            lastMovementAt: scoped.at(-1)?.occurredAt ?? null,
-            status:
-              quantity < 0
-                ? 'NEGATIVE'
-                : quantity === 0
-                  ? 'OUT_OF_STOCK'
-                  : threshold !== null && quantity <= threshold
-                    ? 'LOW'
-                    : 'IN_STOCK',
-          };
-        }),
-      );
-      const employeeName =
-        context.employeeId === 'owner-preview'
-          ? 'Владелец · просмотр'
-          : (snapshot.employees.find((employee) => employee.id === context.employeeId)
-              ?.fullName ?? 'Сотрудник');
-      return {
-        employeeName,
-        employees: snapshot.employees.map((employee) => ({
-          id: employee.id,
-          name: employee.fullName,
-        })),
-        warehouses: warehouseList,
-        resources: resourceList,
-        balances,
-        movements,
-        inventories: store.inventories.filter((entry) =>
-          allowed.has(entry.warehouseId),
+        input.lines.map((line) =>
+          movement(context, {
+            warehouseId: destination.id,
+            resource: {
+              resourceId: line.resourceId,
+              resourceType: line.resourceType,
+              name: line.resourceName,
+              accountingType:
+                line.baseUnit === 'ml'
+                  ? 'volume'
+                  : line.baseUnit === 'pc'
+                    ? 'pieces'
+                    : 'weight',
+              baseUnit: line.baseUnit,
+              baseUnitId: line.baseUnit,
+              purchaseUnitId: line.baseUnit,
+              purchasePackageSize: 1,
+              minimumStockBase: null,
+              active: true,
+            },
+            type: 'RECEIPT',
+            delta: line.quantityBase,
+            documentType: 'SUPPLIER_DELIVERY',
+            documentId: input.deliveryId,
+            comment: [
+              `Заказ поставщику ${input.supplierOrderId}`,
+              input.supplierDocumentReference,
+            ]
+              .filter(Boolean)
+              .join(' · '),
+            idempotencyKey: `supplier-delivery:${input.deliveryId}:${line.deliveryLineId}`,
+          }),
         ),
-        issues: store.issues,
-      };
+      );
     },
     recordOpeningBalance: (context, input) =>
       appendQuantity(

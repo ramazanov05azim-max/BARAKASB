@@ -42,6 +42,7 @@ const moduleKeys: Record<CoffeeSolutionModuleId, TranslationKey> = {
   bar: 'constructor.module.bar',
   kitchen: 'constructor.module.kitchen',
   warehouse: 'constructor.module.warehouse',
+  purchasing: 'constructor.module.purchasing',
   manager: 'constructor.module.manager',
   delivery: 'constructor.module.delivery',
   production: 'constructor.module.production',
