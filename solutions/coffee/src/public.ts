@@ -30,10 +30,8 @@ export {
   createCoffeePurchaserService,
   localCoffeePurchaserService,
 } from './operational-modules/purchasing/service';
-export {
-  createCoffeeManagerWorkspaceService,
-  localCoffeeManagerWorkspaceService,
-} from './operational-modules/manager/service';
+export { createCoffeeManagerWorkspaceService } from './operational-modules/manager/service';
+export { localCoffeeManagerWorkspaceService } from './operational-modules/manager/local-service';
 export {
   coffeePurchaserStoragePrefix,
   createLocalCoffeePurchaserRepository,
@@ -78,19 +76,27 @@ export type {
 export type { CoffeeBarService } from './bar-service';
 export type {
   CoffeeWarehouseService,
-  WarehouseOperationsReadModel,
   WarehouseQuantityInput,
   WarehouseSupplierReceiptInput,
 } from './operational-modules/warehouse/service';
 export type {
+  WarehouseOperationsQueryContext,
+  WarehouseOperationsQueryService,
+  WarehouseOperationsReadModel,
+} from './operational-modules/warehouse/queries';
+export type {
   AssortmentInput,
   CoffeePurchaserService,
-  PurchasingOperationsReadModel,
   PurchaseDeliveryPostingInput,
   SupplierInput,
   SupplierOrderInput,
   SupplierOrderLineInput,
 } from './operational-modules/purchasing/service';
+export type {
+  PurchasingOperationsQueryContext,
+  PurchasingOperationsQueryService,
+  PurchasingOperationsReadModel,
+} from './operational-modules/purchasing/queries';
 export type {
   CoffeeManagerWorkspaceService,
   ManagerWorkspaceState,

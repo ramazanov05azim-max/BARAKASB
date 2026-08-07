@@ -12,6 +12,9 @@ export const managerRu = {
   noData: 'Нет данных',
   notConfigured: 'Не настроено',
   unavailable: 'Недоступно',
+  warehouseUnavailable: 'Данные склада временно недоступны.',
+  purchasingUnavailable: 'Данные закупок временно недоступны.',
+  incompleteWarnings: 'Предупреждения показаны только по доступным источникам данных.',
   openWorkspace: 'Открыть рабочее пространство',
   ownerNavigationOnly:
     'Перейдите в соответствующее рабочее пространство на подключённом устройстве.',

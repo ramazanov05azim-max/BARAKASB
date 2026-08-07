@@ -15,8 +15,8 @@ copy or mutate sales, stock, purchasing, delivery or KPI data.
 ```text
 Manager presentation
   -> Manager application read-model service
-       -> WarehouseOperationsReadModel query
-       -> PurchasingOperationsReadModel query
+       -> WarehouseOperationsQueryService (owned by Warehouse)
+       -> PurchasingOperationsQueryService (owned by Purchasing)
        -> Manager UI-preference repository
 
 Warehouse  -X-> Manager
@@ -42,6 +42,12 @@ business behavior.
 public projections on every load or refresh and builds a transient presentation read
 model. It may group and count already classified results; it never recreates owner
 business rules.
+
+Queries are isolated from each other. If one owner read adapter rejects, Manager marks
+that source `unavailable`, renders the other source normally and displays `Недоступно`
+for the failed source rather than zero. A compile-time removal of a required contract is
+supposed to fail TypeScript; a runtime adapter outage degrades safely without crashing
+the workspace.
 
 The local Manager repository stores only:
 
@@ -103,7 +109,9 @@ tenant isolation at the application and persistence boundaries.
 - `CoffeeManagerWorkspaceService` publishes only the composed read model and UI
   preference operation.
 
-None of these contracts exposes write use cases or another module's repository.
+None of these contracts exposes write use cases or another module's repository. The
+first two live in their owner modules' `queries.ts` files and are reusable by any future
+authorized read consumer; they are not named for or owned by Manager.
 
 ## Verification
 

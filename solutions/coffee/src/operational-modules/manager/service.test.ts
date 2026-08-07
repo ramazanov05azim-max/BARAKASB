@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCoffeeCrashTestSeed } from '../../coffee-crash-test-seed';
 import type { CoffeeOperationalSnapshot } from '../../domain';
 import type { CoffeeOperationalReadRepository } from '../../repository-contracts';
-import type { PurchasingOperationsReadModel } from '../purchasing/service';
-import type { WarehouseOperationsReadModel } from '../warehouse/service';
+import type { PurchasingOperationsReadModel } from '../purchasing/queries';
+import type { WarehouseOperationsReadModel } from '../warehouse/queries';
 import type { CoffeeManagerWorkspaceRepository } from './repository';
 import { createCoffeeManagerWorkspaceService } from './service';
 
@@ -194,6 +194,11 @@ describe('Coffee Manager workspace service', () => {
       receiptCountToday: null,
       averageReceiptToday: null,
     });
+    expect(state.readModel.sourceAvailability).toEqual({
+      warehouse: 'available',
+      purchasing: 'available',
+      sales: 'unavailable',
+    });
     expect(state.readModel.warnings.map((warning) => warning.warningId)).toEqual(
       expect.arrayContaining([
         'warehouse-balance:warehouse-1:resource-1',
@@ -306,5 +311,78 @@ describe('Coffee Manager workspace service', () => {
     await expect(
       service.load({ ...context, workspaceId: 'workspace-warehouse' }),
     ).rejects.toThrow('access-denied');
+  });
+
+  it('degrades safely when Warehouse Read API is not composed', async () => {
+    const service = createCoffeeManagerWorkspaceService({
+      operational: { load: async () => snapshot() },
+      purchasing: {
+        queryOperations: async () => purchasingRead(),
+        subscribe: () => () => undefined,
+      },
+      preferences: preferences(),
+    });
+
+    const state = await service.load(context);
+    expect(state.readModel.sourceAvailability.warehouse).toBe('unavailable');
+    expect(state.readModel.sourceAvailability.purchasing).toBe('available');
+    expect(state.readModel.warehouseSummary).toEqual({
+      totalResources: null,
+      belowMinimum: null,
+      outOfStock: null,
+      negative: null,
+      withoutThreshold: null,
+    });
+    expect(state.readModel.purchasingSummary.active).toBe(0);
+  });
+
+  it('degrades safely when Purchasing Read API rejects', async () => {
+    const service = createCoffeeManagerWorkspaceService({
+      operational: { load: async () => snapshot() },
+      warehouse: {
+        queryOperations: async () => warehouseRead(),
+        subscribe: () => () => undefined,
+      },
+      purchasing: {
+        queryOperations: async () => {
+          throw new Error('purchasing-unavailable');
+        },
+        subscribe: () => () => undefined,
+      },
+      preferences: preferences(),
+    });
+
+    const state = await service.load(context);
+    expect(state.readModel.sourceAvailability.purchasing).toBe('unavailable');
+    expect(state.readModel.sourceAvailability.warehouse).toBe('available');
+    expect(state.readModel.purchasingSummary).toEqual({
+      drafts: null,
+      sent: null,
+      partiallyDelivered: null,
+      delivered: null,
+      cancelled: null,
+      overdue: null,
+      active: null,
+    });
+    expect(state.readModel.warehouseSummary.totalResources).toBe(1);
+  });
+
+  it('does not crash when a source subscription cannot be established', () => {
+    const service = createCoffeeManagerWorkspaceService({
+      operational: { load: async () => snapshot() },
+      warehouse: {
+        queryOperations: async () => warehouseRead(),
+        subscribe: () => {
+          throw new Error('warehouse-subscription-unavailable');
+        },
+      },
+      purchasing: {
+        queryOperations: async () => purchasingRead(),
+        subscribe: () => () => undefined,
+      },
+      preferences: preferences(),
+    });
+
+    expect(() => service.subscribe(context, () => undefined)).not.toThrow();
   });
 });

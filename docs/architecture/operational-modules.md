@@ -126,6 +126,15 @@ Direct repository access across modules is forbidden. Immediate validation uses 
 application interface. Independent processing uses versioned events and a consumer-owned
 read model. One transaction writes one module owner's state and outbox.
 
+Cross-module operational reporting uses owner-defined query contracts. Each bounded
+context keeps its query interface and minimal read projection at its own public
+application boundary (for example, `warehouse/queries.ts` and `purchasing/queries.ts`).
+A consumer depends on that interface only, never on the owner's full command service,
+repository, infrastructure adapter or domain aggregate. These contracts are
+consumer-neutral and may be reused by future Director, Finance or Analytics modules when
+the published projection is sufficient. They must not be moved to a global shared
+package: ownership stays with the bounded context that guarantees their semantics.
+
 ## Permissions
 
 Workspace assignment determines which employees may attempt to enter a workspace; it
@@ -207,6 +216,11 @@ preferences only. Warehouse balances, Purchasing needs and documents remain owne
 calculated by their modules; Manager consumes their minimal public query services and
 does not import their repositories, state adapters or internal domain models. Sales KPI
 fields remain unavailable until Sales publishes an approved read contract.
+
+Owner query failures are isolated. Manager marks the failed source `unavailable`, keeps
+rendering projections from sources that answered, and never substitutes an unavailable
+metric with zero. Query contracts are owned by Warehouse and Purchasing and are not
+Manager-specific.
 
 Warnings and the activity journal are transient read-model projections rebuilt on every
 query. They are never persisted as Manager business records. Removing Manager therefore

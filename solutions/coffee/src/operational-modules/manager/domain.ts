@@ -1,3 +1,6 @@
+import type { PurchasingOperationsReadModel } from '../purchasing/queries';
+import type { WarehouseOperationsReadModel } from '../warehouse/queries';
+
 export type ManagerSection =
   'overview' | 'purchasing' | 'warehouse' | 'events' | 'warnings';
 
@@ -39,6 +42,11 @@ export interface ManagerEvent {
 
 export interface ManagerWorkspaceReadModel {
   readonly employeeName: string;
+  readonly sourceAvailability: {
+    readonly warehouse: 'available' | 'unavailable';
+    readonly purchasing: 'available' | 'unavailable';
+    readonly sales: 'unavailable';
+  };
   readonly salesKpis: {
     readonly revenueToday: number | null;
     readonly receiptCountToday: number | null;
@@ -46,20 +54,20 @@ export interface ManagerWorkspaceReadModel {
     readonly currency: string;
   };
   readonly warehouseSummary: {
-    readonly totalResources: number;
-    readonly belowMinimum: number;
-    readonly outOfStock: number;
-    readonly negative: number;
-    readonly withoutThreshold: number;
+    readonly totalResources: number | null;
+    readonly belowMinimum: number | null;
+    readonly outOfStock: number | null;
+    readonly negative: number | null;
+    readonly withoutThreshold: number | null;
   };
   readonly purchasingSummary: {
-    readonly drafts: number;
-    readonly sent: number;
-    readonly partiallyDelivered: number;
-    readonly delivered: number;
-    readonly cancelled: number;
-    readonly overdue: number;
-    readonly active: number;
+    readonly drafts: number | null;
+    readonly sent: number | null;
+    readonly partiallyDelivered: number | null;
+    readonly delivered: number | null;
+    readonly cancelled: number | null;
+    readonly overdue: number | null;
+    readonly active: number | null;
   };
   readonly purchasing: {
     readonly orders: PurchasingOperationsReadModel['orders'];
@@ -78,5 +86,3 @@ export interface ManagerPreferences {
   readonly warningsOnly: boolean;
   readonly hiddenPanelKeys: ReadonlyArray<string>;
 }
-import type { PurchasingOperationsReadModel } from '../purchasing/service';
-import type { WarehouseOperationsReadModel } from '../warehouse/service';

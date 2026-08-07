@@ -18,6 +18,11 @@ const state: ManagerWorkspaceState = {
   },
   readModel: {
     employeeName: 'Анна',
+    sourceAvailability: {
+      warehouse: 'available',
+      purchasing: 'available',
+      sales: 'unavailable',
+    },
     salesKpis: {
       revenueToday: null,
       receiptCountToday: null,
@@ -151,5 +156,44 @@ describe('CoffeeManagerWorkspaceScreen', () => {
     expect(
       screen.queryByRole('button', { name: /провести|списать|изменить/i }),
     ).toBeNull();
+  });
+
+  it('shows unavailable instead of zero when an owner read API is down', async () => {
+    const unavailableState: ManagerWorkspaceState = {
+      ...state,
+      readModel: {
+        ...state.readModel,
+        sourceAvailability: {
+          ...state.readModel.sourceAvailability,
+          warehouse: 'unavailable',
+        },
+        warehouseSummary: {
+          totalResources: null,
+          belowMinimum: null,
+          outOfStock: null,
+          negative: null,
+          withoutThreshold: null,
+        },
+      },
+    };
+    const moduleService = service();
+    vi.mocked(moduleService.load).mockResolvedValue(unavailableState);
+    render(
+      <CoffeeManagerWorkspaceScreen
+        context={{
+          projectId: 'project-1',
+          businessEnvironmentId: 'environment-1',
+          workspaceId: 'workspace-manager',
+          employeeId: 'employee-1',
+        }}
+        service={moduleService}
+      />,
+    );
+    expect(
+      await screen.findByText(
+        'Предупреждения показаны только по доступным источникам данных.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Недоступно').length).toBeGreaterThan(0);
   });
 });

@@ -9,11 +9,8 @@ import type {
   ManagerWarning,
 } from './domain';
 import { managerRu as text } from './localization';
-import {
-  localCoffeeManagerWorkspaceService,
-  type CoffeeManagerWorkspaceService,
-  type ManagerWorkspaceState,
-} from './service';
+import { localCoffeeManagerWorkspaceService } from './local-service';
+import type { CoffeeManagerWorkspaceService, ManagerWorkspaceState } from './service';
 
 const sections: ReadonlyArray<ManagerSection> = [
   'overview',
@@ -35,6 +32,19 @@ function formatMoney(value: number | null, currency: string): string {
         currency,
         maximumFractionDigits: 2,
       }).format(value);
+}
+
+function formatCount(value: number | null, zeroLabel?: string): number | string {
+  if (value === null) return text.unavailable;
+  return value === 0 && zeroLabel ? zeroLabel : value;
+}
+
+function SourceUnavailable({ children }: { readonly children: React.ReactNode }) {
+  return (
+    <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+      {children}
+    </p>
+  );
 }
 
 function formatQuantity(value: number, unit: 'g' | 'ml' | 'pc'): string {
@@ -261,6 +271,9 @@ function ManagerSectionContent({
 }) {
   const model = state.readModel;
   if (section === 'overview') {
+    const allOperationalSourcesAvailable =
+      model.sourceAvailability.warehouse === 'available' &&
+      model.sourceAvailability.purchasing === 'available';
     const kpis = [
       [
         text.revenueToday,
@@ -273,18 +286,22 @@ function ManagerSectionContent({
       ],
       [
         text.activeOrders,
-        model.purchasingSummary.active === 0
-          ? text.noActiveOrders
-          : model.purchasingSummary.active,
+        formatCount(model.purchasingSummary.active, text.noActiveOrders),
       ],
-      [text.overdueOrders, model.purchasingSummary.overdue],
-      [text.lowStock, model.warehouseSummary.belowMinimum],
-      [text.outOfStock, model.warehouseSummary.outOfStock],
-      [text.thresholdsMissing, model.warehouseSummary.withoutThreshold],
-      [text.warningsCount, warnings.length],
+      [text.overdueOrders, formatCount(model.purchasingSummary.overdue)],
+      [text.lowStock, formatCount(model.warehouseSummary.belowMinimum)],
+      [text.outOfStock, formatCount(model.warehouseSummary.outOfStock)],
+      [text.thresholdsMissing, formatCount(model.warehouseSummary.withoutThreshold)],
+      [
+        text.warningsCount,
+        allOperationalSourcesAvailable ? warnings.length : text.unavailable,
+      ],
     ] as const;
     return (
       <div className="space-y-6">
+        {!allOperationalSourcesAvailable && (
+          <SourceUnavailable>{text.incompleteWarnings}</SourceUnavailable>
+        )}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {kpis.map(([label, value]) => (
             <article className={metric} key={label}>
@@ -330,16 +347,23 @@ function ManagerSectionContent({
   }
 
   if (section === 'purchasing') {
+    const sourceAvailable = model.sourceAvailability.purchasing === 'available';
     const statusMetrics = [
-      [text.drafts, model.purchasingSummary.drafts],
-      [text.sent, model.purchasingSummary.sent],
-      [text.partiallyDelivered, model.purchasingSummary.partiallyDelivered],
-      [text.deliveredOrders, model.purchasingSummary.delivered],
-      [text.cancelledOrders, model.purchasingSummary.cancelled],
-      [text.overdueOrders, model.purchasingSummary.overdue],
+      [text.drafts, formatCount(model.purchasingSummary.drafts)],
+      [text.sent, formatCount(model.purchasingSummary.sent)],
+      [
+        text.partiallyDelivered,
+        formatCount(model.purchasingSummary.partiallyDelivered),
+      ],
+      [text.deliveredOrders, formatCount(model.purchasingSummary.delivered)],
+      [text.cancelledOrders, formatCount(model.purchasingSummary.cancelled)],
+      [text.overdueOrders, formatCount(model.purchasingSummary.overdue)],
     ] as const;
     return (
       <div className="grid gap-6">
+        {!sourceAvailable && (
+          <SourceUnavailable>{text.purchasingUnavailable}</SourceUnavailable>
+        )}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {statusMetrics.map(([label, value]) => (
             <article className={metric} key={label}>
@@ -376,7 +400,9 @@ function ManagerSectionContent({
                 </article>
               ))
             ) : (
-              <p className="text-sm text-slate-500">{text.noNeeds}</p>
+              <p className="text-sm text-slate-500">
+                {sourceAvailable ? text.noNeeds : text.unavailable}
+              </p>
             )}
           </div>
         </section>
@@ -401,7 +427,9 @@ function ManagerSectionContent({
                 </article>
               ))
             ) : (
-              <p className="text-sm text-slate-500">{text.noOrders}</p>
+              <p className="text-sm text-slate-500">
+                {sourceAvailable ? text.noOrders : text.unavailable}
+              </p>
             )}
           </div>
         </section>
@@ -425,7 +453,9 @@ function ManagerSectionContent({
                 </article>
               ))
             ) : (
-              <p className="text-sm text-slate-500">{text.noDeliveries}</p>
+              <p className="text-sm text-slate-500">
+                {sourceAvailable ? text.noDeliveries : text.unavailable}
+              </p>
             )}
           </div>
         </section>
@@ -434,8 +464,13 @@ function ManagerSectionContent({
   }
 
   if (section === 'warehouse') {
+    const sourceAvailable = model.sourceAvailability.warehouse === 'available';
+    const purchasingAvailable = model.sourceAvailability.purchasing === 'available';
     return (
       <div className="grid gap-6">
+        {!sourceAvailable && (
+          <SourceUnavailable>{text.warehouseUnavailable}</SourceUnavailable>
+        )}
         <section className={card}>
           <h2 className="text-xl font-semibold">{text.balances}</h2>
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -475,7 +510,9 @@ function ManagerSectionContent({
                         {text.recommendedPurchase}:{' '}
                         {purchasingNeed?.recommendedQuantityBase === null ||
                         purchasingNeed?.recommendedQuantityBase === undefined
-                          ? text.notConfigured
+                          ? purchasingAvailable
+                            ? text.notConfigured
+                            : text.unavailable
                           : formatQuantity(
                               purchasingNeed.recommendedQuantityBase,
                               purchasingNeed.baseUnit,
@@ -486,7 +523,9 @@ function ManagerSectionContent({
                 );
               })
             ) : (
-              <p className="text-sm text-slate-500">{text.noBalances}</p>
+              <p className="text-sm text-slate-500">
+                {sourceAvailable ? text.noBalances : text.unavailable}
+              </p>
             )}
           </div>
         </section>
@@ -510,7 +549,9 @@ function ManagerSectionContent({
                 </article>
               ))
             ) : (
-              <p className="text-sm text-slate-500">{text.noMovements}</p>
+              <p className="text-sm text-slate-500">
+                {sourceAvailable ? text.noMovements : text.unavailable}
+              </p>
             )}
           </div>
         </section>
@@ -531,7 +572,9 @@ function ManagerSectionContent({
                   </article>
                 ))
             ) : (
-              <p className="text-sm text-slate-500">{text.noWarnings}</p>
+              <p className="text-sm text-slate-500">
+                {sourceAvailable ? text.noWarnings : text.unavailable}
+              </p>
             )}
           </div>
         </section>

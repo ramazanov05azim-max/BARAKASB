@@ -9,10 +9,10 @@ import {
 } from '../../repositories';
 import type {
   CoffeeWarehouseService,
-  WarehouseOperationsReadModel,
   WarehouseSupplierReceiptInput,
 } from '../warehouse/service';
 import { localCoffeeWarehouseService } from '../warehouse/service';
+import type { WarehouseOperationsReadModel } from '../warehouse/queries';
 import type {
   PurchaseDelivery,
   PurchaseDeliveryLine,
@@ -28,6 +28,7 @@ import type {
 } from './domain';
 import type { CoffeePurchaserRepository } from './repository';
 import { localCoffeePurchaserRepository } from './repository';
+import type { PurchasingOperationsQueryService } from './queries';
 
 export interface SupplierOrderLineInput {
   readonly resourceId: string;
@@ -74,65 +75,8 @@ export interface AssortmentInput {
   readonly active: boolean;
 }
 
-export interface PurchasingOperationsReadModel {
-  readonly needs: ReadonlyArray<{
-    readonly warehouseId: string;
-    readonly warehouseName: string;
-    readonly resourceId: string;
-    readonly resourceName: string;
-    readonly quantityBase: number;
-    readonly baseUnit: 'g' | 'ml' | 'pc';
-    readonly thresholdBase: number | null;
-    readonly recommendedQuantityBase: number | null;
-    readonly state: PurchaseNeed['state'];
-    readonly preferredSupplierName: string | null;
-    readonly hasOpenOrder: boolean;
-  }>;
-  readonly orders: ReadonlyArray<{
-    readonly orderId: string;
-    readonly orderNumber: string;
-    readonly supplierName: string;
-    readonly destinationWarehouseId: string;
-    readonly destinationWarehouseName: string;
-    readonly status: SupplierOrder['status'];
-    readonly expectedDeliveryAt: string | null;
-    readonly isOverdue: boolean;
-    readonly createdAt: string;
-    readonly updatedAt: string;
-    readonly employeeId: string;
-    readonly totalExpected: number;
-    readonly resourceNames: ReadonlyArray<string>;
-  }>;
-  readonly deliveries: ReadonlyArray<{
-    readonly deliveryId: string;
-    readonly deliveryNumber: string;
-    readonly supplierOrderId: string;
-    readonly supplierName: string;
-    readonly destinationWarehouseId: string;
-    readonly destinationWarehouseName: string;
-    readonly status: PurchaseDelivery['status'];
-    readonly supplierDocumentReference: string;
-    readonly deliveredAt: string;
-    readonly occurredAt: string;
-    readonly employeeId: string;
-    readonly totalActual: number;
-    readonly expectedTotalForDeliveredQuantity: number;
-    readonly actualPriceHigher: boolean;
-    readonly overdelivery: boolean;
-    readonly resourceNames: ReadonlyArray<string>;
-  }>;
-  readonly configurationWarnings: ReadonlyArray<{
-    readonly warningId: string;
-    readonly message: string;
-    readonly resourceId: string | null;
-  }>;
-}
-
-export interface CoffeePurchaserService {
+export interface CoffeePurchaserService extends PurchasingOperationsQueryService {
   load(context: PurchaserRuntimeContext): Promise<PurchaserState>;
-  queryOperations(
-    context: PurchaserRuntimeContext,
-  ): Promise<PurchasingOperationsReadModel>;
   createOrder(
     context: PurchaserRuntimeContext,
     input: SupplierOrderInput,
@@ -176,7 +120,6 @@ export interface CoffeePurchaserService {
     context: PurchaserRuntimeContext,
     assortmentId: string,
   ): Promise<void>;
-  subscribe(context: PurchaserRuntimeContext, listener: () => void): () => void;
 }
 
 interface Dependencies {

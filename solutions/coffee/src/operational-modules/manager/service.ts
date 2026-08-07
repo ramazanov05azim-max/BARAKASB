@@ -1,9 +1,12 @@
 import type { CoffeeOperationalReadRepository } from '../../repository-contracts';
-import { localCoffeeOperationalReadRepository } from '../../repositories';
-import type { CoffeePurchaserService } from '../purchasing/service';
-import { localCoffeePurchaserService } from '../purchasing/service';
-import type { CoffeeWarehouseService } from '../warehouse/service';
-import { localCoffeeWarehouseService } from '../warehouse/service';
+import type {
+  PurchasingOperationsQueryService,
+  PurchasingOperationsReadModel,
+} from '../purchasing/queries';
+import type {
+  WarehouseOperationsQueryService,
+  WarehouseOperationsReadModel,
+} from '../warehouse/queries';
 import type {
   ManagerEvent,
   ManagerNavigationTarget,
@@ -13,7 +16,6 @@ import type {
   ManagerWorkspaceReadModel,
 } from './domain';
 import type { CoffeeManagerWorkspaceRepository } from './repository';
-import { localCoffeeManagerWorkspaceRepository } from './repository';
 import {
   managerDeliveryStatusRu,
   managerMovementTypeRu,
@@ -36,13 +38,38 @@ export interface CoffeeManagerWorkspaceService {
 
 interface Dependencies {
   readonly operational: CoffeeOperationalReadRepository;
-  readonly warehouse: Pick<CoffeeWarehouseService, 'queryOperations' | 'subscribe'>;
-  readonly purchasing: Pick<CoffeePurchaserService, 'queryOperations' | 'subscribe'>;
+  readonly warehouse?: WarehouseOperationsQueryService;
+  readonly purchasing?: PurchasingOperationsQueryService;
   readonly preferences: CoffeeManagerWorkspaceRepository;
   readonly now?: () => string;
 }
 
 type Snapshot = Awaited<ReturnType<CoffeeOperationalReadRepository['load']>>;
+type QueryResult<T> =
+  | { readonly availability: 'available'; readonly data: T }
+  | { readonly availability: 'unavailable'; readonly data: null };
+
+const emptyWarehouseData: WarehouseOperationsReadModel = {
+  warehouses: [],
+  balances: [],
+  recentMovements: [],
+  issues: [],
+};
+
+const emptyPurchasingData: PurchasingOperationsReadModel = {
+  needs: [],
+  orders: [],
+  deliveries: [],
+  configurationWarnings: [],
+};
+
+async function querySafely<T>(query: () => Promise<T>): Promise<QueryResult<T>> {
+  try {
+    return { availability: 'available', data: await query() };
+  } catch {
+    return { availability: 'unavailable', data: null };
+  }
+}
 
 const navigation = (
   snapshot: Snapshot,
@@ -108,15 +135,25 @@ export function createCoffeeManagerWorkspaceService({
   return {
     async load(context) {
       const { snapshot, employeeName } = await access(context);
-      const [warehouseData, purchasingData, savedPreferences] = await Promise.all([
-        warehouse.queryOperations(context),
-        purchasing.queryOperations(context),
+      const [warehouseResult, purchasingResult, savedPreferences] = await Promise.all([
+        querySafely(() =>
+          warehouse
+            ? warehouse.queryOperations(context)
+            : Promise.reject(new Error('warehouse-query-unavailable')),
+        ),
+        querySafely(() =>
+          purchasing
+            ? purchasing.queryOperations(context)
+            : Promise.reject(new Error('purchasing-query-unavailable')),
+        ),
         preferences.load(
           context.projectId,
           context.businessEnvironmentId,
           context.employeeId,
         ),
       ]);
+      const warehouseData = warehouseResult.data ?? emptyWarehouseData;
+      const purchasingData = purchasingResult.data ?? emptyPurchasingData;
       const warnings: ManagerWarning[] = [];
       for (const balance of warehouseData.balances) {
         if (balance.status === 'IN_STOCK') continue;
@@ -301,6 +338,11 @@ export function createCoffeeManagerWorkspaceService({
         purchasingData.orders.filter((order) => order.status === status).length;
       const readModel: ManagerWorkspaceReadModel = {
         employeeName,
+        sourceAvailability: {
+          warehouse: warehouseResult.availability,
+          purchasing: purchasingResult.availability,
+          sales: 'unavailable',
+        },
         salesKpis: {
           revenueToday: null,
           receiptCountToday: null,
@@ -308,33 +350,64 @@ export function createCoffeeManagerWorkspaceService({
           currency: snapshot.businessProfile.defaultCurrency,
         },
         warehouseSummary: {
-          totalResources: warehouseData.balances.length,
-          belowMinimum: warehouseData.balances.filter(
-            (balance) => balance.status === 'LOW',
-          ).length,
-          outOfStock: warehouseData.balances.filter(
-            (balance) => balance.status === 'OUT_OF_STOCK',
-          ).length,
-          negative: warehouseData.balances.filter(
-            (balance) => balance.status === 'NEGATIVE',
-          ).length,
-          withoutThreshold: warehouseData.balances.filter(
-            (balance) => balance.minimumStockBase === null,
-          ).length,
+          totalResources:
+            warehouseResult.availability === 'available'
+              ? warehouseData.balances.length
+              : null,
+          belowMinimum:
+            warehouseResult.availability === 'available'
+              ? warehouseData.balances.filter((balance) => balance.status === 'LOW')
+                  .length
+              : null,
+          outOfStock:
+            warehouseResult.availability === 'available'
+              ? warehouseData.balances.filter(
+                  (balance) => balance.status === 'OUT_OF_STOCK',
+                ).length
+              : null,
+          negative:
+            warehouseResult.availability === 'available'
+              ? warehouseData.balances.filter(
+                  (balance) => balance.status === 'NEGATIVE',
+                ).length
+              : null,
+          withoutThreshold:
+            warehouseResult.availability === 'available'
+              ? warehouseData.balances.filter(
+                  (balance) => balance.minimumStockBase === null,
+                ).length
+              : null,
         },
         purchasingSummary: {
-          drafts: countOrders('DRAFT'),
-          sent: countOrders('SENT'),
-          partiallyDelivered: countOrders('PARTIALLY_DELIVERED'),
-          delivered: countOrders('DELIVERED'),
-          cancelled: countOrders('CANCELLED'),
-          overdue: purchasingData.orders.filter((order) => order.isOverdue).length,
-          active: purchasingData.orders.filter(
-            (order) =>
-              order.status === 'DRAFT' ||
-              order.status === 'SENT' ||
-              order.status === 'PARTIALLY_DELIVERED',
-          ).length,
+          drafts:
+            purchasingResult.availability === 'available' ? countOrders('DRAFT') : null,
+          sent:
+            purchasingResult.availability === 'available' ? countOrders('SENT') : null,
+          partiallyDelivered:
+            purchasingResult.availability === 'available'
+              ? countOrders('PARTIALLY_DELIVERED')
+              : null,
+          delivered:
+            purchasingResult.availability === 'available'
+              ? countOrders('DELIVERED')
+              : null,
+          cancelled:
+            purchasingResult.availability === 'available'
+              ? countOrders('CANCELLED')
+              : null,
+          overdue:
+            purchasingResult.availability === 'available'
+              ? purchasingData.orders.filter((order) => order.isOverdue).length
+              : null,
+          active:
+            purchasingResult.availability === 'available'
+              ? purchasingData.orders.filter(
+                  (order) =>
+                    order.status === 'DRAFT' ||
+                    order.status === 'SENT' ||
+                    order.status === 'PARTIALLY_DELIVERED',
+                ).length
+              : null,
         },
         purchasing: {
           orders: purchasingData.orders,
@@ -358,19 +431,20 @@ export function createCoffeeManagerWorkspaceService({
       );
     },
     subscribe(context, listener) {
-      const unsubscribers = [
-        warehouse.subscribe(context, listener),
-        purchasing.subscribe(context, listener),
-        preferences.subscribe(context.projectId, listener),
+      const unsubscribers: Array<() => void> = [];
+      const subscriptions: Array<() => () => void> = [
+        () => preferences.subscribe(context.projectId, listener),
       ];
+      if (warehouse) subscriptions.push(() => warehouse.subscribe(context, listener));
+      if (purchasing) subscriptions.push(() => purchasing.subscribe(context, listener));
+      for (const subscribe of subscriptions) {
+        try {
+          unsubscribers.push(subscribe());
+        } catch {
+          // A temporarily unavailable read source must not crash the workspace.
+        }
+      }
       return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
     },
   };
 }
-
-export const localCoffeeManagerWorkspaceService = createCoffeeManagerWorkspaceService({
-  operational: localCoffeeOperationalReadRepository,
-  warehouse: localCoffeeWarehouseService,
-  purchasing: localCoffeePurchaserService,
-  preferences: localCoffeeManagerWorkspaceRepository,
-});

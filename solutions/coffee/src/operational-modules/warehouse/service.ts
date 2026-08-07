@@ -14,6 +14,7 @@ import type {
 import type { CoffeeWarehouseRepository } from './repository';
 import { localCoffeeWarehouseRepository } from './repository';
 import { localCoffeeOperationalReadRepository } from '../../repositories';
+import type { WarehouseOperationsQueryService } from './queries';
 
 export interface WarehouseQuantityInput {
   readonly warehouseId: string;
@@ -39,47 +40,7 @@ export interface WarehouseSupplierReceiptInput {
   }>;
 }
 
-export interface WarehouseOperationsReadModel {
-  readonly warehouses: ReadonlyArray<{ readonly id: string; readonly name: string }>;
-  readonly balances: ReadonlyArray<{
-    readonly warehouseId: string;
-    readonly warehouseName: string;
-    readonly resourceId: string;
-    readonly resourceName: string;
-    readonly resourceType: WarehouseStockResource['resourceType'];
-    readonly accountingType: WarehouseStockResource['accountingType'];
-    readonly quantityBase: number;
-    readonly baseUnit: 'g' | 'ml' | 'pc';
-    readonly baseUnitId: string;
-    readonly purchaseUnitId: string;
-    readonly purchasePackageSize: number;
-    readonly minimumStockBase: number | null;
-    readonly status: 'IN_STOCK' | 'LOW' | 'OUT_OF_STOCK' | 'NEGATIVE';
-  }>;
-  readonly recentMovements: ReadonlyArray<{
-    readonly movementId: string;
-    readonly warehouseId: string;
-    readonly warehouseName: string;
-    readonly resourceId: string;
-    readonly resourceName: string;
-    readonly movementType: string;
-    readonly quantityDeltaBase: number;
-    readonly baseUnit: 'g' | 'ml' | 'pc';
-    readonly sourceDocumentType: string;
-    readonly sourceDocumentId: string;
-    readonly occurredAt: string;
-    readonly employeeId: string;
-  }>;
-  readonly issues: ReadonlyArray<{
-    readonly issueId: string;
-    readonly code: string;
-    readonly message: string;
-    readonly occurredAt: string;
-    readonly resolved: boolean;
-  }>;
-}
-
-export interface CoffeeWarehouseService {
+export interface CoffeeWarehouseService extends WarehouseOperationsQueryService {
   load(context: WarehouseRuntimeContext): Promise<WarehouseState>;
   recordOpeningBalance(
     context: WarehouseRuntimeContext,
@@ -126,10 +87,6 @@ export interface CoffeeWarehouseService {
     context: WarehouseRuntimeContext,
     input: WarehouseSupplierReceiptInput,
   ): Promise<void>;
-  queryOperations(
-    context: WarehouseRuntimeContext,
-  ): Promise<WarehouseOperationsReadModel>;
-  subscribe(context: WarehouseRuntimeContext, listener: () => void): () => void;
 }
 
 interface Dependencies {
