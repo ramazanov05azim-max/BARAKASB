@@ -9,6 +9,7 @@ import {
 } from '../../repositories';
 import type {
   CoffeeWarehouseService,
+  WarehouseOperationsReadModel,
   WarehouseSupplierReceiptInput,
 } from '../warehouse/service';
 import { localCoffeeWarehouseService } from '../warehouse/service';
@@ -73,8 +74,65 @@ export interface AssortmentInput {
   readonly active: boolean;
 }
 
+export interface PurchasingOperationsReadModel {
+  readonly needs: ReadonlyArray<{
+    readonly warehouseId: string;
+    readonly warehouseName: string;
+    readonly resourceId: string;
+    readonly resourceName: string;
+    readonly quantityBase: number;
+    readonly baseUnit: 'g' | 'ml' | 'pc';
+    readonly thresholdBase: number | null;
+    readonly recommendedQuantityBase: number | null;
+    readonly state: PurchaseNeed['state'];
+    readonly preferredSupplierName: string | null;
+    readonly hasOpenOrder: boolean;
+  }>;
+  readonly orders: ReadonlyArray<{
+    readonly orderId: string;
+    readonly orderNumber: string;
+    readonly supplierName: string;
+    readonly destinationWarehouseId: string;
+    readonly destinationWarehouseName: string;
+    readonly status: SupplierOrder['status'];
+    readonly expectedDeliveryAt: string | null;
+    readonly isOverdue: boolean;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+    readonly employeeId: string;
+    readonly totalExpected: number;
+    readonly resourceNames: ReadonlyArray<string>;
+  }>;
+  readonly deliveries: ReadonlyArray<{
+    readonly deliveryId: string;
+    readonly deliveryNumber: string;
+    readonly supplierOrderId: string;
+    readonly supplierName: string;
+    readonly destinationWarehouseId: string;
+    readonly destinationWarehouseName: string;
+    readonly status: PurchaseDelivery['status'];
+    readonly supplierDocumentReference: string;
+    readonly deliveredAt: string;
+    readonly occurredAt: string;
+    readonly employeeId: string;
+    readonly totalActual: number;
+    readonly expectedTotalForDeliveredQuantity: number;
+    readonly actualPriceHigher: boolean;
+    readonly overdelivery: boolean;
+    readonly resourceNames: ReadonlyArray<string>;
+  }>;
+  readonly configurationWarnings: ReadonlyArray<{
+    readonly warningId: string;
+    readonly message: string;
+    readonly resourceId: string | null;
+  }>;
+}
+
 export interface CoffeePurchaserService {
   load(context: PurchaserRuntimeContext): Promise<PurchaserState>;
+  queryOperations(
+    context: PurchaserRuntimeContext,
+  ): Promise<PurchasingOperationsReadModel>;
   createOrder(
     context: PurchaserRuntimeContext,
     input: SupplierOrderInput,
@@ -126,7 +184,7 @@ interface Dependencies {
   readonly purchaser: CoffeePurchaserRepository;
   readonly warehouse: Pick<
     CoffeeWarehouseService,
-    'loadForPurchasing' | 'recordSupplierDelivery'
+    'loadForPurchasing' | 'recordSupplierDelivery' | 'queryOperations'
   >;
   readonly suppliers: CollectionRepository<Supplier>;
   readonly thresholds?: PurchaseThresholdProvider;
@@ -136,6 +194,10 @@ interface Dependencies {
 
 type Snapshot = Awaited<ReturnType<CoffeeOperationalReadRepository['load']>>;
 type WarehouseState = Awaited<ReturnType<CoffeeWarehouseService['loadForPurchasing']>>;
+type PurchasingWarehouseRead = Pick<
+  WarehouseState,
+  'warehouses' | 'resources' | 'balances'
+>;
 
 const round = (value: number): number => Math.round(value * 1_000_000) / 1_000_000;
 const money = (value: number): number => Math.round(value * 100) / 100;
@@ -154,7 +216,7 @@ function requiredText(value: string, code: string): string {
   return normalized;
 }
 
-function activePurchasableResources(state: WarehouseState) {
+function activePurchasableResources(state: Pick<WarehouseState, 'resources'>) {
   return state.resources.filter(
     (
       resource,
@@ -176,7 +238,10 @@ export function createCoffeePurchaserService({
   createId = () =>
     globalThis.crypto?.randomUUID?.() ?? `local-${Date.now().toString(36)}`,
 }: Dependencies): CoffeePurchaserService {
-  async function access(context: PurchaserRuntimeContext): Promise<{
+  async function access(
+    context: PurchaserRuntimeContext,
+    allowReadConsumer = false,
+  ): Promise<{
     snapshot: Snapshot;
     workspace: Snapshot['solutionStructure']['workspaces'][number];
   }> {
@@ -190,7 +255,8 @@ export function createCoffeePurchaserService({
     const snapshot = await operational.load(context.projectId);
     const workspace = snapshot.solutionStructure.workspaces.find(
       (candidate) =>
-        candidate.id === context.workspaceId && candidate.moduleId === 'purchasing',
+        candidate.id === context.workspaceId &&
+        (allowReadConsumer || candidate.moduleId === 'purchasing'),
     );
     const employee = snapshot.employees.find(
       (candidate) =>
@@ -284,10 +350,53 @@ export function createCoffeePurchaserService({
     return { snapshot, workspace, warehouseState, store };
   }
 
+  function purchasingWarehouseRead(
+    operations: WarehouseOperationsReadModel,
+  ): PurchasingWarehouseRead {
+    const resources = new Map<string, PurchasingWarehouseRead['resources'][number]>();
+    for (const balance of operations.balances) {
+      resources.set(`${balance.resourceType}:${balance.resourceId}`, {
+        resourceId: balance.resourceId,
+        resourceType: balance.resourceType,
+        name: balance.resourceName,
+        accountingType: balance.accountingType,
+        baseUnit: balance.baseUnit,
+        baseUnitId: balance.baseUnitId,
+        purchaseUnitId: balance.purchaseUnitId,
+        purchasePackageSize: balance.purchasePackageSize,
+        minimumStockBase: balance.minimumStockBase,
+        active: true,
+      });
+    }
+    const resourceList = [...resources.values()];
+    return {
+      warehouses: operations.warehouses,
+      resources: resourceList,
+      balances: operations.balances.flatMap((balance) => {
+        const resource = resourceList.find(
+          (candidate) =>
+            candidate.resourceId === balance.resourceId &&
+            candidate.resourceType === balance.resourceType,
+        );
+        return resource
+          ? [
+              {
+                warehouseId: balance.warehouseId,
+                resource,
+                quantityBase: balance.quantityBase,
+                lastMovementAt: null,
+                status: balance.status,
+              },
+            ]
+          : [];
+      }),
+    };
+  }
+
   async function buildNeeds(
     context: PurchaserRuntimeContext,
     snapshot: Snapshot,
-    warehouseState: WarehouseState,
+    warehouseState: PurchasingWarehouseRead,
     store: Awaited<ReturnType<CoffeePurchaserRepository['load']>>,
   ): Promise<PurchaseNeed[]> {
     const resources = activePurchasableResources(warehouseState);
@@ -472,6 +581,124 @@ export function createCoffeePurchaserService({
         deliveries: store.deliveries,
         priceHistory: store.priceHistory,
         warnings: store.warnings,
+      };
+    },
+    async queryOperations(context) {
+      const { snapshot } = await access(context, true);
+      await migrateLegacyAssortment(context, snapshot);
+      const [warehouseOperations, store] = await Promise.all([
+        warehouse.queryOperations(context),
+        purchaser.load(context.projectId, context.businessEnvironmentId),
+      ]);
+      const needs = await buildNeeds(
+        context,
+        snapshot,
+        purchasingWarehouseRead(warehouseOperations),
+        store,
+      );
+      const openOrders = store.orders.filter(
+        (order) =>
+          order.status === 'DRAFT' ||
+          order.status === 'SENT' ||
+          order.status === 'PARTIALLY_DELIVERED',
+      );
+      const today = now().slice(0, 10);
+      return {
+        needs: needs.map((need) => ({
+          warehouseId: need.warehouseId,
+          warehouseName: need.warehouseName,
+          resourceId: need.resource.resourceId,
+          resourceName: need.resource.name,
+          quantityBase: need.balance.quantityBase,
+          baseUnit: need.resource.baseUnit,
+          thresholdBase: need.thresholdBase,
+          recommendedQuantityBase: need.recommendedQuantityBase,
+          state: need.state,
+          preferredSupplierName: need.preferredSupplier?.name ?? null,
+          hasOpenOrder: openOrders.some(
+            (order) =>
+              order.destinationWarehouseId === need.warehouseId &&
+              order.lines.some((line) => line.resourceId === need.resource.resourceId),
+          ),
+        })),
+        orders: store.orders.map((order) => ({
+          orderId: order.orderId,
+          orderNumber: order.orderNumber,
+          supplierName: order.supplierNameSnapshot,
+          destinationWarehouseId: order.destinationWarehouseId,
+          destinationWarehouseName: order.destinationWarehouseNameSnapshot,
+          status: order.status,
+          expectedDeliveryAt: order.expectedDeliveryAt,
+          isOverdue:
+            order.expectedDeliveryAt !== null &&
+            order.expectedDeliveryAt < today &&
+            (order.status === 'SENT' || order.status === 'PARTIALLY_DELIVERED'),
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          employeeId: order.createdByEmployeeId,
+          totalExpected: money(
+            order.lines.reduce((sum, line) => sum + line.expectedLineTotal, 0),
+          ),
+          resourceNames: order.lines.map((line) => line.resourceNameSnapshot),
+        })),
+        deliveries: store.deliveries.map((delivery) => {
+          const order = store.orders.find(
+            (candidate) => candidate.orderId === delivery.supplierOrderId,
+          );
+          const expectedTotalForDeliveredQuantity = money(
+            delivery.lines.reduce((sum, line) => {
+              const orderLine = order?.lines.find(
+                (candidate) => candidate.lineId === line.orderLineId,
+              );
+              return (
+                sum +
+                line.deliveredQuantityPurchaseUnit *
+                  (orderLine?.expectedUnitPrice ?? line.actualUnitPrice)
+              );
+            }, 0),
+          );
+          const totalActual = money(
+            delivery.lines.reduce((sum, line) => sum + line.actualLineTotal, 0),
+          );
+          const overdelivery = delivery.lines.some((line) => {
+            const orderLine = order?.lines.find(
+              (candidate) => candidate.lineId === line.orderLineId,
+            );
+            if (!orderLine) return false;
+            const received = store.deliveries
+              .filter(
+                (candidate) =>
+                  candidate.supplierOrderId === delivery.supplierOrderId &&
+                  candidate.status === 'POSTED',
+              )
+              .flatMap((candidate) => candidate.lines)
+              .filter((candidate) => candidate.orderLineId === line.orderLineId)
+              .reduce(
+                (sum, candidate) => sum + candidate.deliveredQuantityPurchaseUnit,
+                0,
+              );
+            return received > orderLine.orderedQuantityPurchaseUnit;
+          });
+          return {
+            deliveryId: delivery.deliveryId,
+            deliveryNumber: delivery.deliveryNumber,
+            supplierOrderId: delivery.supplierOrderId,
+            supplierName: delivery.supplierNameSnapshot,
+            destinationWarehouseId: delivery.destinationWarehouseId,
+            destinationWarehouseName: delivery.destinationWarehouseNameSnapshot,
+            status: delivery.status,
+            supplierDocumentReference: delivery.supplierDocumentReference,
+            deliveredAt: delivery.deliveredAt,
+            occurredAt: delivery.postedAt ?? delivery.createdAt,
+            employeeId: delivery.postedByEmployeeId ?? delivery.createdByEmployeeId,
+            totalActual,
+            expectedTotalForDeliveredQuantity,
+            actualPriceHigher: totalActual > expectedTotalForDeliveredQuantity,
+            overdelivery,
+            resourceNames: delivery.lines.map((line) => line.resourceNameSnapshot),
+          };
+        }),
+        configurationWarnings: store.warnings,
       };
     },
     async createOrder(context, input) {

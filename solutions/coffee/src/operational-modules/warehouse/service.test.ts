@@ -271,6 +271,28 @@ describe('CoffeeWarehouseService ledger', () => {
     ).toBe(2000);
   });
 
+  it('publishes a minimal current operations query without repository internals', async () => {
+    await service.recordOpeningBalance(context, {
+      warehouseId: 'crash-warehouse-main',
+      resourceId: 'crash-ingredient-espresso-beans',
+      quantity: 2,
+      unitId: 'unit-kg',
+      idempotencyKey: 'public-query-open',
+    });
+    const result = await service.queryOperations(context);
+    expect(
+      result.balances.find(
+        (balance) => balance.resourceId === 'crash-ingredient-espresso-beans',
+      ),
+    ).toMatchObject({
+      warehouseName: 'Главный склад',
+      quantityBase: 2000,
+      status: 'LOW',
+    });
+    expect(result).not.toHaveProperty('inventories');
+    expect(result).not.toHaveProperty('employees');
+  });
+
   it('converts a purchase package, writes off and transfers atomically', async () => {
     await service.recordReceipt(context, {
       warehouseId: 'crash-warehouse-main',

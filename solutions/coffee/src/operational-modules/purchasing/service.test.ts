@@ -302,12 +302,35 @@ describe('CoffeePurchaserService', () => {
       purchaser: repository,
       warehouse: {
         loadForPurchasing: async () => structuredClone(currentWarehouseState),
+        queryOperations: async () => ({
+          warehouses: currentWarehouseState.warehouses,
+          balances: currentWarehouseState.balances.map((balance) => ({
+            warehouseId: balance.warehouseId,
+            warehouseName:
+              currentWarehouseState.warehouses.find(
+                (candidate) => candidate.id === balance.warehouseId,
+              )?.name ?? 'Склад',
+            resourceId: balance.resource.resourceId,
+            resourceName: balance.resource.name,
+            resourceType: balance.resource.resourceType,
+            accountingType: balance.resource.accountingType,
+            quantityBase: balance.quantityBase,
+            baseUnit: balance.resource.baseUnit,
+            baseUnitId: balance.resource.baseUnitId,
+            purchaseUnitId: balance.resource.purchaseUnitId,
+            purchasePackageSize: balance.resource.purchasePackageSize,
+            minimumStockBase: balance.resource.minimumStockBase,
+            status: balance.status,
+          })),
+          recentMovements: [],
+          issues: [],
+        }),
         recordSupplierDelivery: async (runtime, input) => {
           await recordSupplierDelivery(runtime, input);
         },
       } satisfies Pick<
         CoffeeWarehouseService,
-        'loadForPurchasing' | 'recordSupplierDelivery'
+        'loadForPurchasing' | 'recordSupplierDelivery' | 'queryOperations'
       >,
       suppliers: supplierRepository(value),
       now: () => timestamp,
@@ -326,6 +349,20 @@ describe('CoffeePurchaserService', () => {
     expect(need?.balance.quantityBase).toBe(200);
     expect(need?.recommendedQuantityBase).toBe(800);
     expect(need?.preferredSupplier?.name).toBe('Северное зерно');
+  });
+
+  it('publishes owner-calculated need facts through the minimal operations query', async () => {
+    const result = await service.queryOperations(context);
+    expect(result.needs[0]).toMatchObject({
+      resourceName: 'Зерно для эспрессо',
+      quantityBase: 200,
+      thresholdBase: 1000,
+      recommendedQuantityBase: 800,
+      preferredSupplierName: 'Северное зерно',
+      hasOpenOrder: false,
+    });
+    expect(result).not.toHaveProperty('assortments');
+    expect(result).not.toHaveProperty('priceHistory');
   });
 
   it('does not invent a recommendation without a threshold and exposes negative stock', async () => {
@@ -382,9 +419,13 @@ describe('CoffeePurchaserService', () => {
   });
 
   it('sends a draft and requires a reason for cancellation', async () => {
-    const draft = await service.createOrder(context, orderInput);
+    const draft = await service.createOrder(context, {
+      ...orderInput,
+      expectedDeliveryAt: '2026-08-01',
+    });
     const sent = await service.sendOrder(context, draft.orderId);
     expect(sent.status).toBe('SENT');
+    expect((await service.queryOperations(context)).orders[0]?.isOverdue).toBe(true);
     await expect(service.cancelOrder(context, sent.orderId, '')).rejects.toThrow(
       'cancellation-reason-required',
     );
@@ -412,6 +453,10 @@ describe('CoffeePurchaserService', () => {
     expect(repository.store.priceHistory[0]).toMatchObject({
       actualUnitPrice: 1250,
       baseUnitPrice: 1.25,
+    });
+    expect((await service.queryOperations(context)).deliveries[0]).toMatchObject({
+      actualPriceHigher: true,
+      overdelivery: false,
     });
     expect(recordSupplierDelivery).toHaveBeenCalledOnce();
     expect(recordSupplierDelivery.mock.calls[0]?.[1].lines[0]?.quantityBase).toBe(6000);
@@ -475,6 +520,9 @@ describe('CoffeePurchaserService', () => {
         confirmOverdelivery: true,
       }),
     ).resolves.toMatchObject({ status: 'POSTED' });
+    expect((await service.queryOperations(context)).deliveries[0]?.overdelivery).toBe(
+      true,
+    );
   });
 
   it('does not post any purchasing state when Warehouse rejects receipt', async () => {

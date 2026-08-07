@@ -43,7 +43,7 @@ const names: CoffeeModuleNames = {
   kitchen: 'Кухня',
   warehouse: 'Склад',
   purchasing: 'Закупщик',
-  manager: 'Руководитель',
+  manager: 'Управляющий',
   delivery: 'Доставка',
   production: 'Производство',
   pickup: 'Самовывоз',

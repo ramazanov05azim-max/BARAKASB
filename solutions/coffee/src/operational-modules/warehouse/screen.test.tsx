@@ -74,6 +74,12 @@ const service: CoffeeWarehouseService = {
   consumeCompletedOrder: vi.fn(async () => undefined),
   loadForPurchasing: vi.fn(async () => state),
   recordSupplierDelivery: vi.fn(async () => undefined),
+  queryOperations: vi.fn(async () => ({
+    warehouses: [],
+    balances: [],
+    recentMovements: [],
+    issues: [],
+  })),
   subscribe: vi.fn(() => () => undefined),
 };
 

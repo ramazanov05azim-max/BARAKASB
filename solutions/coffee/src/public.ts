@@ -12,8 +12,10 @@ export { CoffeeFloorPlanScreen } from './floor-plan-screen';
 export { coffeeBarOperationalModuleManifest } from './operational-modules/bar/manifest';
 export { coffeeWarehouseOperationalModuleManifest } from './operational-modules/warehouse/manifest';
 export { coffeePurchaserOperationalModuleManifest } from './operational-modules/purchasing/manifest';
+export { coffeeManagerOperationalModuleManifest } from './operational-modules/manager/manifest';
 export { CoffeeWarehouseWorkspaceScreen } from './operational-modules/warehouse/screen';
 export { CoffeePurchaserWorkspaceScreen } from './operational-modules/purchasing/screen';
+export { CoffeeManagerWorkspaceScreen } from './operational-modules/manager/screen';
 export {
   createCoffeeWarehouseService,
   localCoffeeWarehouseService,
@@ -29,10 +31,19 @@ export {
   localCoffeePurchaserService,
 } from './operational-modules/purchasing/service';
 export {
+  createCoffeeManagerWorkspaceService,
+  localCoffeeManagerWorkspaceService,
+} from './operational-modules/manager/service';
+export {
   coffeePurchaserStoragePrefix,
   createLocalCoffeePurchaserRepository,
   localCoffeePurchaserRepository,
 } from './operational-modules/purchasing/repository';
+export {
+  coffeeManagerWorkspaceStoragePrefix,
+  createLocalCoffeeManagerWorkspaceRepository,
+  localCoffeeManagerWorkspaceRepository,
+} from './operational-modules/manager/repository';
 export {
   recipeEngineComponentTypes,
   recipeEngineTargetTypes,
@@ -67,17 +78,33 @@ export type {
 export type { CoffeeBarService } from './bar-service';
 export type {
   CoffeeWarehouseService,
+  WarehouseOperationsReadModel,
   WarehouseQuantityInput,
   WarehouseSupplierReceiptInput,
 } from './operational-modules/warehouse/service';
 export type {
   AssortmentInput,
   CoffeePurchaserService,
+  PurchasingOperationsReadModel,
   PurchaseDeliveryPostingInput,
   SupplierInput,
   SupplierOrderInput,
   SupplierOrderLineInput,
 } from './operational-modules/purchasing/service';
+export type {
+  CoffeeManagerWorkspaceService,
+  ManagerWorkspaceState,
+} from './operational-modules/manager/service';
+export type {
+  ManagerEvent,
+  ManagerNavigationTarget,
+  ManagerPreferences,
+  ManagerRuntimeContext,
+  ManagerSection,
+  ManagerWarning,
+  ManagerWarningSeverity,
+  ManagerWorkspaceReadModel,
+} from './operational-modules/manager/domain';
 export type {
   PurchasableResourceType,
   PurchaseDelivery,

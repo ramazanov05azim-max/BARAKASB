@@ -492,7 +492,7 @@ export const en = {
   'constructor.module.warehouse': 'Склад',
   'constructor.module.purchasing': 'Закупщик',
   'constructor.purchasingWarehouses': 'Склады назначения для закупок',
-  'constructor.module.manager': 'Руководитель',
+  'constructor.module.manager': 'Управляющий',
   'constructor.module.delivery': 'Доставка',
   'constructor.module.production': 'Производство',
   'constructor.module.pickup': 'Самовывоз',

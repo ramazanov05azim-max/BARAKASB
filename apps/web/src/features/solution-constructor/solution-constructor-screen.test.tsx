@@ -124,7 +124,7 @@ describe('SolutionConstructorScreen', () => {
           notes: 'Утренняя смена',
           password: 'Coffee2026',
         },
-        expect.objectContaining({ bar: 'Бар', manager: 'Руководитель' }),
+        expect.objectContaining({ bar: 'Бар', manager: 'Управляющий' }),
       ),
     );
   });

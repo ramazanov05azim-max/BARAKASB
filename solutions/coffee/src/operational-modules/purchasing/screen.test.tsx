@@ -69,6 +69,12 @@ const state: PurchaserState = {
 
 const service: CoffeePurchaserService = {
   load: vi.fn(async () => state),
+  queryOperations: vi.fn(async () => ({
+    needs: [],
+    orders: [],
+    deliveries: [],
+    configurationWarnings: [],
+  })),
   createOrder: vi.fn(),
   updateDraftOrder: vi.fn(),
   sendOrder: vi.fn(),

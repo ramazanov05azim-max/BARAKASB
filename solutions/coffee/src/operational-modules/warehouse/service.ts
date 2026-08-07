@@ -39,6 +39,46 @@ export interface WarehouseSupplierReceiptInput {
   }>;
 }
 
+export interface WarehouseOperationsReadModel {
+  readonly warehouses: ReadonlyArray<{ readonly id: string; readonly name: string }>;
+  readonly balances: ReadonlyArray<{
+    readonly warehouseId: string;
+    readonly warehouseName: string;
+    readonly resourceId: string;
+    readonly resourceName: string;
+    readonly resourceType: WarehouseStockResource['resourceType'];
+    readonly accountingType: WarehouseStockResource['accountingType'];
+    readonly quantityBase: number;
+    readonly baseUnit: 'g' | 'ml' | 'pc';
+    readonly baseUnitId: string;
+    readonly purchaseUnitId: string;
+    readonly purchasePackageSize: number;
+    readonly minimumStockBase: number | null;
+    readonly status: 'IN_STOCK' | 'LOW' | 'OUT_OF_STOCK' | 'NEGATIVE';
+  }>;
+  readonly recentMovements: ReadonlyArray<{
+    readonly movementId: string;
+    readonly warehouseId: string;
+    readonly warehouseName: string;
+    readonly resourceId: string;
+    readonly resourceName: string;
+    readonly movementType: string;
+    readonly quantityDeltaBase: number;
+    readonly baseUnit: 'g' | 'ml' | 'pc';
+    readonly sourceDocumentType: string;
+    readonly sourceDocumentId: string;
+    readonly occurredAt: string;
+    readonly employeeId: string;
+  }>;
+  readonly issues: ReadonlyArray<{
+    readonly issueId: string;
+    readonly code: string;
+    readonly message: string;
+    readonly occurredAt: string;
+    readonly resolved: boolean;
+  }>;
+}
+
 export interface CoffeeWarehouseService {
   load(context: WarehouseRuntimeContext): Promise<WarehouseState>;
   recordOpeningBalance(
@@ -86,6 +126,9 @@ export interface CoffeeWarehouseService {
     context: WarehouseRuntimeContext,
     input: WarehouseSupplierReceiptInput,
   ): Promise<void>;
+  queryOperations(
+    context: WarehouseRuntimeContext,
+  ): Promise<WarehouseOperationsReadModel>;
   subscribe(context: WarehouseRuntimeContext, listener: () => void): () => void;
 }
 
@@ -109,6 +152,7 @@ export function createCoffeeWarehouseService({
     context: WarehouseRuntimeContext,
     allowBar = false,
     allowPurchasing = false,
+    allowReadConsumer = false,
   ) {
     if (
       !context.projectId ||
@@ -121,7 +165,8 @@ export function createCoffeeWarehouseService({
     const workspace = snapshot.solutionStructure.workspaces.find(
       (candidate) =>
         candidate.id === context.workspaceId &&
-        (candidate.moduleId === 'warehouse' ||
+        (allowReadConsumer ||
+          candidate.moduleId === 'warehouse' ||
           (allowBar && candidate.moduleId === 'bar') ||
           (allowPurchasing && candidate.moduleId === 'purchasing')),
     );
@@ -365,14 +410,24 @@ export function createCoffeeWarehouseService({
   async function loadState(
     context: WarehouseRuntimeContext,
     allowPurchasing = false,
+    allWarehouses = false,
   ): Promise<WarehouseState> {
-    const { snapshot, workspace } = await access(context, false, allowPurchasing);
+    const { snapshot, workspace } = await access(
+      context,
+      false,
+      allowPurchasing,
+      allWarehouses,
+    );
     await migrateExplicitOpeningBalances(context, snapshot);
     const store = await warehouse.load(
       context.projectId,
       context.businessEnvironmentId,
     );
-    const allowed = new Set(workspace.assignedWarehouseIds ?? []);
+    const allowed = new Set(
+      allWarehouses
+        ? snapshot.warehouses.map((physicalWarehouse) => physicalWarehouse.id)
+        : (workspace.assignedWarehouseIds ?? []),
+    );
     const warehouseList = snapshot.warehouses
       .filter((candidate) => allowed.has(candidate.id) && candidate.status === 'active')
       .map(({ id, name }) => ({ id, name }));
@@ -429,6 +484,60 @@ export function createCoffeeWarehouseService({
   return {
     load: (context) => loadState(context),
     loadForPurchasing: (context) => loadState(context, true),
+    async queryOperations(context) {
+      const state = await loadState(context, false, true);
+      const warehouseNames = new Map(
+        state.warehouses.map((physicalWarehouse) => [
+          physicalWarehouse.id,
+          physicalWarehouse.name,
+        ]),
+      );
+      const resourceNames = new Map(
+        state.resources.map((resource) => [resource.resourceId, resource.name]),
+      );
+      return {
+        warehouses: state.warehouses,
+        balances: state.balances.map((balance) => ({
+          warehouseId: balance.warehouseId,
+          warehouseName: warehouseNames.get(balance.warehouseId) ?? 'Склад',
+          resourceId: balance.resource.resourceId,
+          resourceName: balance.resource.name,
+          resourceType: balance.resource.resourceType,
+          accountingType: balance.resource.accountingType,
+          quantityBase: balance.quantityBase,
+          baseUnit: balance.resource.baseUnit,
+          baseUnitId: balance.resource.baseUnitId,
+          purchaseUnitId: balance.resource.purchaseUnitId,
+          purchasePackageSize: balance.resource.purchasePackageSize,
+          minimumStockBase: balance.resource.minimumStockBase,
+          status: balance.status,
+        })),
+        recentMovements: [...state.movements]
+          .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
+          .slice(0, 100)
+          .map((warehouseMovement) => ({
+            movementId: warehouseMovement.movementId,
+            warehouseId: warehouseMovement.warehouseId,
+            warehouseName: warehouseNames.get(warehouseMovement.warehouseId) ?? 'Склад',
+            resourceId: warehouseMovement.resourceId,
+            resourceName: resourceNames.get(warehouseMovement.resourceId) ?? 'Ресурс',
+            movementType: warehouseMovement.movementType,
+            quantityDeltaBase: warehouseMovement.quantityDeltaBase,
+            baseUnit: warehouseMovement.baseUnit,
+            sourceDocumentType: warehouseMovement.sourceDocumentType,
+            sourceDocumentId: warehouseMovement.sourceDocumentId,
+            occurredAt: warehouseMovement.occurredAt,
+            employeeId: warehouseMovement.employeeId,
+          })),
+        issues: state.issues.map((issue) => ({
+          issueId: issue.issueId,
+          code: issue.code,
+          message: issue.message,
+          occurredAt: issue.occurredAt,
+          resolved: issue.resolvedAt !== null,
+        })),
+      };
+    },
     async recordSupplierDelivery(context, input) {
       const { snapshot, workspace } = await access(context, false, true);
       const allowed = new Set(workspace.assignedWarehouseIds ?? []);

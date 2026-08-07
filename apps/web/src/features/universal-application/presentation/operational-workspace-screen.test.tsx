@@ -29,7 +29,7 @@ const workspace: ResolvedOperationalWorkspace = {
   isolationScopeId: 'environment-1',
   workspaceId: 'workspace-manager',
   workspaceType: 'manager',
-  workspaceName: 'Руководитель',
+  workspaceName: 'Управляющий',
   assignedEmployees: [{ employeeId: 'employee-1', displayName: 'Анна Петрова' }],
   createdAt: '2026-07-31T10:00:00.000Z',
 };

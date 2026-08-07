@@ -70,7 +70,7 @@ After a successful reset, the invariants are:
 - no recognized legacy keys or Coffee project records remain;
 - the schema marker is version `2`.
 - the Coffee development seed is exactly version `5`;
-- `Бар` and `Руководитель` are selected in the Solution Constructor;
+- `Бар` and `Управляющий` are selected in the Solution Constructor;
 - all five canonical employees exist with PBKDF2 password verifiers;
 - Иван Беляев and Анна Лукина are assigned to `Бар`;
 - the immutable Bar Workspace Access Code is `6728 0175 1693`.

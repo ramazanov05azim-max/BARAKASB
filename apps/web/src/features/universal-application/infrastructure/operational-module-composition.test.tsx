@@ -36,4 +36,15 @@ describe('Operational Module browser composition', () => {
     expect(purchaser?.manifest.identity.moduleKey).toBe('purchasing');
     expect(purchaser?.manifest.navigation).toHaveLength(5);
   });
+
+  it('registers Manager as one read-only operational module', () => {
+    const manager = operationalModulePresentationRegistry.get('manager');
+    expect(manager?.manifest.identity.moduleKey).toBe('manager');
+    expect(manager?.manifest.navigation).toHaveLength(5);
+    expect(
+      manager?.manifest.declaredCapabilities.every((capability) =>
+        capability.endsWith('.read'),
+      ),
+    ).toBe(true);
+  });
 });

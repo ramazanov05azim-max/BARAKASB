@@ -53,6 +53,7 @@ This is the canonical entry point for BARAKASB documentation.
 - [Recipe Engine architecture](architecture/recipe-engine.md)
 - [Coffee Warehouse Operational Module v1](solutions/coffee/warehouse-operational-module.md)
 - [Coffee Purchaser Operational Module v1](solutions/coffee/purchaser-operational-module.md)
+- [Coffee Manager Operational Module v1](solutions/coffee/manager-operational-module.md)
 - [Project isolation](architecture/tenancy-and-isolation.md)
 - [Control plane and data plane](architecture/control-plane-and-data-plane.md)
 - [Data architecture](architecture/data-architecture.md)

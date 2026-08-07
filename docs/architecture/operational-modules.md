@@ -13,17 +13,18 @@ functionality. The Universal Application remains the only operational browser mo
 
 The standard covers this Solution-owned workspace family:
 
-| Source identifier | Russian product name | Foundation status                   |
-| ----------------- | -------------------- | ----------------------------------- |
-| `bar`             | Бар                  | Reference implementation registered |
-| `kitchen`         | Кухня                | Architecture only                   |
-| `warehouse`       | Склад                | v1 implementation registered        |
-| `purchasing`      | Закупщик             | v1 implementation registered        |
-| `production`      | Производство         | Architecture only                   |
-| `finance`         | Финансы              | Architecture only                   |
-| `crm`             | CRM                  | Architecture only                   |
-| `delivery`        | Доставка             | Architecture only                   |
-| `pickup`          | Самовывоз            | Architecture only                   |
+| Source identifier | Russian product name | Foundation status                      |
+| ----------------- | -------------------- | -------------------------------------- |
+| `bar`             | Бар                  | Reference implementation registered    |
+| `kitchen`         | Кухня                | Architecture only                      |
+| `warehouse`       | Склад                | v1 implementation registered           |
+| `purchasing`      | Закупщик             | v1 implementation registered           |
+| `manager`         | Управляющий          | v1 read-only implementation registered |
+| `production`      | Производство         | Architecture only                      |
+| `finance`         | Финансы              | Architecture only                      |
+| `crm`             | CRM                  | Architecture only                      |
+| `delivery`        | Доставка             | Architecture only                      |
+| `pickup`          | Самовывоз            | Architecture only                      |
 
 “Architecture only” does not create a route, screen, repository or runtime registration.
 
@@ -198,6 +199,21 @@ parallel balance and never imports Warehouse UI or repositories.
 
 The detailed behavior, lifecycle and migration rules are documented in
 [Coffee Purchaser Operational Module v1](../solutions/coffee/purchaser-operational-module.md).
+
+## Manager v1 implementation
+
+Manager is a read-only operational control workspace. It owns presentation and UI
+preferences only. Warehouse balances, Purchasing needs and documents remain owned and
+calculated by their modules; Manager consumes their minimal public query services and
+does not import their repositories, state adapters or internal domain models. Sales KPI
+fields remain unavailable until Sales publishes an approved read contract.
+
+Warnings and the activity journal are transient read-model projections rebuilt on every
+query. They are never persisted as Manager business records. Removing Manager therefore
+does not change Warehouse, Purchasing or future Sales behavior.
+
+The detailed boundary and deletion test are documented in
+[Coffee Manager Operational Module v1](../solutions/coffee/manager-operational-module.md).
 
 ## Testing contract
 
