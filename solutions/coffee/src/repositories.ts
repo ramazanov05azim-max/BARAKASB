@@ -555,6 +555,15 @@ function readSnapshot(projectId: string, projectName?: string): CoffeeSnapshot {
       ).solutionStructure;
       writeSnapshot(projectId, parsed);
     }
+    parsed.solutionStructure.workspaces = parsed.solutionStructure.workspaces.map(
+      (workspace) => ({
+        ...workspace,
+        assignedWarehouseIds: workspace.assignedWarehouseIds ?? [],
+        sourceWarehouseId: workspace.sourceWarehouseId ?? null,
+        locationId: workspace.locationId ?? null,
+        preparationTiming: workspace.preparationTiming ?? null,
+      }),
+    );
     parsed.employees = parsed.employees.map((employee) => {
       const [derivedFirstName = employee.fullName, ...lastNameParts] = employee.fullName
         .trim()
@@ -915,6 +924,8 @@ export function createLocalCoffeeManagerRepositories(
                   ...existing,
                   assignedWarehouseIds: existing.assignedWarehouseIds ?? [],
                   sourceWarehouseId: existing.sourceWarehouseId ?? null,
+                  locationId: existing.locationId ?? null,
+                  preparationTiming: existing.preparationTiming ?? null,
                 }
               : {
                   id: `workspace-${moduleId}`,
@@ -922,6 +933,8 @@ export function createLocalCoffeeManagerRepositories(
                   assignedEmployeeIds: [],
                   assignedWarehouseIds: [],
                   sourceWarehouseId: null,
+                  locationId: null,
+                  preparationTiming: null,
                   status: 'active',
                   createdAt: timestamp,
                   updatedAt: timestamp,
@@ -1004,6 +1017,50 @@ export function createLocalCoffeeManagerRepositories(
           throw new CoffeeRepositoryError('not-found');
         }
         workspace.sourceWarehouseId = warehouseId;
+        workspace.updatedAt = now();
+        snapshot.solutionStructure.updatedAt = workspace.updatedAt;
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.solutionStructure);
+      },
+      async assignLocation(projectId, workspaceId, locationId) {
+        await wait(80);
+        const snapshot = readSnapshot(projectId);
+        const workspace = snapshot.solutionStructure.workspaces.find(
+          (candidate) => candidate.id === workspaceId,
+        );
+        if (!workspace) throw new CoffeeRepositoryError('not-found');
+        if (
+          locationId &&
+          !snapshot.locations.some(
+            (candidate) => candidate.id === locationId && candidate.status === 'active',
+          )
+        ) {
+          throw new CoffeeRepositoryError('not-found');
+        }
+        workspace.locationId = locationId;
+        workspace.updatedAt = now();
+        snapshot.solutionStructure.updatedAt = workspace.updatedAt;
+        writeSnapshot(projectId, snapshot);
+        return structuredClone(snapshot.solutionStructure);
+      },
+      async setPreparationTiming(projectId, workspaceId, timing) {
+        await wait(80);
+        const snapshot = readSnapshot(projectId);
+        const workspace = snapshot.solutionStructure.workspaces.find(
+          (candidate) =>
+            candidate.id === workspaceId && candidate.moduleId === 'kitchen',
+        );
+        if (!workspace) throw new CoffeeRepositoryError('not-found');
+        if (
+          timing &&
+          (!Number.isInteger(timing.delayedMinutes) ||
+            !Number.isInteger(timing.criticalMinutes) ||
+            timing.delayedMinutes < 1 ||
+            timing.criticalMinutes <= timing.delayedMinutes)
+        ) {
+          throw new CoffeeRepositoryError('invalid-operation');
+        }
+        workspace.preparationTiming = timing;
         workspace.updatedAt = now();
         snapshot.solutionStructure.updatedAt = workspace.updatedAt;
         writeSnapshot(projectId, snapshot);

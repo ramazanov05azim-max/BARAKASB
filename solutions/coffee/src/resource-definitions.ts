@@ -385,6 +385,18 @@ export const resourceDefinitions: Record<CollectionKey, ResourceDefinition> = {
         ],
       },
       {
+        name: 'preparationVisibility',
+        labelKey: 'fields.preparationVisibility',
+        type: 'select',
+        required: true,
+        defaultValue: 'all',
+        options: [
+          { value: 'all', labelKey: 'options.preparationVisibilityAll' },
+          { value: 'bar', labelKey: 'options.preparationVisibilityBar' },
+          { value: 'kitchen', labelKey: 'options.preparationVisibilityKitchen' },
+        ],
+      },
+      {
         name: 'required',
         labelKey: 'fields.requiredStatus',
         type: 'select',

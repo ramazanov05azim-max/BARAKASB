@@ -218,6 +218,7 @@ export interface ModifierGroup extends BaseEntity {
   required: boolean;
   minimumSelections: number;
   maximumSelections: number;
+  preparationVisibility?: 'all' | 'bar' | 'kitchen';
   options: string;
   /** Optional manager-owned stock effects. Operational services never infer effects by label. */
   consumptionEffects?: ModifierConsumptionEffect[];
@@ -365,6 +366,13 @@ export interface CoffeeOperationalWorkspace {
   assignedWarehouseIds?: string[];
   /** Explicit source used by preparation/sales consumption. Never inferred by order. */
   sourceWarehouseId?: string | null;
+  /** Explicit operational location. Required by routed preparation workspaces. */
+  locationId?: string | null;
+  /** Owner-configured KDS timing; absent means no delay severity is inferred. */
+  preparationTiming?: {
+    delayedMinutes: number;
+    criticalMinutes: number;
+  } | null;
   status: 'active';
   createdAt: string;
   updatedAt: string;

@@ -14,7 +14,6 @@ describe('Operational Module browser composition', () => {
 
   it('does not register future business modules as placeholders', () => {
     for (const workspaceType of [
-      'kitchen',
       'production',
       'finance',
       'crm',
@@ -23,6 +22,12 @@ describe('Operational Module browser composition', () => {
     ]) {
       expect(operationalModulePresentationRegistry.has(workspaceType)).toBe(false);
     }
+  });
+
+  it('registers Kitchen through its manifest without a host route', () => {
+    const kitchen = operationalModulePresentationRegistry.get('kitchen');
+    expect(kitchen?.manifest.identity.moduleKey).toBe('kitchen');
+    expect(kitchen?.manifest.navigation).toHaveLength(4);
   });
 
   it('registers Warehouse through its manifest rather than a host route condition', () => {

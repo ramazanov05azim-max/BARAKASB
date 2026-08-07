@@ -35,7 +35,7 @@ describe('CoffeeCrashTestRefreshAction', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('resets seed version 5 and navigates to the canonical project', async () => {
+  it('resets the current seed and navigates to the canonical project', async () => {
     const repository = service();
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const user = userEvent.setup();

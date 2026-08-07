@@ -130,8 +130,8 @@ describe('Coffee crash-test DEV lifecycle', () => {
       coffeeCrashTestProjectId,
     );
     expect(snapshot.developmentSeedId).toBe(coffeeCrashTestSeedId);
-    expect(snapshot.solutionStructure.workspaces).toHaveLength(2);
-    expect(snapshot.employees).toHaveLength(5);
+    expect(snapshot.solutionStructure.workspaces).toHaveLength(5);
+    expect(snapshot.employees).toHaveLength(6);
     for (const employee of snapshot.employees) {
       const credential = await localCoffeeManagerRepositories.employeeCredentials.get(
         coffeeCrashTestProjectId,

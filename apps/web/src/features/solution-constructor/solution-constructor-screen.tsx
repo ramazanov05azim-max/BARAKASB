@@ -252,6 +252,38 @@ export function SolutionConstructorScreen({
     }
   }
 
+  async function assignLocation(
+    workspaceId: string,
+    locationId: string | null,
+  ): Promise<void> {
+    setPendingAction(`location:${workspaceId}`);
+    try {
+      setState(await service.assignLocation(projectId, workspaceId, locationId));
+    } catch {
+      setFeedback({ tone: 'error', message: t('constructor.operationError') });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function setPreparationTiming(
+    workspaceId: string,
+    timing: { delayedMinutes: number; criticalMinutes: number },
+  ): Promise<void> {
+    setPendingAction(`timing:${workspaceId}`);
+    try {
+      setState(await service.setPreparationTiming(projectId, workspaceId, timing));
+      setFeedback({
+        tone: 'success',
+        message: t('constructor.kitchenTimingSaved'),
+      });
+    } catch {
+      setFeedback({ tone: 'error', message: t('constructor.operationError') });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
   async function copyCode(code: string): Promise<void> {
     await navigator.clipboard.writeText(code);
     setCopiedCode(code);
@@ -606,11 +638,84 @@ export function SolutionConstructorScreen({
                         </div>
                       </div>
                     )}
+                    {workspace.moduleId === 'kitchen' && (
+                      <div className="mt-5 space-y-4 border-t border-[var(--border)] pt-5">
+                        <label className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
+                          {t('constructor.kitchenLocation')}
+                          <select
+                            className="mt-2 min-h-11 w-full rounded-[14px] border border-[var(--border)] bg-white px-3 text-sm font-medium normal-case tracking-normal text-[var(--text)]"
+                            value={workspace.locationId ?? ''}
+                            disabled={pendingAction !== null}
+                            onChange={(event) =>
+                              void assignLocation(
+                                workspace.id,
+                                event.target.value || null,
+                              )
+                            }
+                          >
+                            <option value="">
+                              {t('constructor.locationNotAssigned')}
+                            </option>
+                            {state.locations.map((location) => (
+                              <option key={location.id} value={location.id}>
+                                {location.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <form
+                          className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            const values = new FormData(event.currentTarget);
+                            void setPreparationTiming(workspace.id, {
+                              delayedMinutes: Number(values.get('delayedMinutes')),
+                              criticalMinutes: Number(values.get('criticalMinutes')),
+                            });
+                          }}
+                        >
+                          <label className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
+                            {t('constructor.kitchenDelayMinutes')}
+                            <input
+                              name="delayedMinutes"
+                              type="number"
+                              min="1"
+                              required
+                              defaultValue={
+                                workspace.preparationTiming?.delayedMinutes ?? ''
+                              }
+                              className="mt-2 min-h-11 w-full rounded-[14px] border border-[var(--border)] bg-white px-3 text-sm font-medium normal-case tracking-normal text-[var(--text)]"
+                            />
+                          </label>
+                          <label className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
+                            {t('constructor.kitchenCriticalMinutes')}
+                            <input
+                              name="criticalMinutes"
+                              type="number"
+                              min="2"
+                              required
+                              defaultValue={
+                                workspace.preparationTiming?.criticalMinutes ?? ''
+                              }
+                              className="mt-2 min-h-11 w-full rounded-[14px] border border-[var(--border)] bg-white px-3 text-sm font-medium normal-case tracking-normal text-[var(--text)]"
+                            />
+                          </label>
+                          <Button
+                            type="submit"
+                            size="sm"
+                            disabled={pendingAction !== null}
+                          >
+                            {t('constructor.saveKitchenTiming')}
+                          </Button>
+                        </form>
+                      </div>
+                    )}
                     {(workspace.moduleId === 'bar' ||
+                      workspace.moduleId === 'kitchen' ||
                       workspace.moduleId === 'warehouse') && (
                       <div className="mt-5 border-t border-[var(--border)] pt-5">
                         <label className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
-                          Склад списания
+                          {t('constructor.sourceWarehouse')}
                           <select
                             className="mt-2 min-h-11 w-full rounded-[14px] border border-[var(--border)] bg-white px-3 text-sm font-medium normal-case tracking-normal text-[var(--text)]"
                             value={workspace.sourceWarehouseId ?? ''}
@@ -622,7 +727,9 @@ export function SolutionConstructorScreen({
                               )
                             }
                           >
-                            <option value="">Не назначен</option>
+                            <option value="">
+                              {t('constructor.warehouseNotAssigned')}
+                            </option>
                             {state.warehouses.map((warehouse) => (
                               <option key={warehouse.id} value={warehouse.id}>
                                 {warehouse.name}

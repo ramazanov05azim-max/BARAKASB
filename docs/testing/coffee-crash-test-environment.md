@@ -23,8 +23,9 @@ through replaceable Coffee repository contracts.
 | Business Environment ID    | `business-environment-coffee-crash-test-v2`         |
 | Business Environment Code  | `5715 4221 5648 5027`                               |
 | Bar Workspace Access Code  | `6728 0175 1693`                                    |
-| Seed ID                    | `coffee-crash-test-v5`                              |
-| Seed schema version        | `5`                                                 |
+| Kitchen Workspace Code     | generated during the development reset              |
+| Seed ID                    | `coffee-crash-test-v6`                              |
+| Seed schema version        | `6`                                                 |
 
 The 16-digit code is a deterministic, immutable Manager Platform identifier. It is never
 accepted by the Universal Application. Operational device binding uses only the 12-digit
@@ -69,10 +70,12 @@ After a successful reset, the invariants are:
 - the selected project is the canonical crash-test project;
 - no recognized legacy keys or Coffee project records remain;
 - the schema marker is version `2`.
-- the Coffee development seed is exactly version `5`;
-- `Бар` and `Управляющий` are selected in the Solution Constructor;
-- all five canonical employees exist with PBKDF2 password verifiers;
+- the Coffee development seed is exactly version `6`;
+- `Бар`, `Кухня`, `Склад`, `Закупщик` and `Управляющий` are selected;
+- all six canonical employees exist with PBKDF2 password verifiers;
 - Иван Беляев and Анна Лукина are assigned to `Бар`;
+- Дмитрий Соколов is assigned to `Кухня`;
+- the Kitchen location, source warehouse and delay thresholds are explicitly assigned;
 - the immutable Bar Workspace Access Code is `6728 0175 1693`.
 
 The development fixture password for every canonical employee is `Coffee2026`. Only
@@ -95,7 +98,7 @@ localStorage.
 
 ## Dataset coverage
 
-The version 5 seed contains:
+The version 6 seed contains:
 
 - one complete business profile, configured Coffee project, and generated Bar workspace;
 - two locations, one register, five workstations, and four storage areas;
@@ -106,7 +109,7 @@ The version 5 seed contains:
 - at least 20 available products and eight product-specific modifier groups;
 - at least 15 versioned recipes with ingredient rows, cost, sale price, and gross-margin
   data;
-- five employees representing owner, manager, barista, cashier, and inventory
+- six employees representing owner, manager, barista, cashier, cook, and inventory
   responsibilities;
 - normal, low, zero, high-value, and high-quantity stock cases;
 - a completed setup checklist and ready project state.
@@ -129,7 +132,7 @@ Canonical browser-local keys:
 Before installation, the reset removes every existing localStorage value, including
 unknown and stale prototype keys. The only previous value preserved is the UI language
 preference (`barakasb.mock.user.preferences.v1`). The installer then writes only the
-canonical version 5 project, workspaces, employees, password verifiers, directories, and
+canonical version 6 project, workspaces, employees, password verifiers, directories, and
 selection markers required by the test environment.
 
 ## Manual Safari and tablet check
@@ -176,7 +179,7 @@ selection markers required by the test environment.
 18. Send the first batch. Add `Вода без газа` to the same table and verify it appears
     under `Новые позиции` while the cappuccino remains immutable under `Уже отправлено`.
     Send only the additional batch.
-19. Advance the Bar item through `Принят`, `Готовится`, and `Готов`. Verify a
+19. Advance the Bar item through `Новый`, `Готовится`, and `Готов`. Verify a
     Kitchen-routed item cannot be completed from Bar.
 20. Mark `Карта`. Verify payment does not change preparation state and cannot be
     recorded twice.
@@ -203,15 +206,22 @@ selection markers required by the test environment.
     orders, and completed history become readable.
 29. Repeat at 1024 × 768 and 1280 × 800. Each operational screen must use internal
     scrolling where needed and the document must not overflow horizontally.
+30. In the Solution Constructor copy the `Кухня` Workspace Code. Reset the local device
+    binding, enter that code, select Дмитрий Соколов, use `Coffee2026`, and verify
+    Kitchen opens directly at `/app/workspace`.
+31. Send a food position from Bar. Verify it appears only in Kitchen, follows
+    `Новый → Готовится → Готов`, and Bar reflects each status without refresh. Both
+    `Принять всё` and `Всё готово` remain visible; Kitchen never completes a mixed
+    customer order while its Bar positions are unfinished.
 
 ## Current prototype limitations
 
 - payment statuses are local explicit marks; no payment provider or fiscal device is
   used;
-- Kitchen-routed items are visible but cannot be completed because Kitchen UI is not
-  part of this stage;
-- completing an order does not deduct stock or create warehouse, finance, or reporting
-  postings;
+- Kitchen has a local KDS and owner-owned preparation contracts; no realtime backend
+  transport exists yet;
+- terminal completion creates local Warehouse consumption movements, but finance and
+  reporting postings remain outside this stage;
 - localStorage is the replaceable prototype adapter and is not a security boundary;
 - same-origin tabs synchronize order changes, but no realtime backend events exist.
 

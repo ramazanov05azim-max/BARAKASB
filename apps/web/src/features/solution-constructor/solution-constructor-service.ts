@@ -4,6 +4,7 @@ import {
   localCoffeeManagerRepositories,
   type CoffeeManagerRepositories,
   type CoffeeOperationalWorkspace,
+  type CoffeeLocation,
   type CoffeeSolutionModuleId,
   type CoffeeSolutionStructure,
   type Employee,
@@ -52,6 +53,7 @@ export interface SolutionConstructorState {
   readonly accessCodes: ReadonlyArray<ResolvedOperationalWorkspace>;
   readonly connectedWorkspaceId: string | null;
   readonly warehouses: ReadonlyArray<Warehouse>;
+  readonly locations: ReadonlyArray<CoffeeLocation>;
 }
 
 export interface SolutionConstructorService {
@@ -104,6 +106,16 @@ export interface SolutionConstructorService {
     projectId: string,
     workspaceId: string,
     warehouseId: string | null,
+  ): Promise<SolutionConstructorState>;
+  assignLocation(
+    projectId: string,
+    workspaceId: string,
+    locationId: string | null,
+  ): Promise<SolutionConstructorState>;
+  setPreparationTiming(
+    projectId: string,
+    workspaceId: string,
+    timing: { delayedMinutes: number; criticalMinutes: number } | null,
   ): Promise<SolutionConstructorState>;
   issueAccessCode(
     projectId: string,
@@ -198,6 +210,7 @@ export function createSolutionConstructorService({
           ? connected.workspace.workspaceId
           : null,
       warehouses: snapshot.warehouses,
+      locations: snapshot.locations,
     };
   }
 
@@ -380,6 +393,24 @@ export function createSolutionConstructorService({
         projectId,
         workspaceId,
         warehouseId,
+      );
+      return load(projectId);
+    },
+    async assignLocation(projectId, workspaceId, locationId) {
+      requireSetup(await setup.get(projectId));
+      await coffee.solutionConstructor.assignLocation(
+        projectId,
+        workspaceId,
+        locationId,
+      );
+      return load(projectId);
+    },
+    async setPreparationTiming(projectId, workspaceId, timing) {
+      requireSetup(await setup.get(projectId));
+      await coffee.solutionConstructor.setPreparationTiming(
+        projectId,
+        workspaceId,
+        timing,
       );
       return load(projectId);
     },

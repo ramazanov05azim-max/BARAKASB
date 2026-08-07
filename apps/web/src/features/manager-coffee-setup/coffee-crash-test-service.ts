@@ -222,28 +222,37 @@ export function createCoffeeCrashTestService(
       if (credentialCount !== snapshot.employees.length) {
         throw new Error('coffee-crash-test-employee-credentials-missing');
       }
-      const barWorkspace = snapshot.solutionStructure.workspaces.find(
-        (workspace) => workspace.moduleId === 'bar',
-      );
-      if (!barWorkspace || !record.businessEnvironmentId) {
-        throw new Error('coffee-crash-test-bar-workspace-missing');
+      if (!record.businessEnvironmentId) {
+        throw new Error('coffee-crash-test-environment-missing');
       }
-      const assignedEmployeeIds = new Set(barWorkspace.assignedEmployeeIds);
-      await dependencies.workspaceAccess.issue({
-        projectId: record.project.id,
-        solutionId: record.installation.solutionId,
-        solutionInstallationId: record.installation.id,
-        isolationScopeId: record.businessEnvironmentId,
-        workspaceId: barWorkspace.id,
-        workspaceType: barWorkspace.moduleId,
-        workspaceName: 'Бар',
-        assignedEmployees: snapshot.employees
-          .filter((employee) => assignedEmployeeIds.has(employee.id))
-          .map((employee) => ({
-            employeeId: employee.id,
-            displayName: employee.fullName,
-          })),
-      });
+      const workspaceNames = {
+        bar: 'Бар',
+        kitchen: 'Кухня',
+        warehouse: 'Склад',
+        purchasing: 'Закупщик',
+        manager: 'Управляющий',
+        delivery: 'Доставка',
+        production: 'Производство',
+        pickup: 'Самовывоз',
+      } as const;
+      for (const workspace of snapshot.solutionStructure.workspaces) {
+        const assignedEmployeeIds = new Set(workspace.assignedEmployeeIds);
+        await dependencies.workspaceAccess.issue({
+          projectId: record.project.id,
+          solutionId: record.installation.solutionId,
+          solutionInstallationId: record.installation.id,
+          isolationScopeId: record.businessEnvironmentId,
+          workspaceId: workspace.id,
+          workspaceType: workspace.moduleId,
+          workspaceName: workspaceNames[workspace.moduleId],
+          assignedEmployees: snapshot.employees
+            .filter((employee) => assignedEmployeeIds.has(employee.id))
+            .map((employee) => ({
+              employeeId: employee.id,
+              displayName: employee.fullName,
+            })),
+        });
+      }
       dependencies.localStorage.setItem(
         selectedProjectStorageKey,
         coffeeCrashTestProjectId,

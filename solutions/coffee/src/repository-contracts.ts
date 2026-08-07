@@ -90,6 +90,16 @@ export interface CoffeeSolutionConstructorRepository {
     workspaceId: string,
     warehouseId: string | null,
   ): Promise<CoffeeSolutionStructure>;
+  assignLocation(
+    projectId: string,
+    workspaceId: string,
+    locationId: string | null,
+  ): Promise<CoffeeSolutionStructure>;
+  setPreparationTiming(
+    projectId: string,
+    workspaceId: string,
+    timing: { delayedMinutes: number; criticalMinutes: number } | null,
+  ): Promise<CoffeeSolutionStructure>;
 }
 
 export interface CoffeeFloorPlanRepository {

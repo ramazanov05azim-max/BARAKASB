@@ -753,7 +753,9 @@ function Receipt({
   const [attachOpen, setAttachOpen] = useState(false);
   const submitted = order.items.filter((item) => item.submittedBatchId);
   const drafts = order.items.filter((item) => !item.submittedBatchId);
-  const canAcceptAll = submitted.some((item) => item.status === 'NEW');
+  const canAcceptAll = submitted.some(
+    (item) => item.preparationWorkspace === 'BAR' && item.status === 'NEW',
+  );
   const canIssue =
     submitted.length > 0 &&
     drafts.length === 0 &&

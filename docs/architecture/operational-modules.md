@@ -16,7 +16,7 @@ The standard covers this Solution-owned workspace family:
 | Source identifier | Russian product name | Foundation status                      |
 | ----------------- | -------------------- | -------------------------------------- |
 | `bar`             | Бар                  | Reference implementation registered    |
-| `kitchen`         | Кухня                | Architecture only                      |
+| `kitchen`         | Кухня                | v1 implementation registered           |
 | `warehouse`       | Склад                | v1 implementation registered           |
 | `purchasing`      | Закупщик             | v1 implementation registered           |
 | `manager`         | Управляющий          | v1 read-only implementation registered |
@@ -200,6 +200,23 @@ visible unresolved issue and never changes the completed order.
 
 The detailed behavior and migration rules are documented in
 [Coffee Warehouse Operational Module v1](../solutions/coffee/warehouse-operational-module.md).
+
+## Kitchen v1 implementation
+
+Kitchen is an independent KDS workspace registered by `OperationalModuleManifest`. It
+does not own or persist customer orders. The order/preparation context publishes the
+minimal `PreparationQueueQueryService` and `PreparationCommandService`; Kitchen uses
+those contracts to project Kitchen-routed positions and to apply audited status
+transitions to the same authoritative order observed by Bar.
+
+The queue is rebuilt from the owner query after refresh. Kitchen has no repository and
+no localStorage namespace for tickets, positions, statuses or history. Recipe
+instructions are read through the public Recipe Engine query boundary. Terminal stock
+consumption remains Warehouse-owned and selects the explicit Bar or Kitchen source
+warehouse according to the frozen order-line route.
+
+The detailed lifecycle, bulk actions and failure behavior are documented in
+[Coffee Kitchen Operational Module v1](../solutions/coffee/kitchen-operational-module.md).
 
 ## Purchaser v1 implementation
 

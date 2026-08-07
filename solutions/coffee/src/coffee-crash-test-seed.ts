@@ -14,7 +14,7 @@ import type {
 } from './domain';
 import { recipeNetQuantity } from './recipe-migration';
 
-export const coffeeCrashTestSeedVersion = 5;
+export const coffeeCrashTestSeedVersion = 6;
 export const coffeeCrashTestSeedId = `coffee-crash-test-v${coffeeCrashTestSeedVersion}`;
 
 const active = 'active' as const;
@@ -1098,6 +1098,7 @@ function employees(timestamp: string): Employee[] {
     ['manager', 'Мария Воронцова', 'location-manager', ['crash-location-main']],
     ['barista', 'Иван Беляев', 'barista', ['crash-location-main']],
     ['cashier', 'Анна Лукина', 'cashier', ['crash-location-main']],
+    ['kitchen', 'Дмитрий Соколов', 'kitchen', ['crash-location-production']],
     [
       'warehouse',
       'Сергей Котов',
@@ -1118,7 +1119,9 @@ function employees(timestamp: string): Employee[] {
             ? 'Бариста'
             : role === 'cashier'
               ? 'Кассир'
-              : 'Кладовщик',
+              : role === 'kitchen'
+                ? 'Повар'
+                : 'Кладовщик',
     fullName: fullName as string,
     email: `${id}@sever-coffee.test`,
     phone: `+7 999 555-20-0${index + 1}`,

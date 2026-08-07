@@ -10,12 +10,23 @@ export { CoffeeNotFoundScreen } from './not-found-screen';
 export { CoffeeBarWorkspaceScreen } from './bar-workspace-screen';
 export { CoffeeFloorPlanScreen } from './floor-plan-screen';
 export { coffeeBarOperationalModuleManifest } from './operational-modules/bar/manifest';
+export { coffeeKitchenOperationalModuleManifest } from './operational-modules/kitchen/manifest';
 export { coffeeWarehouseOperationalModuleManifest } from './operational-modules/warehouse/manifest';
 export { coffeePurchaserOperationalModuleManifest } from './operational-modules/purchasing/manifest';
 export { coffeeManagerOperationalModuleManifest } from './operational-modules/manager/manifest';
 export { CoffeeWarehouseWorkspaceScreen } from './operational-modules/warehouse/screen';
 export { CoffeePurchaserWorkspaceScreen } from './operational-modules/purchasing/screen';
 export { CoffeeManagerWorkspaceScreen } from './operational-modules/manager/screen';
+export { CoffeeKitchenWorkspaceScreen } from './operational-modules/kitchen/screen';
+export {
+  createCoffeeKitchenService,
+  localCoffeeKitchenService,
+} from './operational-modules/kitchen/service';
+export {
+  createCoffeePreparationService,
+  localCoffeePreparationService,
+} from './order-preparation/service';
+export { createRecipeInstructionQueryService } from './recipe-engine/queries';
 export {
   createCoffeeWarehouseService,
   localCoffeeWarehouseService,
@@ -74,6 +85,31 @@ export type {
   CoffeeTableOperationalStatus,
 } from './bar-domain';
 export type { CoffeeBarService } from './bar-service';
+export type {
+  PreparationCommandService,
+  PreparationModifierView,
+  PreparationPositionStatus,
+  PreparationPositionView,
+  PreparationQueueQueryService,
+  PreparationQueueReadModel,
+  PreparationRuntimeContext,
+  PreparationService,
+  PreparationTicketView,
+} from './order-preparation/contracts';
+export { PreparationOperationError } from './order-preparation/contracts';
+export type { CoffeeKitchenService } from './operational-modules/kitchen/service';
+export type {
+  KitchenPosition,
+  KitchenRuntimeContext,
+  KitchenSort,
+  KitchenState,
+  KitchenTicket,
+  KitchenView,
+} from './operational-modules/kitchen/domain';
+export type {
+  RecipeInstructionQueryService,
+  RecipeInstructionResult,
+} from './recipe-engine/queries';
 export type {
   CoffeeWarehouseService,
   WarehouseQuantityInput,
@@ -184,6 +220,7 @@ export type {
   CoffeeOperatingHoursEntry,
   CoffeeOperationalSnapshot,
   CoffeeOperationalWorkspace,
+  CoffeeLocation,
   CoffeeTable,
   CoffeeTableShape,
   CoffeeWeekday,

@@ -50,6 +50,10 @@ export interface CoffeeOrderItem {
   readonly preparationWorkspace: CoffeePreparationWorkspace;
   readonly status: CoffeeOrderItemStatus;
   readonly submittedBatchId: string | null;
+  readonly preparationStartedAt?: string | null;
+  readonly preparationStartedByEmployeeId?: string | null;
+  readonly readyAt?: string | null;
+  readonly readyByEmployeeId?: string | null;
   readonly issuedAt: string | null;
   readonly issuedByEmployeeId: string | null;
 }
@@ -111,6 +115,10 @@ export interface CoffeeBarAuditEntry {
     | 'BATCH_SENT'
     | 'ITEMS_ACCEPTED'
     | 'ITEM_STATUS_CHANGED'
+    | 'ACCEPT_POSITION'
+    | 'READY_POSITION'
+    | 'ACCEPT_ALL'
+    | 'READY_ALL'
     | 'PAYMENT_RECORDED'
     | 'ORDER_ISSUED'
     | 'ORDER_COMPLETED'

@@ -755,9 +755,10 @@ export function createCoffeeWarehouseService({
       const issue = async (
         code: WarehouseConsumptionIssue['code'],
         message: string,
+        scope: 'bar' | 'kitchen',
       ): Promise<void> => {
         await warehouse.recordIssue(context.projectId, context.businessEnvironmentId, {
-          issueId: `order:${order.orderId}:${code}`,
+          issueId: `order:${order.orderId}:${scope}:${code}`,
           projectId: context.projectId,
           businessEnvironmentId: context.businessEnvironmentId,
           orderId: order.orderId,
@@ -767,91 +768,118 @@ export function createCoffeeWarehouseService({
           resolvedAt: null,
         });
       };
-      if (!workspace.sourceWarehouseId) {
-        await issue(
-          'WAREHOUSE_NOT_ASSIGNED',
-          'Для рабочего пространства «Бар» не назначен склад списания.',
-        );
-        return;
-      }
-      const source = snapshot.warehouses.find(
-        (candidate) =>
-          candidate.id === workspace.sourceWarehouseId && candidate.status === 'active',
-      );
-      if (!source) {
-        await issue('WAREHOUSE_NOT_ASSIGNED', 'Назначенный склад списания недоступен.');
-        return;
-      }
-      const totals = new Map<
-        string,
-        { resource: WarehouseStockResource; quantity: number }
-      >();
       const resourceList = resources(snapshot);
-      for (const item of order.items) {
-        if (item.preparationWorkspace === 'KITCHEN') continue;
-        const frozen = item.stockConsumptionSnapshot;
-        const expanded = frozen
-          ? frozen.issueCode
-            ? { ok: false as const, code: frozen.issueCode }
-            : {
-                ok: true as const,
-                requirements: frozen.requirements.map((requirement) => ({
-                  resourceId: requirement.resourceId,
-                  resourceType: requirement.resourceType,
-                  baseUnit: requirement.baseUnit,
-                  quantityBase: requirement.quantityBasePerItem * item.quantity,
-                })),
-              }
-          : expandCoffeeRecipe({
-              snapshot,
-              productId: item.productId,
-              quantity: item.quantity,
-              selectedModifiers: item.modifiers,
-            });
-        if (!expanded.ok) {
+      const kitchenWorkspace = snapshot.solutionStructure.workspaces.find(
+        (candidate) =>
+          candidate.moduleId === 'kitchen' && candidate.status === 'active',
+      );
+
+      const consumeRoute = async (
+        scope: 'bar' | 'kitchen',
+        sourceWarehouseId: string | null | undefined,
+      ): Promise<void> => {
+        const routedItems = order.items.filter((item) =>
+          scope === 'kitchen'
+            ? item.preparationWorkspace === 'KITCHEN'
+            : item.preparationWorkspace !== 'KITCHEN',
+        );
+        if (routedItems.length === 0) return;
+        if (!sourceWarehouseId) {
           await issue(
-            expanded.code,
-            expanded.code === 'RECIPE_CYCLE'
-              ? 'Обнаружен цикл рецептуры.'
-              : `Не найдена активная рецептура для «${item.productName}».`,
+            'WAREHOUSE_NOT_ASSIGNED',
+            scope === 'kitchen'
+              ? 'Для рабочего пространства «Кухня» не назначен склад списания.'
+              : 'Для рабочего пространства «Бар» не назначен склад списания.',
+            scope,
           );
           return;
         }
-        for (const requirement of expanded.requirements) {
-          const resource = resourceList.find(
-            (candidate) => candidate.resourceId === requirement.resourceId,
+        const source = snapshot.warehouses.find(
+          (candidate) =>
+            candidate.id === sourceWarehouseId && candidate.status === 'active',
+        );
+        if (!source) {
+          await issue(
+            'WAREHOUSE_NOT_ASSIGNED',
+            'Назначенный склад списания недоступен.',
+            scope,
           );
-          if (!resource) {
+          return;
+        }
+        const totals = new Map<
+          string,
+          { resource: WarehouseStockResource; quantity: number }
+        >();
+        for (const item of routedItems) {
+          const frozen = item.stockConsumptionSnapshot;
+          const expanded = frozen
+            ? frozen.issueCode
+              ? { ok: false as const, code: frozen.issueCode }
+              : {
+                  ok: true as const,
+                  requirements: frozen.requirements.map((requirement) => ({
+                    resourceId: requirement.resourceId,
+                    resourceType: requirement.resourceType,
+                    baseUnit: requirement.baseUnit,
+                    quantityBase: requirement.quantityBasePerItem * item.quantity,
+                  })),
+                }
+            : expandCoffeeRecipe({
+                snapshot,
+                productId: item.productId,
+                quantity: item.quantity,
+                selectedModifiers: item.modifiers,
+              });
+          if (!expanded.ok) {
             await issue(
-              'RECIPE_NOT_FOUND',
-              `Ресурс рецептуры ${requirement.resourceId} не найден.`,
+              expanded.code,
+              expanded.code === 'RECIPE_CYCLE'
+                ? 'Обнаружен цикл рецептуры.'
+                : `Не найдена активная рецептура для «${item.productName}».`,
+              scope,
             );
             return;
           }
-          const key = `${requirement.resourceType}:${requirement.resourceId}`;
-          const current = totals.get(key);
-          totals.set(key, {
-            resource,
-            quantity: (current?.quantity ?? 0) + requirement.quantityBase,
-          });
+          for (const requirement of expanded.requirements) {
+            const resource = resourceList.find(
+              (candidate) => candidate.resourceId === requirement.resourceId,
+            );
+            if (!resource) {
+              await issue(
+                'RECIPE_NOT_FOUND',
+                `Ресурс рецептуры ${requirement.resourceId} не найден.`,
+                scope,
+              );
+              return;
+            }
+            const key = `${requirement.resourceType}:${requirement.resourceId}`;
+            const current = totals.get(key);
+            totals.set(key, {
+              resource,
+              quantity: (current?.quantity ?? 0) + requirement.quantityBase,
+            });
+          }
         }
-      }
-      await warehouse.appendBatch(
-        context.projectId,
-        context.businessEnvironmentId,
-        [...totals.values()].map(({ resource, quantity }) =>
-          movement(context, {
-            warehouseId: source.id,
-            resource,
-            type: 'SALE_CONSUMPTION',
-            delta: -quantity,
-            documentType: 'BAR_ORDER',
-            documentId: order.orderId,
-            comment: `Заказ ${order.orderNumber}`,
-            idempotencyKey: `sale:${order.orderId}:${resource.resourceType}:${resource.resourceId}`,
-          }),
-        ),
-      );
+        await warehouse.appendBatch(
+          context.projectId,
+          context.businessEnvironmentId,
+          [...totals.values()].map(({ resource, quantity }) =>
+            movement(context, {
+              warehouseId: source.id,
+              resource,
+              type: 'SALE_CONSUMPTION',
+              delta: -quantity,
+              documentType: 'BAR_ORDER',
+              documentId: order.orderId,
+              comment: `Заказ ${order.orderNumber}`,
+              idempotencyKey: `sale:${order.orderId}:${scope}:${resource.resourceType}:${resource.resourceId}`,
+            }),
+          ),
+        );
+      };
+
+      await consumeRoute('bar', workspace.sourceWarehouseId);
+      await consumeRoute('kitchen', kitchenWorkspace?.sourceWarehouseId);
     },
     subscribe: (context, listener) => warehouse.subscribe(context.projectId, listener),
   };

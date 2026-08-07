@@ -145,7 +145,7 @@ describe('Coffee Manager setup repository', () => {
     expect(snapshot.recipes.length).toBeGreaterThanOrEqual(15);
     expect(snapshot.openingStockBalances).toHaveLength(snapshot.ingredients.length);
     expect(snapshot.suppliers).toHaveLength(5);
-    expect(snapshot.employees).toHaveLength(5);
+    expect(snapshot.employees).toHaveLength(6);
     expect(
       snapshot.openingStockBalances.some((balance) => balance.quantity === 0),
     ).toBe(true);

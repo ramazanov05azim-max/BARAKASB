@@ -70,7 +70,7 @@ function snapshot(): CoffeeOperationalSnapshot {
     suppliers: seed.suppliers,
     employees: seed.employees,
     solutionStructure: {
-      selectedModuleIds: ['warehouse', 'bar'],
+      selectedModuleIds: ['warehouse', 'bar', 'kitchen'],
       workspaces: [
         {
           id: warehouseWorkspaceId,
@@ -88,6 +88,18 @@ function snapshot(): CoffeeOperationalSnapshot {
           assignedEmployeeIds: ['crash-employee-barista'],
           assignedWarehouseIds: [],
           sourceWarehouseId: 'crash-warehouse-bar',
+          status: 'active',
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
+        {
+          id: 'workspace-kitchen',
+          moduleId: 'kitchen',
+          assignedEmployeeIds: ['crash-employee-kitchen'],
+          assignedWarehouseIds: [],
+          sourceWarehouseId: 'crash-warehouse-kitchen',
+          locationId: 'crash-location-production',
+          preparationTiming: { delayedMinutes: 10, criticalMinutes: 20 },
           status: 'active',
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -409,10 +421,41 @@ describe('CoffeeWarehouseService ledger', () => {
     expect(repository.store.issues).toEqual([]);
   });
 
-  it('does not consume uncompleted or Kitchen-routed items', async () => {
+  it('does not consume an uncompleted order', async () => {
     await service.consumeCompletedOrder(barContext, {
       ...completedOrder(),
       status: 'READY',
+    });
+    expect(repository.store.movements).toHaveLength(0);
+  });
+
+  it('consumes Kitchen-routed positions from the explicitly assigned Kitchen warehouse', async () => {
+    const kitchen = completedOrder();
+    await service.consumeCompletedOrder(barContext, {
+      ...kitchen,
+      items: kitchen.items.map((item) => ({
+        ...item,
+        preparationWorkspace: 'KITCHEN',
+      })),
+    });
+    expect(repository.store.movements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          warehouseId: 'crash-warehouse-kitchen',
+          movementType: 'SALE_CONSUMPTION',
+          idempotencyKey: expect.stringContaining('sale:order-1:kitchen:'),
+        }),
+      ]),
+    );
+  });
+
+  it('never guesses a Kitchen warehouse and records an unresolved issue', async () => {
+    const value = snapshot();
+    value.solutionStructure.workspaces[2]!.sourceWarehouseId = null;
+    service = createCoffeeWarehouseService({
+      operational: operational(value),
+      warehouse: repository,
+      now: () => timestamp,
     });
     const kitchen = completedOrder();
     await service.consumeCompletedOrder(barContext, {
@@ -423,6 +466,12 @@ describe('CoffeeWarehouseService ledger', () => {
       })),
     });
     expect(repository.store.movements).toHaveLength(0);
+    expect(repository.store.issues).toEqual([
+      expect.objectContaining({
+        code: 'WAREHOUSE_NOT_ASSIGNED',
+        issueId: 'order:order-1:kitchen:WAREHOUSE_NOT_ASSIGNED',
+      }),
+    ]);
   });
 
   it('does not consume a cancelled order', async () => {

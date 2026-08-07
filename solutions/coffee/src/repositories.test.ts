@@ -350,6 +350,57 @@ describe('local Coffee repository adapter', () => {
     ).toBe(true);
   });
 
+  it('persists explicit Kitchen location, source warehouse and validated timing', async () => {
+    const projectId = 'project-kitchen-configuration';
+    await localCoffeeManagerRepositories.coffeeProject.initialize(
+      projectId,
+      'Kitchen Coffee',
+    );
+    await localCoffeeManagerRepositories.developmentSeed.apply(
+      projectId,
+      createCoffeeCrashTestSeed('2026-08-07T10:00:00.000Z'),
+    );
+    const structure = await localCoffeeManagerRepositories.solutionConstructor.generate(
+      projectId,
+      ['kitchen'],
+    );
+    const workspace = structure.workspaces[0]!;
+    await localCoffeeManagerRepositories.solutionConstructor.assignLocation(
+      projectId,
+      workspace.id,
+      'crash-location-production',
+    );
+    await localCoffeeManagerRepositories.solutionConstructor.assignSourceWarehouse(
+      projectId,
+      workspace.id,
+      'crash-warehouse-kitchen',
+    );
+    await localCoffeeManagerRepositories.solutionConstructor.setPreparationTiming(
+      projectId,
+      workspace.id,
+      { delayedMinutes: 10, criticalMinutes: 20 },
+    );
+
+    await expect(
+      localCoffeeManagerRepositories.solutionConstructor.get(projectId),
+    ).resolves.toMatchObject({
+      workspaces: [
+        {
+          locationId: 'crash-location-production',
+          sourceWarehouseId: 'crash-warehouse-kitchen',
+          preparationTiming: { delayedMinutes: 10, criticalMinutes: 20 },
+        },
+      ],
+    });
+    await expect(
+      localCoffeeManagerRepositories.solutionConstructor.setPreparationTiming(
+        projectId,
+        workspace.id,
+        { delayedMinutes: 20, criticalMinutes: 10 },
+      ),
+    ).rejects.toMatchObject({ code: 'invalid-operation' });
+  });
+
   it('deletes an image only after the last menu-item reference is removed', async () => {
     const remove = vi.fn();
     const mediaAssets = {

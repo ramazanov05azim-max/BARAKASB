@@ -85,6 +85,24 @@ function normalizeItem(value: unknown, legacyBatchId: string): CoffeeOrderItem {
         : submitted
           ? legacyBatchId
           : null,
+    preparationStartedAt:
+      typeof item.preparationStartedAt === 'string'
+        ? item.preparationStartedAt
+        : status === 'PREPARING' || status === 'READY'
+          ? String(item.updatedAt ?? '') || null
+          : null,
+    preparationStartedByEmployeeId:
+      typeof item.preparationStartedByEmployeeId === 'string'
+        ? item.preparationStartedByEmployeeId
+        : null,
+    readyAt:
+      typeof item.readyAt === 'string'
+        ? item.readyAt
+        : status === 'READY'
+          ? String(item.updatedAt ?? '') || null
+          : null,
+    readyByEmployeeId:
+      typeof item.readyByEmployeeId === 'string' ? item.readyByEmployeeId : null,
     issuedAt: typeof item.issuedAt === 'string' ? item.issuedAt : null,
     issuedByEmployeeId:
       typeof item.issuedByEmployeeId === 'string' ? item.issuedByEmployeeId : null,
@@ -197,6 +215,10 @@ function normalizeAudit(value: unknown): CoffeeBarAuditEntry | null {
     'ORDER_RELEASED',
     'BATCH_SENT',
     'ITEM_STATUS_CHANGED',
+    'ACCEPT_POSITION',
+    'READY_POSITION',
+    'ACCEPT_ALL',
+    'READY_ALL',
     'PAYMENT_RECORDED',
     'ORDER_ISSUED',
     'ORDER_COMPLETED',

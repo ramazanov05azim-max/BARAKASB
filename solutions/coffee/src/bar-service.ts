@@ -757,6 +757,10 @@ export function createCoffeeBarService({
         preparationWorkspace: routeFor(snapshot, product.id),
         status: 'DRAFT',
         submittedBatchId: null,
+        preparationStartedAt: null,
+        preparationStartedByEmployeeId: null,
+        readyAt: null,
+        readyByEmployeeId: null,
         issuedAt: null,
         issuedByEmployeeId: null,
       };
@@ -874,6 +878,11 @@ export function createCoffeeBarService({
                 ...item,
                 submittedBatchId: batchId,
                 status: item.preparationWorkspace === 'IMMEDIATE' ? 'READY' : 'NEW',
+                preparationStartedAt: null,
+                preparationStartedByEmployeeId: null,
+                readyAt: item.preparationWorkspace === 'IMMEDIATE' ? timestamp : null,
+                readyByEmployeeId:
+                  item.preparationWorkspace === 'IMMEDIATE' ? context.employeeId : null,
               }
             : item,
         ),
@@ -904,7 +913,25 @@ export function createCoffeeBarService({
       const changed = {
         ...order,
         items: order.items.map((candidate) =>
-          candidate.id === itemId ? { ...candidate, status } : candidate,
+          candidate.id === itemId
+            ? {
+                ...candidate,
+                status,
+                preparationStartedAt:
+                  status === 'PREPARING'
+                    ? (candidate.preparationStartedAt ?? now())
+                    : (candidate.preparationStartedAt ?? null),
+                preparationStartedByEmployeeId:
+                  status === 'PREPARING'
+                    ? (candidate.preparationStartedByEmployeeId ?? context.employeeId)
+                    : (candidate.preparationStartedByEmployeeId ?? null),
+                readyAt: status === 'READY' ? (candidate.readyAt ?? now()) : null,
+                readyByEmployeeId:
+                  status === 'READY'
+                    ? (candidate.readyByEmployeeId ?? context.employeeId)
+                    : null,
+              }
+            : candidate,
         ),
         updatedAt: now(),
       };
@@ -925,18 +952,30 @@ export function createCoffeeBarService({
         throw new CoffeeBarOperationError('ORDER_IMMUTABLE');
       }
       const newItems = order.items.filter(
-        (item) => item.submittedBatchId && item.status === 'NEW',
+        (item) =>
+          item.submittedBatchId &&
+          item.preparationWorkspace === 'BAR' &&
+          item.status === 'NEW',
       );
       if (newItems.length === 0) {
         throw new CoffeeBarOperationError('INVALID_OPERATION');
       }
       const acceptedIds = new Set(newItems.map((item) => item.id));
+      const timestamp = now();
       const changed = {
         ...order,
         items: order.items.map((item) =>
-          acceptedIds.has(item.id) ? { ...item, status: 'PREPARING' as const } : item,
+          acceptedIds.has(item.id)
+            ? {
+                ...item,
+                status: 'PREPARING' as const,
+                preparationStartedAt: item.preparationStartedAt ?? timestamp,
+                preparationStartedByEmployeeId:
+                  item.preparationStartedByEmployeeId ?? context.employeeId,
+              }
+            : item,
         ),
-        updatedAt: now(),
+        updatedAt: timestamp,
       };
       return persist(
         context,

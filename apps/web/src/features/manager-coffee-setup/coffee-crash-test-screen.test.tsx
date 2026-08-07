@@ -44,7 +44,7 @@ const record: CoffeeManagerSetupRecord = {
   businessEnvironmentId: coffeeCrashTestEnvironmentId,
   configuredAt: '2026-07-31T00:00:00.000Z',
   isDevelopmentDemo: true,
-  crashTestSeedVersion: 5,
+  crashTestSeedVersion: 6,
 };
 
 function state(status: CoffeeCrashTestState['status']): CoffeeCrashTestState {

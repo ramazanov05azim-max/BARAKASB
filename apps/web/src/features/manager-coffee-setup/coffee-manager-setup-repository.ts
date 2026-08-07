@@ -331,6 +331,9 @@ export function createCoffeeManagerSetupRepository(
       const structure =
         await dependencies.coffeeRepositories.solutionConstructor.generate(project.id, [
           'bar',
+          'kitchen',
+          'warehouse',
+          'purchasing',
           'manager',
         ]);
       const barWorkspace = structure.workspaces.find(
@@ -338,6 +341,9 @@ export function createCoffeeManagerSetupRepository(
       );
       const managerWorkspace = structure.workspaces.find(
         (workspace) => workspace.moduleId === 'manager',
+      );
+      const kitchenWorkspace = structure.workspaces.find(
+        (workspace) => workspace.moduleId === 'kitchen',
       );
       if (barWorkspace) {
         for (const employeeId of ['crash-employee-barista', 'crash-employee-cashier']) {
@@ -358,6 +364,41 @@ export function createCoffeeManagerSetupRepository(
             true,
           );
         }
+      }
+      if (kitchenWorkspace) {
+        await dependencies.coffeeRepositories.solutionConstructor.assignEmployee(
+          project.id,
+          kitchenWorkspace.id,
+          'crash-employee-kitchen',
+          true,
+        );
+        await dependencies.coffeeRepositories.solutionConstructor.assignLocation(
+          project.id,
+          kitchenWorkspace.id,
+          'crash-location-production',
+        );
+        await dependencies.coffeeRepositories.solutionConstructor.assignSourceWarehouse(
+          project.id,
+          kitchenWorkspace.id,
+          'crash-warehouse-kitchen',
+        );
+        await dependencies.coffeeRepositories.solutionConstructor.setPreparationTiming(
+          project.id,
+          kitchenWorkspace.id,
+          { delayedMinutes: 10, criticalMinutes: 20 },
+        );
+      }
+      if (barWorkspace) {
+        await dependencies.coffeeRepositories.solutionConstructor.assignSourceWarehouse(
+          project.id,
+          barWorkspace.id,
+          'crash-warehouse-bar',
+        );
+        await dependencies.coffeeRepositories.solutionConstructor.assignLocation(
+          project.id,
+          barWorkspace.id,
+          'crash-location-main',
+        );
       }
       const profile = await dependencies.coffeeRepositories.businessProfile.get(
         project.id,

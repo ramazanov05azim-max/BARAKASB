@@ -151,6 +151,11 @@ function arrayValue(values: FormValues, key: string): string[] {
     .filter(Boolean);
 }
 
+function preparationVisibilityValue(values: FormValues): 'all' | 'bar' | 'kitchen' {
+  const visibility = value(values, 'preparationVisibility');
+  return visibility === 'bar' || visibility === 'kitchen' ? visibility : 'all';
+}
+
 function createName(values: FormValues): string {
   return value(values, 'name') || value(values, 'fullName');
 }
@@ -370,6 +375,7 @@ export function CoffeeWorkspaceProvider({
                   : 'configuration',
               selectionType:
                 value(values, 'selectionType') === 'multiple' ? 'multiple' : 'single',
+              preparationVisibility: preparationVisibilityValue(values),
               required: value(values, 'required') === 'true',
               minimumSelections: numeric(values, 'minimumSelections'),
               maximumSelections: numeric(values, 'maximumSelections'),
@@ -581,6 +587,7 @@ export function CoffeeWorkspaceProvider({
                   : 'configuration',
               selectionType:
                 value(values, 'selectionType') === 'multiple' ? 'multiple' : 'single',
+              preparationVisibility: preparationVisibilityValue(values),
               required: value(values, 'required') === 'true',
               minimumSelections: numeric(values, 'minimumSelections'),
               maximumSelections: numeric(values, 'maximumSelections'),
