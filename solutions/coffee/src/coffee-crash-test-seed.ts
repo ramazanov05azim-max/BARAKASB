@@ -14,7 +14,7 @@ import type {
 } from './domain';
 import { recipeNetQuantity } from './recipe-migration';
 
-export const coffeeCrashTestSeedVersion = 6;
+export const coffeeCrashTestSeedVersion = 7;
 export const coffeeCrashTestSeedId = `coffee-crash-test-v${coffeeCrashTestSeedVersion}`;
 
 const active = 'active' as const;
@@ -693,7 +693,7 @@ const productSpecs = [
   ['bottled-water', 'Вода без газа', 'other', 140],
   ['sparkling-water', 'Вода газированная', 'other', 160],
   ['croissant', 'Круассан', 'food', 230],
-  ['sandwich', 'Сэндвич с ветчиной и сыром', 'food', 420],
+  ['sandwich', 'Бургер', 'food', 420],
   ['dessert', 'Шоколадный десерт', 'food', 360],
   ['iced-latte', 'Айс-латте', 'coffee', 370],
   ['vanilla-latte', 'Ванильный латте', 'coffee', 390],

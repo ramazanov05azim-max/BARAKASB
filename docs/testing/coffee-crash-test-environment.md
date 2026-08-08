@@ -24,8 +24,8 @@ through replaceable Coffee repository contracts.
 | Business Environment Code  | `5715 4221 5648 5027`                               |
 | Bar Workspace Access Code  | `6728 0175 1693`                                    |
 | Kitchen Workspace Code     | generated during the development reset              |
-| Seed ID                    | `coffee-crash-test-v6`                              |
-| Seed schema version        | `6`                                                 |
+| Seed ID                    | `coffee-crash-test-v7`                              |
+| Seed schema version        | `7`                                                 |
 
 The 16-digit code is a deterministic, immutable Manager Platform identifier. It is never
 accepted by the Universal Application. Operational device binding uses only the 12-digit

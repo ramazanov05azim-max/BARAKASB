@@ -132,6 +132,20 @@ describe('Coffee crash-test DEV lifecycle', () => {
     expect(snapshot.developmentSeedId).toBe(coffeeCrashTestSeedId);
     expect(snapshot.solutionStructure.workspaces).toHaveLength(5);
     expect(snapshot.employees).toHaveLength(6);
+    expect(snapshot.menuItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'crash-item-cappuccino',
+          name: 'Капучино',
+          preparationLocationId: 'crash-location-main',
+        }),
+        expect.objectContaining({
+          id: 'crash-item-sandwich',
+          name: 'Бургер',
+          preparationLocationId: 'crash-location-production',
+        }),
+      ]),
+    );
     for (const employee of snapshot.employees) {
       const credential = await localCoffeeManagerRepositories.employeeCredentials.get(
         coffeeCrashTestProjectId,
